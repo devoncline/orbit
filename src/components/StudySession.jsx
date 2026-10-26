@@ -38,6 +38,7 @@ export default function StudySession({
 
     async function loadNextQuestion() {
         setLoadingQuestion(true)
+        setStudyQuestion(null)
         setAnswerResult('')
         setFollowUpResult('')
         setShowAdaptedLesson(false)
