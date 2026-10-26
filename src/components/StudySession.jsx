@@ -1,3 +1,6 @@
+import { useEffect, useState } from 'react'
+import { generateStudyQuestion } from '../services/meta'
+
 export default function StudySession({
     course,
     answerResult,
@@ -9,6 +12,24 @@ export default function StudySession({
     mastery,
     setMastery,
 }) {
+    const [studyQuestion, setStudyQuestion] = useState(null)
+    const [loadingQuestion, setLoadingQuestion] = useState(true)
+
+    useEffect(() => {
+        async function loadQuestion() {
+            try {
+                const question = await generateStudyQuestion(course, mastery)
+                setStudyQuestion(question)
+            } catch (error) {
+                console.error(error)
+            } finally {
+                setLoadingQuestion(false)
+            }
+        }
+
+        loadQuestion()
+    }, [])
+
     return (
         <section>
             <h2>{course.name} Session</h2>
