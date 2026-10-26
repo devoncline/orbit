@@ -1,20 +1,35 @@
 export async function analyzeCourseFile(file) {
-  console.log('Orbit will analyze:', file)
+  const base64File = await fileToBase64(file)
 
-  return {
-    courseName: 'Biology 101',
-    instructor: 'Dr. Carter',
-    importantTopics: [
-      'Photosynthesis',
-      'Cellular respiration',
-      'Genetics',
-    ],
-    upcomingWork: [
-      {
-        title: 'Photosynthesis Quiz',
-        type: 'quiz',
-        date: '2026-10-27',
-      },
-    ],
+  const response = await fetch('/api/analyze-course', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      fileName: file.name,
+      fileType: file.type,
+      fileData: base64File,
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error('Failed to analyze course file')
   }
+
+  return response.json()
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+
+    reader.onload = () => {
+      resolve(reader.result)
+    }
+
+    reader.onerror = reject
+
+    reader.readAsDataURL(file)
+  })
 }
