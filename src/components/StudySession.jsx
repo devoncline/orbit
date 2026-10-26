@@ -1,4 +1,5 @@
 export default function StudySession({
+    course,
     answerResult,
     setAnswerResult,
     showAdaptedLesson,
@@ -10,10 +11,16 @@ export default function StudySession({
 }) {
     return (
         <section>
-            <h2>Biology Session</h2>
-            <p>Let’s review photosynthesis.</p>
+            <h2>{course.name} Session</h2>
+            <p>{course.nextTask}</p>
 
             <p>Mastery: {mastery}%</p>
+
+            {course.importantTopics?.length > 0 && (
+                <p>
+                    Focus topics: {course.importantTopics.join(', ')}
+                </p>
+            )}
 
             <h3>Question 1</h3>
             <p>What is the main purpose of photosynthesis?</p>

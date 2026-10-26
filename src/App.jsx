@@ -132,6 +132,7 @@ export default function App() {
         </section>
       ) : (
         <StudySession
+          course={recommendedCourse}
           answerResult={answerResult}
           setAnswerResult={setAnswerResult}
           showAdaptedLesson={showAdaptedLesson}
