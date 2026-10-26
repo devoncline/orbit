@@ -5,6 +5,8 @@ export default function StudySession({
     setShowAdaptedLesson,
     followUpResult,
     setFollowUpResult,
+    mastery,
+    setMastery,
 }) {
     return (
         <section>
@@ -21,6 +23,7 @@ export default function StudySession({
                     setAnswerResult('incorrect')
                     setShowAdaptedLesson(true)
                     setFollowUpResult('')
+                    setMastery(40)
                 }}
             >
                 To make oxygen for animals
@@ -31,6 +34,7 @@ export default function StudySession({
                     setAnswerResult('correct')
                     setShowAdaptedLesson(false)
                     setFollowUpResult('')
+                    setMastery(80)
                 }}
             >
                 To convert light energy into chemical energy
@@ -76,15 +80,30 @@ export default function StudySession({
                         If sunlight gives the plant energy, where does that energy end up?
                     </p>
 
-                    <button onClick={() => setFollowUpResult('correct')}>
+                    <button
+                        onClick={() => {
+                            setFollowUpResult('correct')
+                            setMastery(70)
+                        }}
+                    >
                         Stored in glucose
                     </button>
 
-                    <button onClick={() => setFollowUpResult('incorrect')}>
+                    <button
+                        onClick={() => {
+                            setFollowUpResult('incorrect')
+                            setMastery(40)
+                        }}
+                    >
                         Stored in oxygen
                     </button>
 
-                    <button onClick={() => setFollowUpResult('incorrect')}>
+                    <button
+                        onClick={() => {
+                            setFollowUpResult('incorrect')
+                            setMastery(40)
+                        }}
+                    >
                         Stored in the soil
                     </button>
 

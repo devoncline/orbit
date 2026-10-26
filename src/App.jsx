@@ -54,6 +54,8 @@ export default function App() {
           setShowAdaptedLesson={setShowAdaptedLesson}
           followUpResult={followUpResult}
           setFollowUpResult={setFollowUpResult}
+          mastery={mastery}
+          setMastery={setMastery}
         />
       )}
 
