@@ -60,7 +60,7 @@ export default function App() {
   async function addFileToRecommendedCourse(file) {
     const analysis = await analyzeCourseFile(file)
 
-    console.log('Orbit analysis:', analysis)
+    console.log('Orbit output:', JSON.stringify(analysis.output, null, 2))
 
     setCourses(
       courses.map((course, index) => {
