@@ -74,6 +74,24 @@ export async function evaluateStudyAnswer(
     return response.json()
 }
 
+export async function recommendCourse(courses) {
+    const response = await fetch('/api/recommend-course', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            courses: courses,
+        }),
+    })
+
+    if (!response.ok) {
+        throw new Error('Failed to recommend course')
+    }
+
+    return response.json()
+}
+
 function fileToBase64(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader()
