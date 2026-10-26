@@ -1,10 +1,11 @@
 import StudySession from './components/StudySession'
 import CourseDetails from './components/CourseDetails'
+import AddCourse from './components/AddCourse'
 import { useState } from 'react'
 import './App.css'
 
 export default function App() {
-  const [courses] = useState([
+  const [courses, setCourses] = useState([
     {
       name: 'Biology',
       nextTask: 'Review photosynthesis',
@@ -50,6 +51,10 @@ export default function App() {
   const [followUpResult, setFollowUpResult] = useState('')
   const [mastery, setMastery] = useState(40)
 
+  function addCourse(newCourse) {
+    setCourses([...courses, newCourse])
+  }
+
   return (
     <div>
       <h1>Orbit</h1>
@@ -80,6 +85,8 @@ export default function App() {
           setMastery={setMastery}
         />
       )}
+
+      <AddCourse onAddCourse={addCourse} />
 
       <h2>Courses</h2>
 
