@@ -26,6 +26,7 @@ export default function App() {
   const [answerResult, setAnswerResult] = useState('')
   const [showAdaptedLesson, setShowAdaptedLesson] = useState(false)
   const [followUpResult, setFollowUpResult] = useState('')
+  const [mastery, setMastery] = useState(40)
 
   return (
     <div>

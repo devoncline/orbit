@@ -11,6 +11,8 @@ export default function StudySession({
             <h2>Biology Session</h2>
             <p>Let’s review photosynthesis.</p>
 
+            <p>Mastery: {mastery}%</p>
+
             <h3>Question 1</h3>
             <p>What is the main purpose of photosynthesis?</p>
 
@@ -18,6 +20,7 @@ export default function StudySession({
                 onClick={() => {
                     setAnswerResult('incorrect')
                     setShowAdaptedLesson(true)
+                    setFollowUpResult('')
                 }}
             >
                 To make oxygen for animals
@@ -27,6 +30,7 @@ export default function StudySession({
                 onClick={() => {
                     setAnswerResult('correct')
                     setShowAdaptedLesson(false)
+                    setFollowUpResult('')
                 }}
             >
                 To convert light energy into chemical energy
@@ -36,6 +40,7 @@ export default function StudySession({
                 onClick={() => {
                     setAnswerResult('incorrect')
                     setShowAdaptedLesson(true)
+                    setFollowUpResult('')
                 }}
             >
                 To absorb nutrients from the soil
