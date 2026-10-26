@@ -60,13 +60,41 @@ export default function App() {
   async function addFileToRecommendedCourse(file) {
     const analysis = await analyzeCourseFile(file)
 
-    console.log('Orbit output:', JSON.stringify(analysis.output, null, 2))
+    console.log('Orbit analysis:', analysis)
 
     setCourses(
       courses.map((course, index) => {
         if (index === 0) {
           return {
             ...course,
+
+            name: analysis.courseName || course.name,
+
+            nextTask:
+              analysis.nextRecommendedAction || course.nextTask,
+
+            reason:
+              analysis.upcomingWork?.length > 0
+                ? `${analysis.upcomingWork[0].title} on ${analysis.upcomingWork[0].date}`
+                : course.reason,
+
+            syllabus: {
+              courseName:
+                analysis.courseName || course.syllabus.courseName,
+
+              instructor:
+                analysis.instructor || course.syllabus.instructor,
+
+              semester:
+                analysis.semester || course.syllabus.semester,
+            },
+
+            importantTopics:
+              analysis.importantTopics || [],
+
+            upcomingWork:
+              analysis.upcomingWork || [],
+
             files: [
               ...course.files,
               {
