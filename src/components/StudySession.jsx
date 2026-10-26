@@ -51,37 +51,26 @@ export default function StudySession({
                 <p>{studyQuestion.question}</p>
             )}
 
-            <button
-                onClick={() => {
-                    setAnswerResult('incorrect')
-                    setShowAdaptedLesson(true)
-                    setFollowUpResult('')
-                    setMastery(40)
-                }}
-            >
-                To make oxygen for animals
-            </button>
-
-            <button
-                onClick={() => {
-                    setAnswerResult('correct')
-                    setShowAdaptedLesson(false)
-                    setFollowUpResult('')
-                    setMastery(80)
-                }}
-            >
-                To convert light energy into chemical energy
-            </button>
-
-            <button
-                onClick={() => {
-                    setAnswerResult('incorrect')
-                    setShowAdaptedLesson(true)
-                    setFollowUpResult('')
-                }}
-            >
-                To absorb nutrients from the soil
-            </button>
+            {studyQuestion?.answers?.map((answer) => (
+                <button
+                    key={answer.text}
+                    onClick={() => {
+                        if (answer.correct) {
+                            setAnswerResult('correct')
+                            setShowAdaptedLesson(false)
+                            setFollowUpResult('')
+                            setMastery(80)
+                        } else {
+                            setAnswerResult('incorrect')
+                            setShowAdaptedLesson(true)
+                            setFollowUpResult('')
+                            setMastery(40)
+                        }
+                    }}
+                >
+                    {answer.text}
+                </button>
+            ))}
 
             {answerResult === 'correct' && (
                 <p>
