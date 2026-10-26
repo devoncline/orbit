@@ -19,6 +19,7 @@ export default function StudySession({
     const [loadingQuestion, setLoadingQuestion] = useState(true)
     const [evaluation, setEvaluation] = useState(null)
     const [loadingEvaluation, setLoadingEvaluation] = useState(false)
+    const [questionNumber, setQuestionNumber] = useState(1)
 
     useEffect(() => {
         async function loadQuestion() {
@@ -35,6 +36,39 @@ export default function StudySession({
         loadQuestion()
     }, [])
 
+    useEffect(() => {
+        async function loadQuestion() {
+            try {
+                const question = await generateStudyQuestion(course, mastery)
+                setStudyQuestion(question)
+            } catch (error) {
+                console.error(error)
+            } finally {
+                setLoadingQuestion(false)
+            }
+        }
+
+        loadQuestion()
+    }, [])
+
+    async function loadNextQuestion() {
+        setLoadingQuestion(true)
+        setAnswerResult('')
+        setFollowUpResult('')
+        setShowAdaptedLesson(false)
+        setEvaluation(null)
+
+        try {
+            const question = await generateStudyQuestion(course, mastery)
+            setStudyQuestion(question)
+            setQuestionNumber(questionNumber + 1)
+        } catch (error) {
+            console.error(error)
+        } finally {
+            setLoadingQuestion(false)
+        }
+    }
+
     return (
         <section>
             <h2>{course.name} Session</h2>
@@ -48,7 +82,7 @@ export default function StudySession({
                 </p>
             )}
 
-            <h3>Question 1</h3>
+            <h3>Question {questionNumber}</h3>
 
             {loadingQuestion && <p>Orbit is building your question...</p>}
 
@@ -98,6 +132,12 @@ export default function StudySession({
                 <p>{studyQuestion.explanation}</p>
             )}
 
+            {answerResult === 'correct' && (
+                <button onClick={loadNextQuestion}>
+                    Continue
+                </button>
+            )}
+
             {answerResult === 'incorrect' && loadingEvaluation && (
                 <p>Orbit is changing the approach...</p>
             )}
@@ -139,9 +179,15 @@ export default function StudySession({
                         </p>
                     )}
 
+                    {followUpResult === 'correct' && (
+                        <button onClick={loadNextQuestion}>
+                            Continue
+                        </button>
+                    )}
+
                     {followUpResult === 'incorrect' && (
                         <p>
-                            Orbit would simplify the idea again before advancing.
+                            Orbit marked this concept for another pass before moving on.
                         </p>
                     )}
                 </div>
