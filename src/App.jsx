@@ -91,7 +91,7 @@ export default function App() {
 
     setCourses(
       courses.map((course, index) => {
-        if (index === 0) {
+        if (course.name === recommendedCourse.name) {
           return {
             ...course,
 
