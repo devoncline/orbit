@@ -1,6 +1,7 @@
 import StudySession from './components/StudySession'
 import CourseDetails from './components/CourseDetails'
 import AddCourse from './components/AddCourse'
+import AddCourseFile from './components/AddCourseFile'
 import { useState } from 'react'
 import './App.css'
 
@@ -55,6 +56,29 @@ export default function App() {
     setCourses([...courses, newCourse])
   }
 
+  function addFileToRecommendedCourse(file) {
+    setCourses(
+      courses.map((course, index) => {
+        if (index === 0) {
+          return {
+            ...course,
+            files: [
+              ...course.files,
+              {
+                name: file.name,
+                type: file.type || 'file',
+                size: file.size,
+                file: file,
+              },
+            ],
+          }
+        }
+
+        return course
+      })
+    )
+  }
+
   return (
     <div>
       <h1>Orbit</h1>
@@ -97,6 +121,8 @@ export default function App() {
           <p>{course.reason}</p>
         </div>
       ))}
+
+      <AddCourseFile onAddFile={addFileToRecommendedCourse} />
 
       <CourseDetails course={recommendedCourse} />
     </div>
