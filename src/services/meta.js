@@ -42,6 +42,38 @@ export async function generateStudyQuestion(course, mastery) {
     return response.json()
 }
 
+export async function evaluateStudyAnswer(
+    course,
+    studyQuestion,
+    selectedAnswer,
+    mastery
+) {
+    const correctAnswer = studyQuestion.answers.find(
+        (answer) => answer.correct
+    )
+
+    const response = await fetch('/api/evaluate-study-answer', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            courseName: course.name,
+            question: studyQuestion.question,
+            selectedAnswer: selectedAnswer.text,
+            correctAnswer: correctAnswer.text,
+            importantTopics: course.importantTopics,
+            mastery: mastery,
+        }),
+    })
+
+    if (!response.ok) {
+        throw new Error('Failed to evaluate study answer')
+    }
+
+    return response.json()
+}
+
 function fileToBase64(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader()
