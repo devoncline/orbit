@@ -44,7 +44,12 @@ export default function StudySession({
             )}
 
             <h3>Question 1</h3>
-            <p>What is the main purpose of photosynthesis?</p>
+
+            {loadingQuestion && <p>Orbit is building your question...</p>}
+
+            {studyQuestion && (
+                <p>{studyQuestion.question}</p>
+            )}
 
             <button
                 onClick={() => {
