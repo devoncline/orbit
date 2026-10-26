@@ -2,8 +2,11 @@ import StudySession from './components/StudySession'
 import CourseDetails from './components/CourseDetails'
 import AddCourse from './components/AddCourse'
 import AddCourseFile from './components/AddCourseFile'
-import { analyzeCourseFile } from './services/meta'
-import { useState } from 'react'
+import {
+  analyzeCourseFile,
+  recommendCourse,
+} from './services/meta'
+import { useEffect, useState } from 'react'
 import './App.css'
 
 export default function App() {
@@ -46,12 +49,36 @@ export default function App() {
     },
   ])
 
-  const recommendedCourse = courses[0]
+  const [recommendation, setRecommendation] = useState(null)
+  const [loadingRecommendation, setLoadingRecommendation] = useState(true)
+
+  const recommendedCourse =
+    courses.find(
+      (course) => course.name === recommendation?.courseName
+    ) || courses[0]
   const [sessionStarted, setSessionStarted] = useState(false)
   const [answerResult, setAnswerResult] = useState('')
   const [showAdaptedLesson, setShowAdaptedLesson] = useState(false)
   const [followUpResult, setFollowUpResult] = useState('')
   const [mastery, setMastery] = useState(40)
+
+  useEffect(() => {
+    async function loadRecommendation() {
+      try {
+        setLoadingRecommendation(true)
+
+        const result = await recommendCourse(courses)
+
+        setRecommendation(result)
+      } catch (error) {
+        console.error(error)
+      } finally {
+        setLoadingRecommendation(false)
+      }
+    }
+
+    loadRecommendation()
+  }, [courses])
 
   function addCourse(newCourse) {
     setCourses([...courses, newCourse])
@@ -122,13 +149,29 @@ export default function App() {
         <section>
           <h2>What should I work on now?</h2>
 
-          <h3>{recommendedCourse.name}</h3>
-          <p>{recommendedCourse.nextTask}</p>
-          <p>{recommendedCourse.reason}</p>
+          {loadingRecommendation ? (
+            <p>Orbit is deciding what you should work on...</p>
+          ) : (
+            <>
+              <h3>{recommendedCourse.name}</h3>
 
-          <button onClick={() => setSessionStarted(true)}>
-            Start session
-          </button>
+              <p>
+                {recommendation?.recommendedAction ||
+                  recommendedCourse.nextTask}
+              </p>
+
+              <p>
+                {recommendation?.reason ||
+                  recommendedCourse.reason}
+              </p>
+            </>
+          )}
+
+          {!loadingRecommendation && (
+            <button onClick={() => setSessionStarted(true)}>
+              Start session
+            </button>
+          )}
         </section>
       ) : (
         <StudySession
