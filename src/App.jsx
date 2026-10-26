@@ -1,4 +1,5 @@
 import StudySession from './components/StudySession'
+import CourseDetails from './components/CourseDetails'
 import { useState } from 'react'
 import './App.css'
 
@@ -8,6 +9,27 @@ export default function App() {
       name: 'Biology',
       nextTask: 'Review photosynthesis',
       reason: 'Quiz tomorrow and weak performance on light reactions',
+
+      syllabus: {
+        courseName: 'Biology 101',
+        instructor: 'Dr. Carter',
+        semester: 'Fall 2026',
+      },
+
+      files: [
+        {
+          name: 'Photosynthesis Notes',
+          type: 'notes',
+        },
+        {
+          name: 'Chapter 6 Study Guide',
+          type: 'study-guide',
+        },
+        {
+          name: 'Biology Syllabus',
+          type: 'syllabus',
+        },
+      ],
     },
     {
       name: 'Algebra',
@@ -68,6 +90,8 @@ export default function App() {
           <p>{course.reason}</p>
         </div>
       ))}
+
+      <CourseDetails course={recommendedCourse} />
     </div>
   )
 }
