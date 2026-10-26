@@ -36,21 +36,6 @@ export default function StudySession({
         loadQuestion()
     }, [])
 
-    useEffect(() => {
-        async function loadQuestion() {
-            try {
-                const question = await generateStudyQuestion(course, mastery)
-                setStudyQuestion(question)
-            } catch (error) {
-                console.error(error)
-            } finally {
-                setLoadingQuestion(false)
-            }
-        }
-
-        loadQuestion()
-    }, [])
-
     async function loadNextQuestion() {
         setLoadingQuestion(true)
         setAnswerResult('')
