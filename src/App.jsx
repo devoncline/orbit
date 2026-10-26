@@ -107,13 +107,13 @@ export default function App() {
 
             syllabus: {
               courseName:
-                analysis.courseName || course.syllabus.courseName,
+                analysis.courseName || course.syllabus?.courseName || '',
 
               instructor:
-                analysis.instructor || course.syllabus.instructor,
+                analysis.instructor || course.syllabus?.instructor || '',
 
               semester:
-                analysis.semester || course.syllabus.semester,
+                analysis.semester || course.syllabus?.semester || '',
             },
 
             importantTopics:
@@ -123,7 +123,7 @@ export default function App() {
               analysis.upcomingWork || [],
 
             files: [
-              ...course.files,
+              ...(course.files || []),
               {
                 name: file.name,
                 type: file.type || 'file',
