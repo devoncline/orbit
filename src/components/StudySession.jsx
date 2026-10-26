@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
-import { generateStudyQuestion } from '../services/meta'
+import {
+    generateStudyQuestion,
+    evaluateStudyAnswer,
+} from '../services/meta'
 
 export default function StudySession({
     course,
@@ -14,6 +17,8 @@ export default function StudySession({
 }) {
     const [studyQuestion, setStudyQuestion] = useState(null)
     const [loadingQuestion, setLoadingQuestion] = useState(true)
+    const [evaluation, setEvaluation] = useState(null)
+    const [loadingEvaluation, setLoadingEvaluation] = useState(false)
 
     useEffect(() => {
         async function loadQuestion() {
@@ -54,17 +59,34 @@ export default function StudySession({
             {studyQuestion?.answers?.map((answer) => (
                 <button
                     key={answer.text}
-                    onClick={() => {
+                    onClick={async () => {
                         if (answer.correct) {
                             setAnswerResult('correct')
                             setShowAdaptedLesson(false)
                             setFollowUpResult('')
                             setMastery(80)
+                            setEvaluation(null)
                         } else {
                             setAnswerResult('incorrect')
                             setShowAdaptedLesson(true)
                             setFollowUpResult('')
                             setMastery(40)
+                            setLoadingEvaluation(true)
+
+                            try {
+                                const result = await evaluateStudyAnswer(
+                                    course,
+                                    studyQuestion,
+                                    answer,
+                                    mastery
+                                )
+
+                                setEvaluation(result)
+                            } catch (error) {
+                                console.error(error)
+                            } finally {
+                                setLoadingEvaluation(false)
+                            }
                         }
                     }}
                 >
@@ -72,72 +94,55 @@ export default function StudySession({
                 </button>
             ))}
 
-            {answerResult === 'correct' && (
-                <p>
-                    Correct. Photosynthesis converts light energy into chemical energy.
-                </p>
+            {answerResult === 'correct' && studyQuestion && (
+                <p>{studyQuestion.explanation}</p>
             )}
 
-            {answerResult === 'incorrect' && (
-                <p>
-                    Not quite. Orbit noticed a gap, so the next step should explain this
-                    differently before moving on.
-                </p>
+            {answerResult === 'incorrect' && loadingEvaluation && (
+                <p>Orbit is changing the approach...</p>
             )}
 
-            {showAdaptedLesson && (
+            {answerResult === 'incorrect' && evaluation && (
+                <p>{evaluation.feedback}</p>
+            )}
+
+            {showAdaptedLesson && evaluation && (
                 <div>
                     <h3>Orbit changed the approach</h3>
 
-                    <p>Think of a plant like a tiny solar-powered factory.</p>
-
-                    <p>
-                        Sunlight is the energy source. The plant uses that energy to make
-                        glucose, which stores chemical energy the plant can use later.
-                    </p>
+                    <p>{evaluation.adaptedExplanation}</p>
 
                     <h4>Try this instead:</h4>
 
-                    <p>
-                        If sunlight gives the plant energy, where does that energy end up?
-                    </p>
+                    <p>{evaluation.followUpQuestion}</p>
 
-                    <button
-                        onClick={() => {
-                            setFollowUpResult('correct')
-                            setMastery(70)
-                        }}
-                    >
-                        Stored in glucose
-                    </button>
-
-                    <button
-                        onClick={() => {
-                            setFollowUpResult('incorrect')
-                            setMastery(40)
-                        }}
-                    >
-                        Stored in oxygen
-                    </button>
-
-                    <button
-                        onClick={() => {
-                            setFollowUpResult('incorrect')
-                            setMastery(40)
-                        }}
-                    >
-                        Stored in the soil
-                    </button>
+                    {evaluation.followUpAnswers.map((answer) => (
+                        <button
+                            key={answer.text}
+                            onClick={() => {
+                                if (answer.correct) {
+                                    setFollowUpResult('correct')
+                                    setMastery(70)
+                                } else {
+                                    setFollowUpResult('incorrect')
+                                    setMastery(40)
+                                }
+                            }}
+                        >
+                            {answer.text}
+                        </button>
+                    ))}
 
                     {followUpResult === 'correct' && (
                         <p>
-                            Nice. That shows the concept is starting to click. Orbit can now
-                            move you forward.
+                            Nice. That shows the concept is starting to click. Orbit can now move you forward.
                         </p>
                     )}
 
                     {followUpResult === 'incorrect' && (
-                        <p>Orbit would simplify the idea again before advancing.</p>
+                        <p>
+                            Orbit would simplify the idea again before advancing.
+                        </p>
                     )}
                 </div>
             )}
