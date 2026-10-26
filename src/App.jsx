@@ -2,6 +2,7 @@ import StudySession from './components/StudySession'
 import CourseDetails from './components/CourseDetails'
 import AddCourse from './components/AddCourse'
 import AddCourseFile from './components/AddCourseFile'
+import { analyzeCourseFile } from './services/meta'
 import { useState } from 'react'
 import './App.css'
 
@@ -56,7 +57,11 @@ export default function App() {
     setCourses([...courses, newCourse])
   }
 
-  function addFileToRecommendedCourse(file) {
+  async function addFileToRecommendedCourse(file) {
+    const analysis = await analyzeCourseFile(file)
+
+    console.log('Orbit analysis:', analysis)
+
     setCourses(
       courses.map((course, index) => {
         if (index === 0) {
