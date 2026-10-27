@@ -36,7 +36,7 @@ export default function HomeScreen({
 
       <main className="home-container" id="home-content" tabIndex={-1}>
         <section className="home-hero" aria-labelledby="home-heading">
-          {/* A full-hero layer for future environmental artwork and ambient motion. */}
+          {/* Static environmental artwork sits behind the learning content and companion. */}
           <div className="home-hero-environment" aria-hidden="true" />
 
           <div className="home-hero-content">

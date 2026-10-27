@@ -135,6 +135,27 @@
   inset: 0;
   z-index: -1;
   pointer-events: none;
+  background-image:
+    linear-gradient(
+      to bottom,
+      var(--home-base),
+      transparent 16%,
+      transparent 70%,
+      var(--home-base)
+    ),
+    linear-gradient(
+      to right,
+      var(--home-base),
+      rgb(16 23 37 / 65%) 12%,
+      rgb(16 23 37 / 35%) 44%,
+      rgb(16 23 37 / 12%) 70%,
+      rgb(16 23 37 / 18%) 90%,
+      var(--home-base)
+    ),
+    url('../assets/backgrounds/orbit-home-background-nebula.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .home-hero-content {
@@ -473,6 +494,12 @@ details[open] > summary .home-disclosure-mark::before {
 
   .home-hero-content {
     max-width: 600px;
+  }
+
+  .home-hero-environment {
+    /* Keep the stacked learning content quiet; frame the nebula around the companion below. */
+    top: 45%;
+    background-position: 72% center;
   }
 
   .home-hero-scene {
