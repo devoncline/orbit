@@ -487,6 +487,16 @@ The goal is for Orbit to move with the learner instead of waiting passively for 
 
 ---
 
+## Home UI Foundation
+
+- Established the first responsive Home composition: minimal navigation, one primary learning recommendation, and courses below the hero.
+- Added a Home-scoped midnight and periwinkle palette, consistent spacing, readable typography, and keyboard focus treatments.
+- Reserved open hero space for future companion and environment artwork; the empty scene collapses on smaller screens to keep the learning action first.
+- Kept existing course, upload, study, and mastery behavior, with course information and course tools available through disclosures on Home.
+- This is a structural foundation for visual review. Custom artwork, mascot design, motion, and other screen redesigns remain future work.
+
+---
+
 # Next
 
 The next major development steps are:

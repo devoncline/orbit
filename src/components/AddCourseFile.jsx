@@ -13,6 +13,7 @@ export default function AddCourseFile({ onAddFile }) {
 
             <input
                 type="file"
+                aria-label="Course material PDF"
                 accept="application/pdf"
                 onChange={handleFileChange}
             />

@@ -34,6 +34,7 @@ export default function AddCourse({ onAddCourse }) {
       <form onSubmit={handleSubmit}>
         <input
           type="text"
+          aria-label="Course name"
           value={courseName}
           onChange={(event) => setCourseName(event.target.value)}
           placeholder="Course name"
@@ -41,6 +42,7 @@ export default function AddCourse({ onAddCourse }) {
 
         <input
           type="text"
+          aria-label="Instructor"
           value={instructor}
           onChange={(event) => setInstructor(event.target.value)}
           placeholder="Instructor"

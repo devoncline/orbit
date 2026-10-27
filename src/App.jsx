@@ -2,6 +2,7 @@ import StudySession from './components/StudySession'
 import CourseDetails from './components/CourseDetails'
 import AddCourse from './components/AddCourse'
 import AddCourseFile from './components/AddCourseFile'
+import HomeScreen from './components/HomeScreen'
 import {
   analyzeCourseFile,
   recommendCourse,
@@ -237,65 +238,49 @@ export default function App() {
     )
   }
 
+  if (!sessionStarted) {
+    return (
+      <HomeScreen
+        courses={courses}
+        recommendedCourse={recommendedCourse}
+        recommendation={recommendation}
+        loadingRecommendation={loadingRecommendation}
+        onContinue={() => setSessionStarted(true)}
+        onAddCourse={addCourse}
+        onAddFile={addCourseFile}
+      />
+    )
+  }
+
   return (
     <div>
       <h1>Orbit</h1>
       <p>Learn → Quiz → Evaluate → Adapt → Continue</p>
       <p>Your adaptive learning companion.</p>
 
-      {!sessionStarted ? (
-        <section>
-          <h2>What should I work on now?</h2>
-
-          {loadingRecommendation ? (
-            <p>Orbit is deciding what you should work on...</p>
-          ) : (
-            <>
-              <h3>{recommendedCourse.name}</h3>
-
-              <p>
-                {recommendation?.recommendedAction ||
-                  recommendedCourse.nextTask}
-              </p>
-
-              <p>
-                {recommendation?.reason ||
-                  recommendedCourse.reason}
-              </p>
-            </>
-          )}
-
-          {!loadingRecommendation && (
-            <button onClick={() => setSessionStarted(true)}>
-              Start session
-            </button>
-          )}
-        </section>
-      ) : (
-        <StudySession
-          course={recommendedCourse}
-          answerResult={answerResult}
-          setAnswerResult={setAnswerResult}
-          showAdaptedLesson={showAdaptedLesson}
-          setShowAdaptedLesson={setShowAdaptedLesson}
-          followUpResult={followUpResult}
-          setFollowUpResult={setFollowUpResult}
-          mastery={recommendedCourse.mastery?.overall ?? 40}
-          setMastery={(newMastery) =>
-            updateCourseMastery(
-              recommendedCourse.name,
-              newMastery
-            )
-          }
-          updateTopicMastery={(topicName, newMastery) =>
-            updateTopicMastery(
-              recommendedCourse.name,
-              topicName,
-              newMastery
-            )
-          }
-        />
-      )}
+      <StudySession
+        course={recommendedCourse}
+        answerResult={answerResult}
+        setAnswerResult={setAnswerResult}
+        showAdaptedLesson={showAdaptedLesson}
+        setShowAdaptedLesson={setShowAdaptedLesson}
+        followUpResult={followUpResult}
+        setFollowUpResult={setFollowUpResult}
+        mastery={recommendedCourse.mastery?.overall ?? 40}
+        setMastery={(newMastery) =>
+          updateCourseMastery(
+            recommendedCourse.name,
+            newMastery
+          )
+        }
+        updateTopicMastery={(topicName, newMastery) =>
+          updateTopicMastery(
+            recommendedCourse.name,
+            topicName,
+            newMastery
+          )
+        }
+      />
 
       <AddCourse onAddCourse={addCourse} />
 
