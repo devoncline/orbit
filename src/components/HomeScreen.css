@@ -246,18 +246,18 @@
 @keyframes home-mascot-float {
   0%,
   100% {
-    transform: translateY(4px) rotate(-0.5deg);
+    transform: translate(-4px, 8px) rotate(-1deg);
   }
 
   50% {
-    transform: translateY(-4px) rotate(0.5deg);
+    transform: translate(4px, -10px) rotate(1deg);
   }
 }
 
 /* Static by default, including when reduced motion is requested. */
 @media (prefers-reduced-motion: no-preference) {
   .home-mascot {
-    animation: home-mascot-float 16s ease-in-out infinite;
+    animation: home-mascot-float 7s ease-in-out infinite;
   }
 }
 
