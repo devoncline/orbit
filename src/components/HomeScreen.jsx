@@ -35,7 +35,7 @@ export default function HomeScreen({
             </div>
           )}
         </div>
-        <OrbitStage variant="home" />
+        <OrbitStage variant="home" thinking={loadingRecommendation} />
       </section>
       {!empty && (
         <div className="home-support">

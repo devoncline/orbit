@@ -127,9 +127,7 @@
 .space-details p { font-size: 14px; }
 .session-resume { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding-block: 18px; color: var(--orbit-muted); font-size: 13px; }
 .session-resume button { color: var(--orbit-accent); }
-.orbit-shell-focused .shell-main { margin: 0 auto; max-width: 1680px; }
-.orbit-shell-focused .orbit-environment { inset-inline: 0; opacity: .28; }
-.orbit-shell-focused .shell-mobile-header { display: flex; max-width: 1680px; margin: auto; padding: 22px clamp(28px, 4.5vw, 80px); }
+.orbit-shell-focused .orbit-environment { opacity: .28; }
 .study-room-header { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 26px 0 12px; color: var(--orbit-muted); font-size: 12px; }
 .study-room { position: relative; }
 @media (max-width: 1050px) {
@@ -154,6 +152,5 @@
   .orbit-form :where(input, select) { font-size: 16px; }
   .study-room-header { padding: 8px 0; }
   .study-room-header > span { text-align: right; max-width: 55%; }
-  .orbit-shell-focused .shell-mobile-header { padding: 20px 24px; }
 }
 @media (max-height: 600px) { .shell-sidebar { padding-top: 16px; } .shell-sidebar > .shell-brand { margin-bottom: 20px; } .shell-spaces-heading { margin-top: 20px; } }

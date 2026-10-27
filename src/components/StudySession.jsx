@@ -258,7 +258,7 @@ export default function StudySession({
                 {stage === 'learn' && lesson && <p className="study-topic">{lesson.topic}</p>}
                 <h1>{stage === 'learn' ? lesson?.concept || course.nextTask || course.name : studyQuestion?.topic || lesson?.topic || 'Practice'}</h1>
             </header>
-            <OrbitStage />
+            <OrbitStage thinking={Boolean(loadingLesson || loadingConversation || loadingActivity || loadingQuestion || loadingEvaluation)} />
             <div className="study-body">
             {stage === 'learn' && (
                 <div className="study-lesson">

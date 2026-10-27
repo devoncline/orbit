@@ -4,7 +4,7 @@ import './OrbitStage.css'
 
 // Visuals and annotations can enter independently without changing the learning controls.
 // The current stage uses existing artwork only; empty slots render no placeholder UI.
-export default function OrbitStage({ variant = 'study', children, annotations }) {
+export default function OrbitStage({ variant = 'study', thinking = false, children, annotations }) {
   const hasVisual = Boolean(children || annotations)
 
   return (
@@ -15,7 +15,7 @@ export default function OrbitStage({ variant = 'study', children, annotations })
       aria-label={hasVisual ? 'Visual explanation' : undefined}
     >
       <div className="orbit-stage-environment" aria-hidden="true" />
-      <img className="orbit-stage-companion" src={variant === 'study' ? orbitTeaching : orbitHero} alt="" width="1600" height="1600" decoding="async" />
+      <img className="orbit-stage-companion" src={thinking ? orbitTeaching : orbitHero} alt="" width="1600" height="1600" decoding="async" />
       {children && <div className="orbit-stage-object">{children}</div>}
       {annotations && <div className="orbit-stage-annotations">{annotations}</div>}
     </div>

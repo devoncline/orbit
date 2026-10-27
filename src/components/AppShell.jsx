@@ -50,7 +50,7 @@ export default function AppShell({ courses, destination, selectedSpace, onNaviga
     <div className={`orbit-shell${focused ? ' orbit-shell-focused' : ''}`}>
       <a className="orbit-skip-link" href="#orbit-content">Skip to learning</a>
       <div className="orbit-environment" aria-hidden="true" />
-      {!focused && <aside className="shell-sidebar">{navigation()}</aside>}
+      <aside className="shell-sidebar">{navigation()}</aside>
       <header className="shell-mobile-header">
         <button className="shell-brand" onClick={() => onNavigate('home')} aria-label="Orbit home"><img src={orbitLogo} width="528" height="176" alt="Orbit" /></button>
         <button className="orbit-button" onClick={() => drawer.current.showModal()} aria-haspopup="dialog">Menu</button>

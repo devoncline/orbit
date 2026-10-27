@@ -53,9 +53,10 @@ test('many spaces stay in navigation while Home shows only two alternatives', ()
   assert.match(shell, /aria-label="Your learning spaces"/)
 })
 
-test('Study removes the desktop sidebar and keeps the navigation drawer available', () => {
+test('Study keeps the desktop sidebar, active Learn destination, and navigation drawer', () => {
   const html = renderToStaticMarkup(createElement(AppShell, { courses, destination: 'study' }))
-  assert.doesNotMatch(html, /<aside/)
+  assert.match(html, /<aside class="shell-sidebar"/)
+  assert.match(html, /<button aria-current="page"><svg[^]*?<\/svg>Learn<\/button>/)
   assert.match(html, /<dialog/)
   assert.match(html, /orbit-shell-focused/)
 })

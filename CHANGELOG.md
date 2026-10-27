@@ -4,6 +4,7 @@
 
 ### Improvements
 
+- Learn keeps the shared desktop sidebar. Orbit stays fully visible on small screens, smiles between replies, and uses the same gentle floating motion everywhere, switching to a thinking pose while preparing a response.
 - Home now leads with the current learning task or question and a contextual action. Study gives Orbit a larger visual stage, with a dedicated mobile composition, calmer motion, and clearer controls. Calendar, Library, and space setup use simpler copy and more open layouts with fewer dividers.
 - Orbit now has learning spaces for classes, skills, and personal interests, with a calm shared navigation, a mobile menu, and three ways to begin from an empty account. Home keeps one next action in focus and uses Orbit’s existing environment and companion artwork.
 - A lightweight Calendar and Home preview gather dated work from learning materials, keeping unclear dates separate for review. Materials can be added directly to a chosen space, with visible upload progress and retry feedback.
