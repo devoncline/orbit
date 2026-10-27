@@ -4,6 +4,9 @@
 
 ### Improvements
 
+- Orbit now has learning spaces for classes, skills, and personal interests, with a calm shared navigation, a mobile menu, and three ways to begin from an empty account. Home keeps one next action in focus and uses Orbit’s existing environment and companion artwork.
+- A lightweight Calendar and Home preview gather dated work from learning materials, keeping unclear dates separate for review. Materials can be added directly to a chosen space, with visible upload progress and retry feedback.
+- Study now has a quieter environment, clear Learn/Practice progress, and a way to return Home and resume the current session. Spaces and progress still last only until refresh.
 - Orbit can now remember useful connections, successful activities, and tentative misconceptions during a study session, then reuse relevant examples in later teaching and practice. These memories stay within the current session and do not change mastery.
 - Learn now offers "Let me try it": a short, practical activity based on the current concept and conversation. Learners can share what they tried, get focused feedback, and keep talking or choose "Quiz me". Activities stay in the current session and do not change mastery.
 - Learners can now ask questions or share connections during a lesson and receive short, contextual replies from Orbit. The lesson shortcuts and "Quiz me" remain available, with conversation kept only for the current session.
@@ -17,6 +20,8 @@
 
 ### Manual test checklist
 
+- Start with no spaces and try the class, curiosity, and material entry points. Add one space, then several (including a long name); verify Home stays compact and the full list remains accessible in navigation and Library. Check the mobile menu, Escape, keyboard focus, and reduced motion.
+- Add a PDF to a chosen space and check its material list and any extracted dates in Calendar. Check a failed upload and retry, ambiguous dates, and a Home preview with more than three upcoming items. Leave Study for Home or Calendar and resume; verify the current lesson, conversation, activity, quiz, and mastery remain intact.
 - Explain a useful analogy or complete an activity, continue past several conversation turns, then request another explanation, example, activity, or quiz. Check that Orbit can refer naturally to relevant earlier work without repeating it every time or bringing in unrelated topics. Try an incorrect quiz answer and its adapted follow-up; verify mastery and Continue still work. Start a fresh session or refresh to check that session memories are cleared and no memory panel or internal labels appear.
 - During Learn, try "Let me try it", submit a response, revise it, and ask about the result in conversation. Check that feedback stays concise, mastery stays unchanged, and a new activity replaces the previous one. Try failed generation and feedback requests, retry without losing your response, and choose "Quiz me" before an activity, after feedback, and while an activity request is pending. Check the response input on mobile and with a keyboard.
 - During Learn, ask a question, share a connection, and send several follow-ups; check that replies stay concise and on topic. Try a failed send and retry, both lesson shortcuts, and "Quiz me" while a reply is pending; confirm the existing quiz, follow-up, and mastery flow still works. Check input usability on mobile and with a keyboard.

@@ -3,19 +3,16 @@ export default function CourseDetails({ course }) {
     <section>
       <h2>{course.name}</h2>
 
-      <h3>Syllabus</h3>
-
-      {course.syllabus ? (
+      {course.syllabus && (
         <>
-          <p>Course: {course.syllabus.courseName}</p>
-          <p>Instructor: {course.syllabus.instructor}</p>
-          <p>Semester: {course.syllabus.semester}</p>
+          <h3>Syllabus</h3>
+          {course.syllabus.courseName && <p>Course: {course.syllabus.courseName}</p>}
+          {course.syllabus.instructor && <p>Instructor: {course.syllabus.instructor}</p>}
+          {course.syllabus.semester && <p>Semester: {course.syllabus.semester}</p>}
         </>
-      ) : (
-        <p>No syllabus information yet.</p>
       )}
 
-      <h3>Course Files</h3>
+      <h3>Learning material</h3>
 
       {course.files?.length > 0 ? (
         course.files.map((file) => (
@@ -25,7 +22,7 @@ export default function CourseDetails({ course }) {
           </div>
         ))
       ) : (
-        <p>No course files yet.</p>
+        <p>No material yet. You can start with an idea or add a PDF.</p>
       )}
     </section>
   )

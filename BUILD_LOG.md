@@ -537,6 +537,16 @@ The goal is for Orbit to move with the learner instead of waiting passively for 
 
 ---
 
+## October 27, 2026 — Learning Spaces & Product Shell
+
+- Re-anchored the app in the existing nebula, brand, and companion assets. Added shared visual tokens, restrained desktop navigation, a scrollable learning-space list, a native mobile drawer, and a quieter Study frame with Learn/Practice progress.
+- Replaced seeded demo courses with intentional first-use paths for a class, personal-interest topic, or PDF material. Learning spaces continue using the existing in-memory course shape; Home shows one next action and at most two alternatives. The interface explains that refresh clears spaces and progress.
+- Added Library and a lightweight Calendar using existing uploaded `upcomingWork`. Complete ISO dates are sorted locally; ambiguous dates remain visible for review instead of becoming invented deadlines. Home previews at most three upcoming items. Uploads now target one selected space, retain its name, and expose pending/error/retry states.
+- Kept Study mounted while visiting other destinations so the current lesson, conversation, activity, quiz, and session anchors can resume. Learning service/API contracts and topic-mastery fallbacks are unchanged. No dependencies, database, migrations, scheduling engine, or permanent learner memory were added.
+- Added seven shell/calendar rendering and date checks. Production build, focused lint, all 63 tests, and diff checks pass. Full-project lint still reports three existing errors in unchanged course analysis/recommendation APIs. Browser review covers desktop first use, single-space Home and Study at a narrow viewport, mobile drawer navigation, live lesson/quiz generation, adapted feedback, follow-up mastery changing from 40% to 70%, and resuming the same quiz after visiting Home. PDF upload, full conversation/activity interaction, and physical-device checks remain manual; the existing mocked tests cover the unchanged learning services.
+
+---
+
 # Next
 
 The next major development steps are:

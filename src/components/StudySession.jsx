@@ -252,17 +252,16 @@ export default function StudySession({
     }
 
     return (
-        <section>
-            <h2>{course.name} Session</h2>
-            <p>{course.nextTask}</p>
-
-            <p>Mastery: {mastery}%</p>
-
-            {course.importantTopics?.length > 0 && (
-                <p>
-                    Focus topics: {course.importantTopics.join(', ')}
-                </p>
-            )}
+        <section className="study-session">
+            <header className="study-context">
+                <p className="orbit-eyebrow">{course.name}</p>
+                <h1>{stage === 'learn' ? lesson?.topic || 'Let’s explore an idea.' : studyQuestion?.topic || 'Put it into practice.'}</h1>
+                <p className="study-objective">{course.nextTask}</p>
+                <ol className="study-stages" aria-label="Session progress">
+                    <li aria-current={stage === 'learn' ? 'step' : undefined}>01 <span>Learn & try</span></li>
+                    <li aria-current={stage === 'quiz' ? 'step' : undefined}>02 <span>Practice{stage === 'quiz' ? ` · Question ${questionNumber}` : ''}</span></li>
+                </ol>
+            </header>
 
             {stage === 'learn' && (
                 <div className="study-lesson">
@@ -315,7 +314,7 @@ export default function StudySession({
                             >
                                 Let me try it
                             </button>
-                            <button
+                            <button className="study-primary-action"
                                 disabled={Boolean(loadingLesson) || loadingQuestion}
                                 onClick={() => loadQuestion(lesson)}
                             >
@@ -434,13 +433,13 @@ export default function StudySession({
             )}
 
             {stage === 'quiz' && (
-                <>
+                <div className="study-quiz">
                     {studyQuestion && (
                         <p>{studyQuestion.question}</p>
                     )}
 
                     {studyQuestion?.answers?.map((answer) => (
-                        <button
+                        <button className="study-answer"
                             key={answer.text}
                             onClick={async () => {
                                 if (answer.correct) {
@@ -492,7 +491,7 @@ export default function StudySession({
                     )}
 
                     {answerResult === 'correct' && (
-                        <button onClick={loadNextQuestion}>
+                        <button className="study-primary-action" onClick={loadNextQuestion}>
                             Continue
                         </button>
                     )}
@@ -506,7 +505,7 @@ export default function StudySession({
                     )}
 
                     {showAdaptedLesson && evaluation && (
-                        <div>
+                        <div className="study-adapted">
                             <h3>Orbit changed the approach</h3>
 
                             <p>{evaluation.adaptedExplanation}</p>
@@ -516,7 +515,7 @@ export default function StudySession({
                             <p>{evaluation.followUpQuestion}</p>
 
                             {evaluation.followUpAnswers.map((answer) => (
-                                <button
+                                <button className="study-answer"
                                     key={answer.text}
                                     onClick={() => {
                                         rememberAnchor(anchorAfterFollowUp(evaluation.anchor, answer.correct))
@@ -548,7 +547,7 @@ export default function StudySession({
                             )}
 
                             {followUpResult === 'correct' && (
-                                <button onClick={loadNextQuestion}>
+                                <button className="study-primary-action" onClick={loadNextQuestion}>
                                     Continue
                                 </button>
                             )}
@@ -560,8 +559,9 @@ export default function StudySession({
                             )}
                         </div>
                     )}
-                </>
+                </div>
             )}
+            <p className="study-mastery">Current mastery in this space · {mastery}%</p>
         </section>
     )
 }
