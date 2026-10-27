@@ -10,6 +10,7 @@ export default async function handler(req, res) {
       importantTopics,
       upcomingWork,
       mastery,
+      topicMastery,
     } = req.body
 
     const response = await fetch('https://api.meta.ai/v1/responses', {
@@ -31,10 +32,18 @@ Recommended task: ${nextTask}
 Important topics: ${importantTopics?.join(', ') || 'Unknown'}
 Upcoming work: ${JSON.stringify(upcomingWork || [])}
 Current mastery: ${mastery}%
+Topic mastery: ${JSON.stringify(topicMastery || {})}
+
+Choose ONE relevant topic for this question.
+
+Prefer topics with lower mastery when they are relevant to the student’s upcoming work.
+
+If topic mastery is unavailable, choose the most relevant topic from the course context.
 
 Return ONLY valid JSON in this exact shape:
 
 {
+  "topic": "",
   "question": "",
   "answers": [
     {

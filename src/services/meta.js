@@ -32,6 +32,7 @@ export async function generateStudyQuestion(course, mastery) {
             importantTopics: course.importantTopics,
             upcomingWork: course.upcomingWork,
             mastery: mastery,
+            topicMastery: course.mastery?.topics || {},
         }),
     })
 
