@@ -1,115 +1,116 @@
 # Orbit Build Log
 
-This file is a chronological record of what I built during the Meta Global AI Developer Hackathon, why I built it, and what I learned along the way.
+This document records the major milestones I completed while building Orbit for the Meta Global AI Developer Hackathon.
+
+Orbit is an adaptive learning companion powered by Meta Muse. The goal is not to create a traditional education dashboard or a basic chatbot. Orbit is designed to understand what a student is learning, decide what they should work on next, teach and quiz them, evaluate their performance, and adapt based on what they understand.
+
+The core learning loop is:
+
+**Learn → Quiz → Evaluate → Adapt → Continue**
 
 ---
 
 ## October 26, 2026
 
-### Project Setup
+### Project Foundation
 
 **Built**
 - Created the public `orbit` GitHub repository.
-- Cloned the repository locally using GitHub Desktop.
+- Cloned the project locally using GitHub Desktop.
 - Opened the project in VS Code.
-- Initialized a React application with Vite.
+- Initialized a React application using Vite.
 - Selected JavaScript and ESLint.
-- Installed npm dependencies.
-- Started the Vite development server at `localhost:5173`.
+- Installed the project's npm dependencies.
+- Started the local Vite development server.
+- Removed the default Vite starter interface.
+- Created the first Orbit React interface.
 
 **Learned**
-- React is being used to build Orbit's interface with reusable components.
+- React is used to build Orbit's interface through reusable components.
 - Vite creates and runs the development environment.
 - npm installs and manages project dependencies.
-- `node_modules` contains installed packages and normally should not be edited manually.
+- `node_modules` stores installed packages.
 - ESLint checks JavaScript and React code for potential problems.
-- `localhost` means the application is currently running only on my computer.
+- `main.jsx` starts the React application.
+- `App.jsx` contains the main application component.
+- JSX allows JavaScript components to describe what should appear in the browser.
 
 **Why it matters**
 
-This created the technical foundation for Orbit before adding any AI functionality.
-
-**Commit**
-
-`Create first Orbit UI`
+This established the technical foundation for Orbit before introducing AI behavior.
 
 ---
 
-### First Orbit UI
+## Adaptive Learning Prototype
 
 **Built**
-- Removed the default Vite starter interface.
-- Replaced it with the first Orbit-specific React screen.
-- Added the Orbit name, learning loop, and initial product description.
-- Added an initial multi-course view with Biology, Algebra, and History.
-- Added a recommended course and study-session entry point.
-
-**Learned**
-- `main.jsx` starts the React application and renders the `App` component.
-- `App.jsx` contains the main React component.
-- A React component can be a JavaScript function.
-- The function returns JSX describing what should appear in the browser.
-- React state allows the interface to change without reloading the page.
-- Props allow data and functions to be passed between components.
-
-**Why it matters**
-
-This created the first working version of Orbit's learning workflow instead of a static mockup.
-
----
-
-### Adaptive Study Session Prototype
-
-**Built**
-- Created a separate `StudySession` React component.
-- Added an initial Learn → Quiz → Evaluate → Adapt flow.
-- Added mastery tracking.
+- Created a separate `StudySession` component.
+- Built the first version of Orbit's learning loop.
+- Added multiple-choice questions.
 - Added different behavior for correct and incorrect answers.
+- Added mastery tracking.
 - Added a simpler follow-up question after an incorrect answer.
+- Added the ability to continue into Question 2, Question 3, and additional questions.
+
+The first prototype intentionally used hardcoded questions and responses so I could prove the interaction model before adding AI.
 
 **Learned**
-- `useState` stores information that can change while the application is running.
-- Updating state causes React to re-render the interface.
-- Event handlers can update multiple pieces of state based on a student's answer.
-- Components can receive state and setter functions through props.
+- `useState` stores values that can change while the application is running.
+- Updating React state causes the interface to re-render.
+- Props can pass information and functions between components.
+- Event handlers can change several pieces of state after a user action.
+- Breaking the study experience into its own component keeps `App.jsx` easier to manage.
 
 **Why it matters**
 
-This proved the adaptive learning interaction before adding AI. The first version was intentionally hardcoded so I could make sure the product logic worked before introducing model-generated behavior.
+This proved the adaptive study flow before adding model-generated behavior.
 
 ---
 
-### Course and Syllabus Context
+## Course Context and Materials
 
 **Built**
-- Added the ability to create courses.
+- Added an initial multi-course structure.
+- Added the ability to create new courses.
 - Added course detail information.
 - Added course material uploads.
-- Added PDF-only course material support.
-- Added syllabus fields including course name, instructor, and semester.
-- Added important topics and upcoming work to the course data model.
+- Added PDF syllabus support.
+- Added syllabus information including:
+  - course name
+  - instructor
+  - semester
+- Added support for:
+  - important course topics
+  - upcoming assignments
+  - quizzes and tests
+  - recommended next actions
+- Added safer handling for courses that do not yet have syllabus or file data.
 
 **Learned**
-- Browser file inputs provide a JavaScript `File` object.
+- Browser file inputs return JavaScript `File` objects.
 - Files can be converted to Base64 using `FileReader`.
-- React state can be updated by mapping over an existing array and replacing only the course that changed.
-- Course files are useful as evidence for Orbit's decisions rather than simply acting as stored documents.
+- React arrays can be updated by mapping over existing state and replacing only the item that changed.
+- Optional chaining can prevent crashes when data has not been created yet.
+- Different courses may contain different amounts of information, so the application needs to handle missing data safely.
 
 **Why it matters**
 
-Orbit needs real context about what a student is responsible for before it can make useful learning decisions. Course files are inputs to the learning agent, not the main product.
+Orbit needs real context about what the student is responsible for before it can make useful learning decisions.
+
+Course files are not meant to be the main product. They provide evidence Orbit can use when deciding what the student should do next.
 
 ---
 
-### Secure Meta Muse Connection
+## Secure Meta Muse Connection
 
 **Built**
 - Deployed Orbit to Vercel.
 - Added Vercel serverless API routes.
-- Stored the Meta Model API key securely as a Vercel environment variable.
-- Connected the frontend to the backend without exposing the API key in browser code.
-- Successfully sent requests from Orbit to Meta Muse Spark 1.3.
-- Confirmed the deployed application could receive real Muse responses.
+- Stored the Meta Model API key as a Vercel environment variable.
+- Connected the React frontend to server-side API routes.
+- Connected the backend to Meta Muse Spark 1.3.
+- Confirmed that the deployed application could successfully receive Muse responses.
+- Kept the Meta API key out of browser code.
 
 **Learned**
 - How to structure a frontend-to-backend AI request securely in a deployed React application.
@@ -119,157 +120,386 @@ Orbit needs real context about what a student is responsible for before it can m
 
 **Why it matters**
 
-This created the secure AI architecture Orbit now uses:
+Orbit's AI architecture now follows this flow:
 
-`React frontend → Vercel serverless API → Meta Muse → Orbit`
+**React frontend → Vercel serverless API → Meta Muse → Orbit**
 
 The browser never receives the Meta API key.
 
 ---
 
-### AI Syllabus Analysis
+## AI Syllabus Analysis
 
 **Built**
-- Added an `/api/analyze-course` endpoint.
+- Added `/api/analyze-course`.
 - Sent uploaded syllabus PDFs to Meta Muse.
-- Asked Muse to return structured JSON instead of free-form text.
+- Asked Muse to return structured JSON.
 - Extracted:
   - course name
   - instructor
   - semester
   - important topics
-  - upcoming assignments and quizzes
-  - a recommended next learning action
+  - upcoming work
+  - recommended next learning action
 - Parsed Muse's response on the backend.
-- Updated Orbit's React course state using the extracted information.
+- Used the analysis to update Orbit's course state.
+- Added logic to match an analyzed syllabus to the correct existing course instead of attaching it to whichever course Orbit currently recommends.
 
 **Test**
 
-Uploaded a fake Biology 101 syllabus.
+I uploaded a test Biology 101 syllabus.
 
 Orbit successfully identified:
 - Dr. Maya Carter
 - Fall 2026
 - Mendelian genetics
 - genotype vs. phenotype
-- Punnett squares
 - dominant and recessive alleles
-- a Genetics Quiz on October 28, 2026
+- homozygous and heterozygous genotypes
+- Punnett squares
+- probability
+- Genetics Quiz on October 28, 2026
 
-Orbit then recommended reviewing the Genetics Prep Worksheet and practicing Punnett-square problems.
+Orbit also recommended reviewing the Genetics Prep Worksheet and practicing Punnett-square problems before the quiz.
 
 **Learned**
-- A model response can contain reasoning and message objects in addition to the actual generated text.
-- The useful `output_text` can be extracted and parsed with `JSON.parse()`.
-- Structured AI output is much easier for application code to use than plain conversational text.
+- Model responses can contain multiple objects in addition to the generated text.
+- The useful `output_text` can be extracted and parsed using `JSON.parse()`.
+- Structured AI output is much easier for application code to use than conversational text.
+- The course Orbit recommends studying and the course that owns an uploaded document are separate concepts.
 
 **Why it matters**
 
-Orbit can now turn an actual student document into learning context and use that context to decide what the student should work on next.
+Orbit can now turn a real student document into structured learning context.
 
 ---
 
-### AI-Generated Study Questions
+## AI-Generated Study Questions
 
 **Built**
 - Added `/api/generate-study-question`.
-- Added a frontend `generateStudyQuestion()` service.
+- Added a `generateStudyQuestion()` frontend service.
 - Used `useEffect` to generate a question when a study session begins.
-- Sent the course recommendation, important topics, upcoming work, and current mastery to Muse.
-- Replaced the hardcoded study question with a Muse-generated question.
-- Replaced hardcoded answers with model-generated answer choices.
-- Used `.map()` to turn Muse's answer array into React buttons.
-- Used each answer's `correct` value to determine what happens after the student clicks it.
+- Sent Muse:
+  - course information
+  - recommended task
+  - important topics
+  - upcoming work
+  - current mastery
+- Replaced hardcoded study questions with Muse-generated questions.
+- Replaced hardcoded answer choices with model-generated choices.
+- Used `.map()` to render the generated answers as React buttons.
+- Added loading states while Orbit generates a question.
+- Added a Continue button that generates additional questions during the same session.
 
 **Test**
 
-After uploading the Biology syllabus, Orbit generated genetics questions based on the extracted course material instead of the original hardcoded photosynthesis question.
+After analyzing the Biology syllabus, Orbit stopped using the original hardcoded photosynthesis material and began generating genetics questions based on the uploaded syllabus.
 
-One generated question asked about a Punnett-square cross between pea plants and tested the probability of a phenotype.
+One generated question tested inheritance probability using a Punnett-square scenario.
 
 **Learned**
-- `useEffect` can run an asynchronous setup action when a component first appears.
-- `.map()` can turn an array of model-generated data into UI elements.
-- Optional chaining such as `studyQuestion?.answers?.map()` prevents the app from trying to use data before it has loaded.
-- Loading states make asynchronous model calls understandable to the user.
+- `useEffect` can trigger an asynchronous setup action when a component first appears.
+- `.map()` can turn model-generated arrays into interface elements.
+- Optional chaining prevents the application from trying to use data before it exists.
+- Loading states make AI requests clearer to the user.
+- AI-generated learning content can remain grounded in course context instead of becoming a general chatbot conversation.
 
 **Why it matters**
 
-The study experience is no longer a scripted quiz. Orbit can generate a learning interaction based on the student's actual course context.
+The study session is no longer scripted.
+
+Orbit can generate new learning interactions based on what the student is actually studying.
 
 ---
 
-### AI Evaluation and Adaptation
+## AI Evaluation and Adaptation
 
 **Built**
 - Added `/api/evaluate-study-answer`.
 - Added an `evaluateStudyAnswer()` frontend service.
 - Sent Muse:
   - the original question
-  - the student's selected answer
+  - the selected answer
   - the correct answer
-  - the relevant course topics
-  - the student's current mastery
-- Generated personalized feedback after a wrong answer.
-- Generated a simpler explanation based on the student's mistake.
+  - relevant course topics
+  - current mastery
+- Generated personalized feedback after incorrect answers.
+- Asked Muse to identify the likely misconception behind the wrong answer.
+- Generated a simpler explanation based on that mistake.
 - Generated an easier follow-up question testing the same concept.
-- Generated new follow-up answer choices.
+- Generated follow-up answer choices dynamically.
 - Updated mastery based on student performance.
-- Replaced the hardcoded correct-answer explanation with Muse's generated explanation.
+- Used Muse's generated explanation after correct answers.
 
 **Test**
 
-Orbit asked:
+Orbit asked a genetics question involving a heterozygous tall pea plant and a homozygous short plant.
 
-A heterozygous tall pea plant `(Tt)` is crossed with a homozygous short plant `(tt)`. What is the probability of a tall phenotype?
+I intentionally selected an incorrect `100%` answer.
 
-After selecting the incorrect `100%` answer, Orbit identified the misconception that a dominant allele does not automatically appear in 100% of offspring.
+Orbit recognized that the likely misconception was assuming that a dominant allele automatically appears in every offspring.
 
-Orbit then changed its teaching approach and explained the cross as a simple 50/50 allele "coin flip."
+It changed the explanation and described the inheritance pattern as a simpler 50/50 allele choice.
 
-Finally, it generated an easier follow-up question asking what phenotype a plant with genotype `tt` would have.
+Orbit then generated an easier follow-up question about the phenotype of a plant with genotype `tt`.
 
 **Learned**
-- An `async` click handler can wait for an AI response before updating the next part of the interface.
-- AI can be used for more than content generation; it can evaluate a student's response and choose a different teaching strategy.
-- The student's wrong answer provides useful evidence about what they may misunderstand.
-- An adaptive system should change what happens next instead of simply displaying whether an answer was right or wrong.
+- An asynchronous click handler can wait for an AI response before updating the next part of the interface.
+- A wrong answer contains useful information about what a student may misunderstand.
+- AI can do more than generate content; it can evaluate performance and choose a different teaching strategy.
+- Adaptive learning should change what happens next instead of only saying whether an answer was correct.
 
 **Why it matters**
 
-This is the first fully AI-driven version of Orbit's core learning loop:
+This created the first fully AI-driven version of Orbit's main learning loop:
 
 **Learn → Quiz → Evaluate → Adapt → Continue**
 
-Orbit is no longer just generating educational content. It is using student performance to decide how the learning experience should change.
+Orbit is not only generating educational content. It is changing its behavior based on student performance.
 
 ---
 
-## Current System
+## Multi-Course AI Prioritization
+
+**Built**
+- Added `/api/recommend-course`.
+- Added a `recommendCourse()` frontend service.
+- Sent all available courses to Muse.
+- Asked Muse to compare:
+  - deadlines
+  - upcoming quizzes and tests
+  - homework urgency
+  - recommended tasks
+  - available course context
+- Asked Muse to select one course and explain why it should be prioritized.
+- Added loading behavior while Orbit decides what the student should work on.
+- Re-ran the recommendation whenever course state changes.
+
+**Test**
+
+Orbit compared:
+- Biology — quiz tomorrow
+- Algebra — homework due tonight
+- History — test Friday
+
+Muse selected Algebra because the homework deadline was the most immediate.
+
+After additional Biology syllabus information became available, Orbit was still able to compare all courses instead of automatically prioritizing the newest uploaded material.
+
+**Learned**
+- AI becomes more agentic when it compares several possible actions and chooses between them.
+- The model can use application state as decision-making context.
+- A recommendation system should respond to changing course information rather than rely on a fixed course order.
+
+**Why it matters**
+
+Orbit can now decide what the student should work on across multiple classes instead of only responding inside one course.
+
+---
+
+## Course-Specific Mastery
+
+**Built**
+- Replaced one global mastery value with mastery stored inside each course.
+- Added a default mastery score when new courses are created.
+- Added `updateCourseMastery()` so only the course being studied changes.
+- Passed the recommended course's mastery into `StudySession`.
+- Verified that progress in one subject does not change the mastery of other subjects.
+
+**Test**
+
+The starting state was:
+
+- Biology — 40%
+- Algebra — 40%
+- History — 40%
+
+After correctly answering a Biology question:
+
+- Biology — 80%
+- Algebra — 40%
+- History — 40%
+
+**Learned**
+- Student progress needs to belong to the course where the learning happened.
+- Shared global state would incorrectly make progress in one class affect every other class.
+- Updating one object inside an array can preserve all unrelated course data.
+
+**Why it matters**
+
+Orbit now has separate learning progress for each course.
+
+This allows future recommendations to consider both urgency and how well the student understands each subject.
+
+---
+
+## Topic-Level Mastery Structure
+
+**Built**
+- Expanded each course's mastery from one number into a nested structure.
+- Added:
+  - overall course mastery
+  - individual topic mastery
+- Added initial Biology topic mastery values for:
+  - Mendelian genetics
+  - genotype vs. phenotype
+  - dominant and recessive alleles
+  - homozygous and heterozygous genotypes
+  - Punnett squares
+  - probability
+- Updated new-course creation to use the same mastery structure.
+- Updated course mastery changes so overall mastery can change without deleting topic mastery.
+
+The current structure looks like:
+
+```js
+mastery: {
+  overall: 40,
+  topics: {
+    'Mendelian genetics': 40,
+    'Punnett squares': 40,
+  },
+}
+```
+
+**Learned**
+- Nested objects can represent more detailed student progress.
+- Object spread syntax can update one part of a nested object while preserving the rest.
+- Overall course mastery is useful as a summary, but individual topic scores provide more useful information for deciding what should be taught next.
+
+**Why it matters**
+
+Orbit can eventually understand that a student may be strong in one part of a class and weak in another.
+
+For example:
+
+- Biology overall — 68%
+- Punnett squares — 85%
+- Mendelian genetics — 50%
+- genotype vs. phenotype — 70%
+
+That creates a much stronger foundation for adaptive learning than treating an entire class as one score.
+
+---
+
+# Current System
 
 Orbit can currently:
 
-1. Accept a real course syllabus as a PDF.
-2. Use Meta Muse to understand the course.
-3. Identify important topics and upcoming work.
-4. Recommend what the student should work on.
-5. Generate a study question from that context.
-6. Evaluate the student's answer.
-7. Update mastery.
-8. Identify a likely conceptual gap after an incorrect answer.
-9. Explain the concept differently.
-10. Generate an easier follow-up question to test whether the new explanation worked.
+1. Support multiple courses.
+2. Create new courses.
+3. Accept course materials as PDF files.
+4. Send syllabus PDFs to Meta Muse.
+5. Extract course information and important topics.
+6. Identify upcoming assignments, quizzes, and tests.
+7. Match uploaded course material to the correct course.
+8. Ask Muse to compare multiple courses.
+9. Recommend which course the student should work on next.
+10. Explain why that course should be prioritized.
+11. Start an AI-generated study session.
+12. Generate study questions from real course context.
+13. Generate multiple-choice answers.
+14. Evaluate student responses.
+15. Identify likely misconceptions after incorrect answers.
+16. Change the teaching explanation.
+17. Generate easier follow-up questions.
+18. Continue into additional study questions.
+19. Track mastery separately for each course.
+20. Store overall mastery and topic-level mastery inside each course.
+21. Reevaluate course recommendations when course state changes.
 
-The current prototype uses React, Vite, JavaScript, Vercel serverless functions, and Meta Muse Spark 1.3.
+The current prototype uses:
+
+- React
+- Vite
+- JavaScript
+- Vercel
+- Vercel serverless functions
+- Meta Muse Spark 1.3
 
 ---
 
-## Next
+# Product Direction
 
-- Allow a study session to continue into Question 2, Question 3, and beyond.
-- Use updated mastery when deciding the difficulty and focus of the next question.
-- Decide what should happen when a student misses the adapted follow-up question.
-- Improve the multi-course decision logic so Orbit can choose what the student should study across all courses.
-- Replace the prototype interface with the final Orbit visual system and companion.
-- Add persistence so course context and learning progress survive page refreshes.
-- Prepare the final hackathon demo around Orbit's decision-making and adaptive behavior rather than presenting it as a traditional education dashboard.
+Orbit is being designed around two possible learning situations.
+
+## Structured Learning
+
+A student already has a class.
+
+Orbit can use:
+- syllabi
+- assignments
+- quizzes
+- exams
+- deadlines
+- uploaded materials
+- course mastery
+- topic mastery
+
+to decide what the student should learn next.
+
+## Self-Directed Learning
+
+A user wants to learn a subject without having a formal course.
+
+Examples could include:
+- quantum physics
+- music theory
+- programming
+- astronomy
+- history
+
+Instead of pretending the user can reach a fixed percentage of all knowledge in a huge subject, Orbit could create a learning path and track progress through the concepts included in that path.
+
+The same adaptive engine could then:
+
+**teach → quiz → evaluate → adapt → continue**
+
+---
+
+# Long-Term Orbit Goal
+
+The long-term idea is similar to a dynamic version of Duolingo that can work for almost any subject.
+
+Orbit should not require the user to constantly decide what to study.
+
+Instead, it should maintain an evolving understanding of:
+
+- what the user is learning
+- what they understand
+- what they struggle with
+- what deadlines are approaching
+- what they have already practiced
+- what they should do next
+
+Orbit should eventually be able to proactively check in with useful actions such as:
+
+- reminding the student about an upcoming test
+- asking whether they want help with an assignment
+- giving a short pop quiz
+- recommending a weak topic
+- changing the study plan after mastery improves
+- skipping material the student already understands
+
+The goal is for Orbit to move with the learner instead of waiting passively for prompts.
+
+---
+
+# Next
+
+The next major development steps are:
+
+- Connect generated study questions to specific topic mastery values.
+- Update individual topic mastery based on student performance.
+- Use both deadline urgency and mastery when Muse chooses what the student should study next.
+- Let overall course mastery reflect topic-level performance more intelligently.
+- Replace the current prototype interface with the final Orbit visual system.
+- Design the main recommendation experience around the learning agent rather than a traditional education dashboard.
+- Add the Orbit companion character.
+- Make study sessions visually focused and remove prototype/debug information during learning.
+- Add persistence so courses, files, mastery, and learning progress survive page refreshes.
+- Explore proactive Muse-powered check-ins, reminders, and pop quizzes.
+- Add a future self-directed learning mode for subjects without a formal syllabus.
+- Prepare the final hackathon demo around Orbit's decision-making and adaptive behavior.
