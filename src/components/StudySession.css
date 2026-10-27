@@ -1,0 +1,24 @@
+.study-lesson {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 16px;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.study-lesson p {
+  white-space: pre-wrap;
+  margin-block: 12px;
+}
+
+.study-lesson-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.study-lesson button {
+  min-height: 44px;
+  padding: 8px 12px;
+}

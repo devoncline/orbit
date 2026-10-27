@@ -497,6 +497,16 @@ The goal is for Orbit to move with the learner instead of waiting passively for 
 
 ---
 
+## October 27, 2026 — Learn Before Quiz
+
+- Added an initial micro-lesson using the existing course context and topic mastery to guide Muse's topic selection.
+- Added "I lost you" for a different teaching approach and "Give me an example" for one concrete example, keeping each response focused on a single concept.
+- Connected "Quiz me" to the existing question workflow with the lesson context; later questions, evaluation, adaptive follow-ups, and mastery updates continue as before.
+- Kept the active course stable while recommendations refresh, and added recoverable lesson/question errors.
+- This is the first Learn stage only. Persistence, learning-style memory, learning paths, and a Study Mode redesign remain future work.
+
+---
+
 # Next
 
 The next major development steps are:

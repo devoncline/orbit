@@ -75,6 +75,9 @@ export default function App() {
       (course) => course.name === recommendation?.courseName
     ) || courses[0]
   const [sessionStarted, setSessionStarted] = useState(false)
+  const [sessionCourseName, setSessionCourseName] = useState(null)
+  const sessionCourse =
+    courses.find((course) => course.name === sessionCourseName) || recommendedCourse
   const [answerResult, setAnswerResult] = useState('')
   const [showAdaptedLesson, setShowAdaptedLesson] = useState(false)
   const [followUpResult, setFollowUpResult] = useState('')
@@ -245,7 +248,10 @@ export default function App() {
         recommendedCourse={recommendedCourse}
         recommendation={recommendation}
         loadingRecommendation={loadingRecommendation}
-        onContinue={() => setSessionStarted(true)}
+        onContinue={() => {
+          setSessionCourseName(recommendedCourse.name)
+          setSessionStarted(true)
+        }}
         onAddCourse={addCourse}
         onAddFile={addCourseFile}
       />
@@ -259,23 +265,24 @@ export default function App() {
       <p>Your adaptive learning companion.</p>
 
       <StudySession
-        course={recommendedCourse}
+        key={sessionCourse.name}
+        course={sessionCourse}
         answerResult={answerResult}
         setAnswerResult={setAnswerResult}
         showAdaptedLesson={showAdaptedLesson}
         setShowAdaptedLesson={setShowAdaptedLesson}
         followUpResult={followUpResult}
         setFollowUpResult={setFollowUpResult}
-        mastery={recommendedCourse.mastery?.overall ?? 40}
+        mastery={sessionCourse.mastery?.overall ?? 40}
         setMastery={(newMastery) =>
           updateCourseMastery(
-            recommendedCourse.name,
+            sessionCourse.name,
             newMastery
           )
         }
         updateTopicMastery={(topicName, newMastery) =>
           updateTopicMastery(
-            recommendedCourse.name,
+            sessionCourse.name,
             topicName,
             newMastery
           )
@@ -297,7 +304,7 @@ export default function App() {
 
       <AddCourseFile onAddFile={addCourseFile} />
 
-      <CourseDetails course={recommendedCourse} />
+      <CourseDetails course={sessionCourse} />
     </div>
   )
 }

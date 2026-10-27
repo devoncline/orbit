@@ -20,7 +20,45 @@ export async function analyzeCourseFile(file) {
     return response.json()
 }
 
-export async function generateStudyQuestion(course, mastery) {
+export function generateStudyLesson(course, mastery) {
+    return requestStudyLesson(course, mastery, 'lesson')
+}
+
+export function explainStudyLessonDifferently(course, lesson, example = '') {
+    return requestStudyLesson(course, course.mastery?.overall ?? 40, 'simplify', lesson, example)
+}
+
+export function generateStudyExample(course, lesson, example = '') {
+    return requestStudyLesson(course, course.mastery?.overall ?? 40, 'example', lesson, example)
+}
+
+async function requestStudyLesson(course, mastery, action, lesson, example) {
+    const response = await fetch('/api/generate-study-lesson', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            courseName: course.name,
+            nextTask: course.nextTask,
+            importantTopics: course.importantTopics,
+            upcomingWork: course.upcomingWork,
+            mastery,
+            topicMastery: course.mastery?.topics || {},
+            action,
+            lesson,
+            example,
+        }),
+    })
+
+    if (!response.ok) {
+        throw new Error('Failed to generate study lesson')
+    }
+
+    return response.json()
+}
+
+export async function generateStudyQuestion(course, mastery, lesson) {
     const response = await fetch('/api/generate-study-question', {
         method: 'POST',
         headers: {
@@ -33,6 +71,7 @@ export async function generateStudyQuestion(course, mastery) {
             upcomingWork: course.upcomingWork,
             mastery: mastery,
             topicMastery: course.mastery?.topics || {},
+            ...(lesson ? { lesson } : {}),
         }),
     })
 

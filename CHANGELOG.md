@@ -4,6 +4,7 @@
 
 ### Improvements
 
+- Study sessions now begin with a short, topic-aware lesson. Learners can ask for a different explanation or a concrete example, then choose "Quiz me" to practice the concept before continuing through adaptive questions.
 - Home now places its learning recommendation and companion in a nebula environment, with dark text areas, soft edges, and a quieter crop on smaller screens.
 - Orbit now uses its own browser and app icons. The Home companion has a more noticeable, calm floating motion while remaining static for reduced-motion users.
 - Home now features the Orbit logo and companion artwork, with gentle floating motion that respects reduced-motion preferences and compact placement on smaller screens.
@@ -13,6 +14,8 @@
 
 ### Manual test checklist
 
+- Start a session with and without topic mastery; confirm a short lesson appears before any question. Try "I lost you" and "Give me an example" repeatedly, then "Quiz me"; verify the first question covers the lesson and correct/incorrect answers, follow-ups, and Continue still update the active course's mastery.
+- Check the lesson on a narrow screen and with keyboard navigation. Simulate a failed lesson, explanation, example, or question request; confirm retry works, existing lesson content stays visible, and actions are disabled while a request is pending.
 - Review the Home background on desktop and narrow screens; check text contrast, mascot visibility, the fade into courses, and the absence of horizontal scrolling.
 - Reload Orbit and check its browser icon and saved home-screen icon; watch a full mascot float cycle, then enable reduced motion and confirm it remains static.
 - Check the Home logo and mascot on desktop and mobile; enable reduced motion and confirm the mascot stays still while the learning action remains easy to reach.
