@@ -13,7 +13,17 @@ export default function App() {
   const [courses, setCourses] = useState([
     {
       name: 'Biology',
-      mastery: 40,
+      mastery: {
+        overall: 40,
+        topics: {
+          'Mendelian genetics': 40,
+          'genotype vs phenotype': 40,
+          'dominant/recessive alleles': 40,
+          'homozygous vs. heterozygous genotypes': 40,
+          'Punnett squares': 40,
+          probability: 40,
+        },
+      },
       nextTask: 'Review photosynthesis',
       reason: 'Quiz tomorrow and weak performance on light reactions',
 
@@ -40,12 +50,18 @@ export default function App() {
     },
     {
       name: 'Algebra',
-      mastery: 40,
+      mastery: {
+        overall: 40,
+        topics: {},
+      },
       nextTask: 'Practice quadratic equations',
     },
     {
       name: 'History',
-      mastery: 40,
+      mastery: {
+        overall: 40,
+        topics: {},
+      },
       nextTask: 'Review Industrial Revolution notes',
     },
   ])
