@@ -84,14 +84,24 @@ export default function App() {
     setCourses([...courses, newCourse])
   }
 
-  async function addFileToRecommendedCourse(file) {
+  async function addCourseFile(file) {
     const analysis = await analyzeCourseFile(file)
 
     console.log('Orbit analysis:', analysis)
 
     setCourses(
-      courses.map((course, index) => {
-        if (course.name === recommendedCourse.name) {
+      courses.map((course) => {
+        const analyzedCourseName =
+          analysis.courseName?.toLowerCase() || ''
+
+        const existingCourseName =
+          course.name?.toLowerCase() || ''
+
+        const matchesCourse =
+          analyzedCourseName.includes(existingCourseName) ||
+          existingCourseName.includes(analyzedCourseName)
+
+        if (matchesCourse) {
           return {
             ...course,
 
@@ -199,7 +209,7 @@ export default function App() {
         </div>
       ))}
 
-      <AddCourseFile onAddFile={addFileToRecommendedCourse} />
+      <AddCourseFile onAddFile={addCourseFile} />
 
       <CourseDetails course={recommendedCourse} />
     </div>
