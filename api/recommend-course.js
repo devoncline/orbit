@@ -1,10 +1,16 @@
+import process from 'node:process'
+import { inferCoursePosition } from '../src/services/coursePosition.js'
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
   try {
-    const { courses } = req.body
+    const { courses, currentDate } = req.body || {}
+    if (!Array.isArray(courses) || !courses.length || courses.length > 100 || courses.some((course) => typeof course?.name !== 'string')) {
+      return res.status(400).json({ error: 'Invalid courses' })
+    }
 
     const response = await fetch('https://api.meta.ai/v1/responses', {
       method: 'POST',
@@ -27,9 +33,15 @@ Consider:
 - upcoming quizzes, tests, and homework
 - the recommended task for each course
 - available course context
+- today's runtime date, current syllabus area, explicit learner position, and weak mastery
+
+Within a course, use this priority: explicit learner position > current dated syllabus area > upcoming work / weak topic > next useful concept.
+Learner exclusions (skip or notYet) override inferred dates. Never start old orientation material merely because it is listed first.
+Past material remains useful for weak mastery, requested review, prerequisites or test coverage. Do not claim dated coverage proves completion.
+If the timeline is uncertain, ask a concise starting-point question. Never expose confidence labels.
 
 Courses:
-${JSON.stringify(courses)}
+${JSON.stringify(courses.map((course) => ({ name: course.name, nextTask: course.nextTask, importantTopics: course.importantTopics, mastery: course.mastery, position: inferCoursePosition(course, currentDate) })))}
 
 Return ONLY valid JSON in this exact shape:
 

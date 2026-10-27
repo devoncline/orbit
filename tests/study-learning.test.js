@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+import { coursePositionRequest, localDate } from '../src/services/coursePosition.js'
 import lessonHandler from '../api/generate-study-lesson.js'
 import questionHandler from '../api/generate-study-question.js'
 import {
@@ -165,9 +166,9 @@ test('lesson services send the right action and context without changing course 
     assert.equal(options.headers.Authorization, undefined)
     return JSON.parse(options.body)
   })
-  assert.deepEqual(bodies[0], { ...courseContext, action: 'lesson' })
-  assert.deepEqual(bodies[1], { ...courseContext, action: 'simplify', lesson, example: 'An example' })
-  assert.deepEqual(bodies[2], { ...courseContext, action: 'example', lesson, example: 'An example' })
+  assert.deepEqual(bodies[0], { ...courseContext, ...coursePositionRequest(course), action: 'lesson' })
+  assert.deepEqual(bodies[1], { ...courseContext, ...coursePositionRequest(course), action: 'simplify', lesson, example: 'An example' })
+  assert.deepEqual(bodies[2], { ...courseContext, ...coursePositionRequest(course), action: 'example', lesson, example: 'An example' })
   assert.deepEqual(course, before)
 })
 
@@ -183,8 +184,8 @@ test('Quiz me adds lesson context; later question requests keep their original p
   await generateStudyQuestion(course, 50, lesson)
   await generateStudyQuestion(course, 50)
   const bodies = fetchMock.mock.calls.map(({ arguments: [, options] }) => JSON.parse(options.body))
-  assert.deepEqual(bodies[0], { ...courseContext, lesson })
-  assert.deepEqual(bodies[1], courseContext)
+  assert.deepEqual(bodies[0], { ...courseContext, ...coursePositionRequest(course), lesson })
+  assert.deepEqual(bodies[1], { ...courseContext, ...coursePositionRequest(course) })
 })
 
 test('question endpoint focuses the first quiz and preserves adaptive selection without a lesson', async (t) => {
@@ -216,7 +217,7 @@ test('existing evaluation and recommendation services retain their request contr
     mastery: 50,
   })
   assert.equal(recommendation.url, '/api/recommend-course')
-  assert.deepEqual(recommendation.body, { courses: [course] })
+  assert.deepEqual(recommendation.body, { courses: [course], currentDate: localDate() })
 })
 
 test('a focused quiz cannot silently change topics; legacy questions can still omit a topic', async (t) => {

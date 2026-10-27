@@ -1,10 +1,14 @@
+import process from 'node:process'
+import { localDate, normalizeSyllabusItems } from '../src/services/coursePosition.js'
+import { parseWorkDate } from '../src/services/upcomingWork.js'
+
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' })
     }
 
     try {
-        const { fileName, fileType, fileData } = req.body
+        const { fileName, fileData, currentDate } = req.body
 
         if (!fileData) {
             return res.status(400).json({
@@ -37,6 +41,7 @@ export default async function handler(req, res) {
 You are Orbit, an adaptive learning agent.
 
 Analyze this course document.
+Today in the learner's app: ${parseWorkDate(currentDate) ? currentDate : localDate()}.
 
 Return ONLY valid JSON in this exact shape:
 
@@ -45,10 +50,14 @@ Return ONLY valid JSON in this exact shape:
   "instructor": "",
   "semester": "",
   "importantTopics": [],
+  "syllabusItems": [
+    { "topic": "", "unit": "", "startDate": "", "endDate": "", "dateText": "" }
+  ],
   "upcomingWork": [
     {
       "title": "",
       "type": "",
+      "topic": "",
       "date": ""
     }
   ],
@@ -56,6 +65,13 @@ Return ONLY valid JSON in this exact shape:
 }
 
 Use only information found in the document.
+Extract the teaching schedule in document order, including past, current and future units.
+Use YYYY-MM-DD for full dates, or YYYY-MM for a month with an explicitly supported year.
+Infer a year ONLY from an explicit course/semester year in the document, never from today's date.
+For weeks without a dated term start or ambiguous dates, leave startDate/endDate empty and preserve the original wording in dateText.
+Keep past assignments too; upcomingWork is the complete extracted assignment list, not just future work.
+Use complete YYYY-MM-DD assignment dates only when supported; otherwise preserve the original date text.
+Choose a useful current action using today's date, not automatically the earliest topic. Treat coverage as tentative, not completed work.
 If something is unknown, use an empty string or empty array.
                 `,
                             },
@@ -81,7 +97,7 @@ If something is unknown, use an empty string or empty array.
 
         const analysis = JSON.parse(text)
 
-        return res.status(200).json(analysis)
+        return res.status(200).json({ ...analysis, syllabusItems: normalizeSyllabusItems(analysis.syllabusItems) })
     } catch (error) {
         console.error(error)
 

@@ -79,8 +79,12 @@
 .orbit-button:hover:not(:disabled) { border-color: #75819b; }
 .orbit-button-primary { background: var(--orbit-accent); color: #171327; border-color: transparent; font-weight: 600 !important; }
 .orbit-button-primary:hover:not(:disabled) { background: #cdc4ff; border-color: transparent; }
-.orbit-text-button { border: 0; padding: 6px 0; background: transparent; color: var(--orbit-muted); text-align: left; min-height: 36px; }
-.orbit-text-button:hover { color: var(--orbit-text); }
+.orbit-text-button { border: 1px solid rgb(169 179 201 / 18%); border-radius: 8px; padding: 8px 12px; background: rgb(17 27 44 / 65%); color: var(--orbit-muted); text-align: left; min-height: 44px; }
+.orbit-text-button:hover:not(:disabled) { color: var(--orbit-text); border-color: #7e779a; background: #202a40; }
+.orbit-button:active:not(:disabled), .orbit-text-button:active:not(:disabled) { filter: brightness(1.12); }
+.orbit-shell summary { cursor: pointer; padding: 10px 12px; min-height: 44px; border: 1px solid var(--orbit-border); border-radius: 8px; background: rgb(17 27 44 / 65%); }
+.orbit-shell summary:hover { background: #202a40; border-color: #7e779a; }
+.orbit-shell details[open] > summary { margin-bottom: 16px; background: #202a40; }
 .orbit-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 10px; }
 .orbit-section-heading h2 { font-size: 16px; font-weight: 500; margin: 0; }
 .orbit-section-heading button { font-size: 12px; }
@@ -104,10 +108,11 @@
 .orbit-upload input { margin-block: 20px 10px; }
 .orbit-upload input::file-selector-button { background: #252d45; color: var(--orbit-text); border: 0; border-radius: 5px; padding: 8px 12px; margin-right: 12px; cursor: pointer; }
 .space-links, .upcoming-list { list-style: none; margin: 0; padding: 0; }
-.space-links button { width: 100%; display: flex; align-items: center; gap: 18px; padding: 20px 0; text-align: left; background: none; border: 0; color: var(--orbit-text); }
+.space-links button { width: 100%; display: flex; align-items: center; gap: 18px; padding: 16px; text-align: left; background: rgb(17 27 44 / 65%); border: 1px solid var(--orbit-border); border-radius: 8px; color: var(--orbit-text); margin-block: 8px; }
 .space-links button > span:nth-child(2) { flex: 1; min-width: 0; }
 .space-links strong, .space-links small, .upcoming-list strong, .upcoming-list small { display: block; font-weight: 400; }
 .space-links small, .upcoming-list small { color: var(--orbit-muted); font-size: 12px; margin-top: 5px; }
+.space-links button:hover { background: #202a40; border-color: #7e779a; }
 .space-links button:hover strong { color: var(--orbit-accent); }
 .upcoming-list li { display: grid; grid-template-columns: 90px minmax(0, 1fr); align-items: baseline; gap: 16px; padding: 12px 0; }
 .upcoming-date { font-size: 12px; color: var(--orbit-accent); }
@@ -130,6 +135,23 @@
 .orbit-shell-focused .orbit-environment { opacity: .28; }
 .study-room-header { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 26px 0 12px; color: var(--orbit-muted); font-size: 12px; }
 .study-room { position: relative; }
+.course-position { margin-top: 20px; font-size: 13px; color: var(--orbit-muted); }
+.course-position p { margin: 0 0 8px; }
+.course-position strong { font-weight: 500; color: var(--orbit-text); }
+.course-position .orbit-form { margin-top: 12px; gap: 12px; }
+.position-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.study-threads { display: flex; align-items: start; flex-wrap: wrap; gap: 12px; padding-top: 12px; }
+.study-threads > details { flex: 1; min-width: 200px; }
+.study-threads > details > p { font-size: 13px; }
+.study-threads summary span, .study-history summary span { margin-left: 8px; color: var(--orbit-muted); }
+.thread-create { flex-basis: 100%; }
+.thread-list { list-style: none; padding: 0; margin: 12px 0; max-height: 290px; overflow-y: auto; }
+.thread-list .orbit-button { display: grid; justify-content: start; gap: 4px; width: 100%; text-align: left; margin-bottom: 8px; }
+.thread-list small, .thread-list button > span { font-size: 12px; color: var(--orbit-muted); }
+.thread-list button[aria-current] { border-color: var(--orbit-accent); background: #25243d; }
+@media (prefers-reduced-motion: no-preference) {
+  .orbit-button, .orbit-text-button, .space-links button, .home-entry-points button, .study-body button, .orbit-shell summary { transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease; }
+}
 @media (max-width: 1050px) {
   .shell-sidebar { width: 190px; padding-inline: 14px; }
   .shell-main { margin-left: 190px; padding-inline: 30px; }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import {
     generateStudyLesson,
     explainStudyLessonDifferently,
@@ -9,24 +9,38 @@ import {
     generateStudyQuestion,
     evaluateStudyAnswer,
 } from '../services/meta'
-import { MAX_STUDY_MESSAGE_LENGTH, retainStudyExchanges } from '../services/studyConversation'
+import { MAX_STUDY_MESSAGE_LENGTH } from '../services/studyConversation'
 import { rememberLearningAnchor, anchorAfterFollowUp } from '../services/studyLearningContext'
+import { applyPositionOverride, readPositionStatement } from '../services/coursePosition'
+import { selectStudyInteraction, studyThreadMetadata } from '../services/studyThreads'
+import CoursePosition from './CoursePosition'
 import OrbitStage from './OrbitStage'
 import './StudySession.css'
 
 export default function StudySession({
     course,
-    answerResult,
-    setAnswerResult,
-    showAdaptedLesson,
-    setShowAdaptedLesson,
-    followUpResult,
-    setFollowUpResult,
+    threadId,
+    active = true,
+    onThreadUpdate,
+    onPositionChange,
+    onNewThread,
+    today,
     mastery,
     setMastery,
     updateTopicMastery,
 }) {
-    const [stage, setStage] = useState('learn')
+    const [activeInteraction, setActiveInteraction] = useState('lesson')
+    const stage = activeInteraction === 'quiz' ? 'quiz' : 'learn'
+    const [answerResult, setAnswerResult] = useState('')
+    const [showAdaptedLesson, setShowAdaptedLesson] = useState(false)
+    const [followUpResult, setFollowUpResult] = useState('')
+    const [history, setHistory] = useState([])
+    const [selectedHistory, setSelectedHistory] = useState(null)
+    const [positionChanged, setPositionChanged] = useState(false)
+    const [evaluationError, setEvaluationError] = useState('')
+    const [selectedAnswer, setSelectedAnswer] = useState(null)
+    const panel = useRef(null)
+    const id = useId()
     const [lesson, setLesson] = useState(null)
     const [example, setExample] = useState('')
     const [loadingLesson, setLoadingLesson] = useState('lesson')
@@ -57,6 +71,29 @@ export default function StudySession({
         learnerResponse: activityFeedback?.learnerResponse || '',
         feedback: activityFeedback?.feedback || '',
     } : undefined
+    const busy = Boolean(loadingLesson || loadingConversation || loadingActivity || loadingQuestion || loadingEvaluation)
+
+    useEffect(() => {
+        onThreadUpdate?.(threadId, studyThreadMetadata({ lesson, activeInteraction, conversation, activity, activityFeedback, questionNumber, answerResult, followUpResult }))
+    }, [threadId, onThreadUpdate, lesson, activeInteraction, conversation, activity, activityFeedback, questionNumber, answerResult, followUpResult])
+
+    useEffect(() => {
+        if (active) panel.current?.focus({ preventScroll: false })
+    }, [active, activeInteraction])
+
+    function openInteraction(next) {
+        setSelectedHistory(null)
+        setActiveInteraction((current) => selectStudyInteraction(current, next))
+    }
+
+    function rememberInteraction(type, title, content, response = '') {
+        setHistory((current) => [...current, { type, title: title.slice(0, 80), content, response }])
+    }
+
+    function changePosition(update) {
+        onPositionChange?.(update)
+        setPositionChanged(true)
+    }
 
     useEffect(() => {
         let active = true
@@ -108,7 +145,10 @@ export default function StudySession({
         setQuestionError('')
 
         try {
-            const result = await respondToStudyMessage(course, lesson, {
+            const update = readPositionStatement(message, lesson.topic)
+            if (update) changePosition(update)
+            const requestCourse = update ? { ...course, learnerPosition: applyPositionOverride(course.learnerPosition, update) } : course
+            const result = await respondToStudyMessage(requestCourse, lesson, {
                 message,
                 history: conversation,
                 example,
@@ -119,10 +159,12 @@ export default function StudySession({
             if (controller.signal.aborted) return
 
             rememberAnchor(result.anchor)
-            setConversation((current) => retainStudyExchanges([
+            // Keep session exchanges for review; services still send only the last four to Muse.
+            setConversation((current) => [
                 ...current,
                 { message, response: result.response, signal: result.signal },
-            ]))
+            ])
+            rememberInteraction('conversation', message, message, result.response)
             setLearnerMessage('')
         } catch {
             if (!controller.signal.aborted) {
@@ -138,11 +180,12 @@ export default function StudySession({
 
     async function runActivity(action) {
         const response = activityResponse.trim()
-        if (!lesson || stage !== 'learn' || loadingLesson || loadingQuestion ||
+        if (!lesson || loadingLesson || loadingQuestion || loadingEvaluation ||
             conversationRequest.current || activityRequest.current ||
             (action === 'evaluate' && (!activity || !response))) return
 
         const controller = new AbortController()
+        openInteraction('activity')
         activityRequest.current = controller
         setLoadingActivity(action)
         setActivityError(null)
@@ -157,6 +200,7 @@ export default function StudySession({
             if (controller.signal.aborted) return
 
             if (action === 'generate') {
+                if (activity) rememberInteraction('activity', activity.title, `${activity.instruction}\n\nYour response: ${activityResponse || 'Not submitted'}`, activityFeedback?.feedback || '')
                 setActivity(result)
                 setActivityResponse('')
                 setActivityFeedback(null)
@@ -195,6 +239,7 @@ export default function StudySession({
 
     async function changeLesson(action) {
         if (loadingLesson || loadingQuestion || loadingConversation || loadingActivity) return
+        openInteraction(action === 'example' ? 'example' : 'lesson')
         setLoadingLesson(action)
         setLessonError('')
         setQuestionError('')
@@ -205,9 +250,10 @@ export default function StudySession({
                 : await generateStudyExample(course, lesson, example, { anchors: learningAnchors })
 
             if (action === 'simplify') {
+                rememberInteraction('lesson', lesson.concept, lesson.content)
                 setLesson(result)
-                setExample('')
             } else {
+                if (example) rememberInteraction('example', lesson.concept, example)
                 setExample(result.content)
             }
         } catch {
@@ -218,7 +264,9 @@ export default function StudySession({
     }
 
     async function loadQuestion(lessonContext) {
-        if (loadingQuestion || loadingLesson) return
+        if (loadingQuestion || loadingLesson || loadingEvaluation) return
+        if (studyQuestion) rememberInteraction('quiz', studyQuestion.topic || 'Practice', studyQuestion.question, `${answerResult || 'Not answered'}${evaluation ? `\n${evaluation.feedback}\n${evaluation.adaptedExplanation}\nFollow-up: ${followUpResult || 'Not answered'}` : studyQuestion.explanation ? `\n${studyQuestion.explanation}` : ''}`)
+        openInteraction('quiz')
         conversationRequest.current?.abort()
         conversationRequest.current = null
         setLoadingConversation(false)
@@ -235,12 +283,13 @@ export default function StudySession({
         setFollowUpResult('')
         setShowAdaptedLesson(false)
         setEvaluation(null)
+        setEvaluationError('')
+        setSelectedAnswer(null)
 
         try {
             const question = await generateStudyQuestion(course, mastery, lessonContext, { anchors: learningAnchors })
             setStudyQuestion(question)
             setQuestionNumber((number) => number + 1)
-            setStage('quiz')
         } catch {
             setQuestionError('Orbit could not load your question. Please try again.')
         } finally {
@@ -252,6 +301,31 @@ export default function StudySession({
         return loadQuestion()
     }
 
+    async function answerQuestion(answer, retry = false) {
+        if (busy || (answerResult && !retry)) return
+        setSelectedAnswer(answer)
+        setAnswerResult(answer.correct ? 'correct' : 'incorrect')
+        setShowAdaptedLesson(!answer.correct)
+        setFollowUpResult('')
+        setEvaluation(null)
+        setEvaluationError('')
+        if (!retry) {
+            if (studyQuestion.topic) updateTopicMastery(studyQuestion.topic, answer.correct ? 80 : 40)
+            else setMastery(answer.correct ? 80 : 40)
+        }
+        if (answer.correct) return
+        setLoadingEvaluation(true)
+        try {
+            const result = await evaluateStudyAnswer(course, studyQuestion, answer, mastery, { anchors: learningAnchors })
+            setEvaluation(result)
+            rememberAnchor(result.anchor)
+        } catch {
+            setEvaluationError('Orbit could not prepare a different explanation. Your answer is saved; try again.')
+        } finally {
+            setLoadingEvaluation(false)
+        }
+    }
+
     return (
         <section className="study-session">
             <header className="study-context">
@@ -260,17 +334,38 @@ export default function StudySession({
             </header>
             <OrbitStage thinking={Boolean(loadingLesson || loadingConversation || loadingActivity || loadingQuestion || loadingEvaluation)} />
             <div className="study-body">
+            {lesson && <div className="study-lesson-actions" aria-label="Choose a study interaction">
+                <button disabled={busy} aria-pressed={activeInteraction === 'lesson'} onClick={() => openInteraction('lesson')}>Lesson</button>
+                <button disabled={busy} aria-pressed={activeInteraction === 'example'} onClick={() => example ? openInteraction('example') : changeLesson('example')}>Give me an example</button>
+                <button disabled={busy} aria-pressed={activeInteraction === 'activity'} onClick={() => activity ? openInteraction('activity') : runActivity('generate')}>Let me try it</button>
+                <button disabled={busy} aria-pressed={activeInteraction === 'conversation'} onClick={() => openInteraction('conversation')}>Talk it through</button>
+                <button className="study-primary-action" disabled={Boolean(loadingLesson || loadingQuestion || loadingEvaluation)} aria-pressed={activeInteraction === 'quiz'} onClick={() => studyQuestion ? openInteraction('quiz') : loadQuestion(lesson)}>Quiz me</button>
+            </div>}
+            {history.length > 0 && <details className="study-history">
+                <summary>Earlier in this thread <span>{history.length}</span></summary>
+                <ol>{history.map((entry, index) => <li key={index}>
+                    <button disabled={busy} onClick={(event) => { setSelectedHistory(entry); setActiveInteraction('history'); event.currentTarget.closest('details').open = false }}>
+                        <small>{index + 1} · {entry.type}</small><span>{entry.title}</span>
+                    </button>
+                </li>)}</ol>
+            </details>}
+            <section className="study-active-panel" data-study-interaction={activeInteraction} ref={panel} tabIndex={-1} aria-label="Current study interaction">
+            {positionChanged && <div className="study-position-notice" role="status">Your course starting point is updated. This thread is still here.
+                <button onClick={onNewThread}>Start a thread there</button>
+            </div>}
+            {selectedHistory && activeInteraction === 'history' && <div className="study-history-entry">
+                <h3>{selectedHistory.title}</h3><p>{selectedHistory.content}</p>
+                {selectedHistory.response && <p><strong>Orbit:</strong> {selectedHistory.response}</p>}
+                <button onClick={() => openInteraction(selectedHistory.type)}>Return to current {selectedHistory.type}</button>
+            </div>}
+            {activeInteraction === 'example' && example && <div className="study-example"><h3>One example</h3><p>{example}</p><button disabled={busy} onClick={() => changeLesson('example')}>Another example</button></div>}
             {stage === 'learn' && (
                 <div className="study-lesson">
-                    {lesson && (
+                    {lesson && activeInteraction === 'lesson' && (
                         <div aria-live="polite">
                             <p>{lesson.content}</p>
-                            {example && (
-                                <>
-                                    <h4>One example</h4>
-                                    <p>{example}</p>
-                                </>
-                            )}
+                            <button disabled={busy} onClick={() => changeLesson('simplify')}>I lost you</button>
+                            <CoursePosition course={course} today={today} onChange={onPositionChange ? changePosition : undefined} />
                         </div>
                     )}
 
@@ -288,45 +383,16 @@ export default function StudySession({
                         <button onClick={retryLesson}>Try again</button>
                     )}
 
-                    {lesson && (
-                        <div className="study-lesson-actions">
-                            <button
-                                disabled={Boolean(loadingLesson || loadingActivity) || loadingQuestion || loadingConversation}
-                                onClick={() => changeLesson('simplify')}
-                            >
-                                I lost you
-                            </button>
-                            <button
-                                disabled={Boolean(loadingLesson || loadingActivity) || loadingQuestion || loadingConversation}
-                                onClick={() => changeLesson('example')}
-                            >
-                                Give me an example
-                            </button>
-                            <button
-                                disabled={Boolean(loadingLesson || loadingActivity) || loadingQuestion || loadingConversation}
-                                onClick={() => runActivity('generate')}
-                            >
-                                Let me try it
-                            </button>
-                            <button className="study-primary-action"
-                                disabled={Boolean(loadingLesson) || loadingQuestion}
-                                onClick={() => loadQuestion(lesson)}
-                            >
-                                Quiz me
-                            </button>
-                        </div>
-                    )}
-
-                    {(activity || loadingActivity || activityError) && (
+                    {activeInteraction === 'activity' && (activity || loadingActivity || activityError) && (
                         <div className="study-activity" aria-busy={Boolean(loadingActivity)}>
                             {activity && (
                                 <>
-                                    <h4>{activity.title}</h4>
+                                    <div className="study-panel-heading"><h4>{activity.title}</h4><button disabled={busy} onClick={() => runActivity('generate')}>Another activity</button></div>
                                     <p>{activity.instruction}</p>
                                     <form onSubmit={submitActivity}>
-                                        <label htmlFor="study-activity-response">What did you try or notice?</label>
+                                        <label htmlFor={`study-activity-response-${id}`}>What did you try or notice?</label>
                                         <textarea
-                                            id="study-activity-response"
+                                            id={`study-activity-response-${id}`}
                                             rows={3}
                                             maxLength={MAX_STUDY_MESSAGE_LENGTH}
                                             value={activityResponse}
@@ -372,21 +438,21 @@ export default function StudySession({
                         </div>
                     )}
 
-                    {lesson && (
+                    {lesson && activeInteraction === 'conversation' && (
                         <div className="study-conversation">
                             <div aria-live="polite">
-                                {conversation.slice(-2).map((exchange, index) => (
+                                {conversation.slice(-1).map((exchange, index) => (
                                     <div key={index}>
-                                        <p><strong>You:</strong> {exchange.message}</p>
+                                        <details className="study-thought"><summary>Your thought: {exchange.message.slice(0, 80)}{exchange.message.length > 80 ? '…' : ''}</summary><p>{exchange.message}</p></details>
                                         <p><strong>Orbit:</strong> {exchange.response}</p>
                                     </div>
                                 ))}
                             </div>
 
                             <form onSubmit={sendMessage} aria-busy={loadingConversation}>
-                                <label htmlFor="study-message">What are you thinking?</label>
+                                <label htmlFor={`study-message-${id}`}>What are you thinking?</label>
                                 <textarea
-                                    id="study-message"
+                                    id={`study-message-${id}`}
                                     rows={2}
                                     maxLength={MAX_STUDY_MESSAGE_LENGTH}
                                     placeholder="Ask about this idea, or share a connection."
@@ -428,53 +494,17 @@ export default function StudySession({
 
             {stage === 'quiz' && (
                 <div className="study-quiz">
-                    {studyQuestion && (
+                    {studyQuestion && !(showAdaptedLesson && evaluation) && (
                         <p>{studyQuestion.question}</p>
                     )}
+                    {selectedAnswer && !(showAdaptedLesson && evaluation) && <p className="orbit-muted">Your answer: {selectedAnswer.text}</p>}
+                    {evaluationError && <div role="alert"><p>{evaluationError}</p><button onClick={() => answerQuestion(selectedAnswer, true)}>Try again</button></div>}
 
-                    {studyQuestion?.answers?.map((answer) => (
+                    {!answerResult && studyQuestion?.answers?.map((answer) => (
                         <button className="study-answer"
                             key={answer.text}
-                            onClick={async () => {
-                                if (answer.correct) {
-                                    setAnswerResult('correct')
-                                    setShowAdaptedLesson(false)
-                                    setFollowUpResult('')
-                                    if (studyQuestion.topic) {
-                                        updateTopicMastery(studyQuestion.topic, 80)
-                                    } else {
-                                        setMastery(80)
-                                    }
-                                    setEvaluation(null)
-                                } else {
-                                    setAnswerResult('incorrect')
-                                    setShowAdaptedLesson(true)
-                                    setFollowUpResult('')
-                                    if (studyQuestion.topic) {
-                                        updateTopicMastery(studyQuestion.topic, 40)
-                                    } else {
-                                        setMastery(40)
-                                    }
-                                    setLoadingEvaluation(true)
-
-                                    try {
-                                        const result = await evaluateStudyAnswer(
-                                            course,
-                                            studyQuestion,
-                                            answer,
-                                            mastery,
-                                            { anchors: learningAnchors }
-                                        )
-
-                                        setEvaluation(result)
-                                        rememberAnchor(result.anchor)
-                                    } catch (error) {
-                                        console.error(error)
-                                    } finally {
-                                        setLoadingEvaluation(false)
-                                    }
-                                }
-                            }}
+                            disabled={busy}
+                            onClick={() => answerQuestion(answer)}
                         >
                             {answer.text}
                         </button>
@@ -500,6 +530,7 @@ export default function StudySession({
 
                     {showAdaptedLesson && evaluation && (
                         <div className="study-adapted">
+                            <details><summary>Review the original question</summary><p>{studyQuestion.question}</p><p>Your answer: {selectedAnswer?.text}</p></details>
                             <h3>Orbit changed the approach</h3>
 
                             <p>{evaluation.adaptedExplanation}</p>
@@ -555,6 +586,7 @@ export default function StudySession({
                     )}
                 </div>
             )}
+            </section>
             </div>
             <footer className="study-progress">
                 <ol className="study-stages" aria-label="Session progress">

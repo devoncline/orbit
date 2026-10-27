@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { coursePositionRequest } from '../src/services/coursePosition.js'
 import { test } from 'node:test'
 import handler from '../api/respond-to-study-message.js'
 import { respondToStudyMessage } from '../src/services/meta.js'
@@ -189,6 +190,7 @@ test('service sends bounded context and supports cancellation without transmitti
   const payload = JSON.parse(options.body)
   assert.deepEqual(payload, {
     ...body,
+    ...coursePositionRequest(course),
     history: history.slice(-4).map(({ message, response }) => ({ message, response })),
   })
   assert.equal(history.length, 7)

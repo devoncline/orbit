@@ -10,12 +10,14 @@ let server
 let HomeScreen
 let AppShell
 let UpcomingWork
+let StudyThreads
 
 before(async () => {
   server = await createServer({ server: { middlewareMode: true, watch: null }, appType: 'custom' })
   HomeScreen = (await server.ssrLoadModule('/src/components/HomeScreen.jsx')).default
   AppShell = (await server.ssrLoadModule('/src/components/AppShell.jsx')).default
   UpcomingWork = (await server.ssrLoadModule('/src/components/UpcomingWork.jsx')).default
+  StudyThreads = (await server.ssrLoadModule('/src/components/StudyThreads.jsx')).default
 })
 after(async () => { await server?.close() })
 
@@ -67,8 +69,34 @@ test('Home keeps a real question as its hook and does not invent learner history
     recommendation: { recommendedAction: 'Why can props go down but not back up?' },
   }))
   assert.match(html, /Why can props go down but not back up\?/)
-  assert.match(html, /Show me /)
+  assert.match(html, />Show me<\/button>/)
   assert.doesNotMatch(html, /You were close|home-reason|YOUR NEXT STEP|WELCOME BACK/)
+})
+
+test('Home uses current syllabus timing ahead of an outdated recommendation and offers a correction', () => {
+  const course = { ...courses[0], syllabusItems: [{ topic: 'Orientation', startDate: '2026-08' }, { topic: 'React', startDate: '2026-10' }] }
+  const html = renderToStaticMarkup(createElement(HomeScreen, {
+    courses: [course], recommendedCourse: course, today: '2026-10-27',
+    recommendation: { recommendedAction: 'Start orientation' }, onPositionChange: () => {},
+  }))
+  assert.match(html, /Explore React/)
+  assert.match(html, /Change starting point/)
+  assert.doesNotMatch(html, /Start orientation|confidence/)
+  assert.equal(html.match(/This part of your syllabus lines up with today\./g).length, 1)
+})
+
+test('thread navigation starts collapsed and identifies the current objective without transcript content', () => {
+  const html = renderToStaticMarkup(createElement(StudyThreads, {
+    courses, activeId: 'second', threads: [
+      { id: 'first', title: 'Props basics', courseName: courses[0].name, context: 'conversation', summary: 'A parent passes data.', createdAt: '2026-10-27T10:00:00Z' },
+      { id: 'second', title: 'Events', courseName: courses[0].name, context: 'activity', summary: 'Trying a button.', createdAt: '2026-10-27T10:05:00Z' },
+    ],
+  }))
+  assert.match(html, /<details><summary>Study threads/)
+  assert.doesNotMatch(html, /<details open|<textarea/)
+  assert.match(html, /aria-current="true"/)
+  assert.ok(html.indexOf('Events') < html.indexOf('Props basics'))
+  assert.match(html, /Refresh clears these threads/)
 })
 
 test('learning actions use the task context and keep an active session distinct', () => {

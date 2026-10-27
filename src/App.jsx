@@ -5,11 +5,14 @@ import AppShell from './components/AppShell'
 import SpaceScreen from './components/SpaceScreen'
 import UpcomingWork from './components/UpcomingWork'
 import OrbitStage from './components/OrbitStage'
+import StudyThreads from './components/StudyThreads'
+import { applyPositionOverride, inferCoursePosition, localDate, mergeCourseAnalysis, positionAction } from './services/coursePosition'
+import { createStudyThread, initialThreads, studyThreadsReducer } from './services/studyThreads'
 import {
   analyzeCourseFile,
   recommendCourse,
 } from './services/meta'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useReducer, useState } from 'react'
 import './App.css'
 
 export default function App() {
@@ -20,39 +23,48 @@ export default function App() {
 
   const [recommendation, setRecommendation] = useState(null)
   const [loadingRecommendation, setLoadingRecommendation] = useState(false)
+  const [today, setToday] = useState(localDate)
+  const [{ threads, activeId }, dispatchThreads] = useReducer(studyThreadsReducer, initialThreads)
+  const activeThread = threads.find((thread) => thread.id === activeId)
 
   const recommendedCourse =
     courses.find(
       (course) => course.name === recommendation?.courseName
     ) || courses[0]
-  const [sessionStarted, setSessionStarted] = useState(false)
-  const [sessionCourseName, setSessionCourseName] = useState(null)
+  const sessionStarted = Boolean(activeThread)
+  const sessionCourseName = activeThread?.courseName
   const sessionCourse =
     courses.find((course) => course.name === sessionCourseName) || recommendedCourse
-  const [answerResult, setAnswerResult] = useState('')
-  const [showAdaptedLesson, setShowAdaptedLesson] = useState(false)
-  const [followUpResult, setFollowUpResult] = useState('')
+
+  useEffect(() => {
+    // Refresh only when the local calendar day changes, including after a sleeping tab wakes.
+    const refreshDate = () => setToday(localDate())
+    const timer = setInterval(refreshDate, 60_000)
+    window.addEventListener('focus', refreshDate)
+    return () => { clearInterval(timer); window.removeEventListener('focus', refreshDate) }
+  }, [])
 
   useEffect(() => {
     if (!courses.length) return
     let active = true
+    const controller = new AbortController()
     async function loadRecommendation() {
       try {
         setLoadingRecommendation(true)
 
-        const result = await recommendCourse(courses)
+        const result = await recommendCourse(courses, { currentDate: today, signal: controller.signal })
 
         if (active) setRecommendation(result)
-      } catch (error) {
-        console.error(error)
+      } catch {
+        // Keep the previous recommendation and local position-based action available.
       } finally {
         if (active) setLoadingRecommendation(false)
       }
     }
 
     loadRecommendation()
-    return () => { active = false }
-  }, [courses])
+    return () => { active = false; controller.abort() }
+  }, [courses, today])
 
   function addCourse(newCourse) {
     setCourses((currentCourses) => [
@@ -70,8 +82,8 @@ export default function App() {
   }
 
   function updateCourseMastery(courseName, newMastery) {
-    setCourses(
-      courses.map((course) => {
+    setCourses((currentCourses) =>
+      currentCourses.map((course) => {
         if (course.name === courseName) {
           return {
             ...course,
@@ -160,11 +172,7 @@ export default function App() {
                 analysis.semester || course.syllabus?.semester || '',
             },
 
-            importantTopics:
-              analysis.importantTopics || [],
-
-            upcomingWork:
-              analysis.upcomingWork || [],
+            ...mergeCourseAnalysis(course, analysis),
 
             files: [
               ...(course.files || []),
@@ -199,14 +207,33 @@ export default function App() {
 
   function startSession(course) {
     if (!course) return
-    if (sessionCourseName !== course.name) {
-      setAnswerResult('')
-      setShowAdaptedLesson(false)
-      setFollowUpResult('')
+    const matching = (thread) => thread?.courseName === course.name && thread.positionKey === JSON.stringify(course.learnerPosition || null)
+    const previous = matching(activeThread) ? activeThread : [...threads].reverse().find(matching)
+    if (previous) switchThread(previous.id)
+    else newThread(course)
+  }
+
+  function newThread(course, topic = '') {
+    const position = inferCoursePosition(course, today)
+    if (!topic && position.needsConfirmation) {
+      selectSpace(course.name)
+      return
     }
-    setSessionCourseName(course.name)
-    setSessionStarted(true)
+    dispatchThreads({ type: 'create', thread: createStudyThread(course, topic) })
     setDestination('study')
+  }
+
+  function switchThread(id) {
+    dispatchThreads({ type: 'switch', id })
+    setDestination('study')
+  }
+
+  const updateThread = useCallback((id, metadata) => dispatchThreads({ type: 'update', id, metadata }), [])
+
+  function updatePosition(courseName, update) {
+    setCourses((current) => current.map((course) => course.name === courseName
+      ? { ...course, learnerPosition: update ? applyPositionOverride(course.learnerPosition, update) : undefined }
+      : course))
   }
 
   const selectedCourse = courses.find((course) => course.name === selectedSpace)
@@ -224,7 +251,7 @@ export default function App() {
       {sessionStarted && destination !== 'study' && !(destination === 'home' && recommendedCourse?.name === sessionCourseName) && (
         <div className="session-resume">
           <span>{sessionCourse.name}</span>
-          <button className="orbit-text-button" onClick={() => navigate('learn')}>Resume your session →</button>
+          <button className="orbit-text-button" onClick={() => navigate('learn')}>Resume your session</button>
         </div>
       )}
       {(destination === 'home' || destination === 'learn') && (
@@ -237,7 +264,9 @@ export default function App() {
           onSelectSpace={selectSpace}
           onNewSpace={newSpace}
           onNavigate={navigate}
-          resuming={sessionStarted && recommendedCourse?.name === sessionCourseName}
+          resuming={sessionStarted && recommendedCourse?.name === sessionCourseName && activeThread.positionKey === JSON.stringify(recommendedCourse.learnerPosition || null)}
+          today={today}
+          onPositionChange={(update) => updatePosition(recommendedCourse.name, update)}
         />
       )}
       {destination === 'new' && (
@@ -254,7 +283,7 @@ export default function App() {
         </section>
       )}
       {destination === 'space' && selectedCourse && (
-        <SpaceScreen key={selectedCourse.name} course={selectedCourse} onContinue={startSession} onAddFile={addCourseFile} onSelectSpace={selectSpace} />
+        <SpaceScreen key={selectedCourse.name} course={selectedCourse} today={today} onContinue={startSession} onNewThread={newThread} onPositionChange={(update) => updatePosition(selectedCourse.name, update)} onAddFile={addCourseFile} onSelectSpace={selectSpace} />
       )}
       {destination === 'calendar' && (
         <section className="orbit-page orbit-page-layout calendar-page">
@@ -266,7 +295,7 @@ export default function App() {
           <div className="orbit-page-content">
             <UpcomingWork courses={courses} onSelectSpace={selectSpace} />
             <div className="orbit-page-actions">
-              <button className="orbit-button" onClick={() => courses.length ? navigate('library') : newSpace('material')}>Add a syllabus or notes <span aria-hidden="true">↗</span></button>
+              <button className="orbit-button" onClick={() => courses.length ? navigate('library') : newSpace('material')}>Add a syllabus or notes</button>
             </div>
           </div>
         </section>
@@ -285,8 +314,7 @@ export default function App() {
                 <li key={course.name}>
                   <button onClick={() => selectSpace(course.name)}>
                     <span className="space-dot" />
-                    <span><strong>{course.name}</strong><small>{course.files?.length || 0} {course.files?.length === 1 ? 'material' : 'materials'} · {course.nextTask}</small></span>
-                    <span aria-hidden="true">↗</span>
+                    <span><strong>{course.name}</strong><small>{course.files?.length || 0} {course.files?.length === 1 ? 'material' : 'materials'} · {positionAction(course, inferCoursePosition(course, today))}</small></span>
                   </button>
                 </li>
               ))}
@@ -302,21 +330,27 @@ export default function App() {
             <button className="orbit-text-button" onClick={() => navigate('home')}>← Back home</button>
             <span>{sessionCourse.name}</span>
           </div>
-          <div className="study-room">
-            <StudySession
-              key={sessionCourse.name}
-              course={sessionCourse}
-              answerResult={answerResult}
-              setAnswerResult={setAnswerResult}
-              showAdaptedLesson={showAdaptedLesson}
-              setShowAdaptedLesson={setShowAdaptedLesson}
-              followUpResult={followUpResult}
-              setFollowUpResult={setFollowUpResult}
-              mastery={sessionCourse.mastery?.overall ?? 40}
-              setMastery={(newMastery) => updateCourseMastery(sessionCourse.name, newMastery)}
-              updateTopicMastery={(topicName, newMastery) => updateTopicMastery(sessionCourse.name, topicName, newMastery)}
-            />
-          </div>
+          <StudyThreads threads={threads} activeId={activeId} courses={courses} onSwitch={switchThread} onCreate={newThread} />
+          {threads.map((thread) => {
+            const originalCourse = courses.find((course) => course.name === thread.courseName)
+            // A thread goal seeds its lesson; a later course correction takes precedence.
+            const useThreadGoal = thread.requestedTopic && thread.positionKey === JSON.stringify(originalCourse.learnerPosition || null)
+            const course = useThreadGoal ? { ...originalCourse, learnerPosition: applyPositionOverride(originalCourse.learnerPosition, { type: 'current', topic: thread.requestedTopic }) } : originalCourse
+            return <div className="study-room" key={thread.id} hidden={thread.id !== activeId}>
+              <StudySession
+                course={course}
+                threadId={thread.id}
+                active={destination === 'study' && thread.id === activeId}
+                onThreadUpdate={updateThread}
+                onPositionChange={(update) => updatePosition(course.name, update)}
+                onNewThread={() => newThread(courses.find((entry) => entry.name === course.name))}
+                today={today}
+                mastery={originalCourse.mastery?.overall ?? 40}
+                setMastery={(newMastery) => updateCourseMastery(course.name, newMastery)}
+                updateTopicMastery={(topicName, newMastery) => updateTopicMastery(course.name, topicName, newMastery)}
+              />
+            </div>
+          })}
         </div>
       )}
     </AppShell>

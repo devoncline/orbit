@@ -4,6 +4,9 @@
 
 ### Improvements
 
+- Study now keeps one interaction in focus, with compact access to earlier exchanges and separate study threads. Switching threads preserves drafts, activities, quizzes, and learning context until refresh.
+- Recommendations and new lessons use today's date and syllabus timing to suggest a relevant starting point. Learners can correct that position, skip familiar material, or say a topic has not started; unclear timelines ask for a starting point, and past material remains available for review.
+- Actions across Orbit have clearer surfaces and hover/focus feedback, with fewer decorative arrows and easier-to-tap Study controls on mobile.
 - Learn keeps the shared desktop sidebar. Orbit stays fully visible on small screens, smiles between replies, and uses the same gentle floating motion everywhere, switching to a thinking pose while preparing a response.
 - Home now leads with the current learning task or question and a contextual action. Study gives Orbit a larger visual stage, with a dedicated mobile composition, calmer motion, and clearer controls. Calendar, Library, and space setup use simpler copy and more open layouts with fewer dividers.
 - Orbit now has learning spaces for classes, skills, and personal interests, with a calm shared navigation, a mobile menu, and three ways to begin from an empty account. Home keeps one next action in focus and uses Orbit’s existing environment and companion artwork.
@@ -22,6 +25,8 @@
 
 ### Manual test checklist
 
+- Create and switch between study threads, leave for Home, and resume. Verify drafts, conversation, activities, quiz feedback, and mastery remain intact. After several conversation turns on a phone-sized screen, confirm only the latest exchange is expanded and earlier work is accessible through history.
+- Add a dated syllabus with past, current, and future units; verify the initial lesson follows the current unit. Try "We're on props now", "Skip orientation", "I already know this", and "We haven't started React yet". Check Home and a new thread honor the correction. Try ambiguous/yearless dates and confirm Orbit asks rather than inventing a schedule. Add notes afterward and verify earlier syllabus items remain.
 - Review Home, Study, Calendar, Library, and space setup on desktop and mobile. Try a question as a starting point, resume a lesson after navigating away, and check keyboard focus, the menu, and reduced motion. Confirm lesson controls, conversation, applied activities, quizzes, and retries remain usable on a phone.
 - Start with no spaces and try the class, curiosity, and material entry points. Add one space, then several (including a long name); verify Home stays compact and the full list remains accessible in navigation and Library. Check the mobile menu, Escape, keyboard focus, and reduced motion.
 - Add a PDF to a chosen space and check its material list and any extracted dates in Calendar. Check a failed upload and retry, ambiguous dates, and a Home preview with more than three upcoming items. Leave Study for Home or Calendar and resume; verify the current lesson, conversation, activity, quiz, and mastery remain intact.

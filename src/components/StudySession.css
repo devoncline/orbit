@@ -11,10 +11,24 @@
 .study-body button:hover:not(:disabled) { border-color: #8a83b4; background: #202a40; }
 .study-body .study-primary-action { background: var(--orbit-accent); border-color: transparent; color: #171327; font-weight: 600; }
 .study-body .study-primary-action:hover:not(:disabled) { background: #cdc4ff; border-color: transparent; }
-.study-lesson-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 30px; }
-.study-activity, .study-adapted { margin-top: 32px; padding: 2px 0 0 22px; border-left: 2px solid #665e8d; }
+.study-lesson-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 24px; }
+.study-lesson-actions button[aria-pressed='true'] { border-color: var(--orbit-accent); box-shadow: inset 0 -2px var(--orbit-accent); }
+.study-activity, .study-adapted { margin-top: 16px; padding: 2px 0 0 22px; border-left: 2px solid #665e8d; }
 .study-activity h4 { margin-top: 0; }
-.study-conversation { margin-top: 36px; }
+.study-conversation { margin-top: 0; }
+.study-active-panel { outline: none; }
+.study-active-panel:focus-visible { outline: 2px solid var(--orbit-accent); outline-offset: 8px; border-radius: 8px; }
+.study-panel-heading { display: flex; justify-content: space-between; gap: 12px; align-items: start; margin-bottom: 16px; }
+.study-panel-heading h4 { margin: 8px 0; }
+.study-history { margin-bottom: 20px; font-size: 13px; }
+.study-history ol { list-style: none; margin: 12px 0; padding: 0; max-height: 240px; overflow-y: auto; }
+.study-history button { display: grid; gap: 4px; text-align: left; width: 100%; margin: 6px 0; }
+.study-history small { color: var(--orbit-muted); }
+.study-thought { margin-bottom: 16px; font-size: 13px; }
+.study-thought p { margin-top: 12px; }
+.study-position-notice { padding: 12px; margin-bottom: 20px; background: #202a40; border-radius: 8px; font-size: 13px; }
+.study-position-notice button { display: block; margin-top: 8px; }
+.study-body .course-position p { font-size: 13px; margin-bottom: 8px; }
 .study-body form { display: grid; gap: 12px; }
 .study-body label { font-size: 13px; color: var(--orbit-muted); }
 .study-body textarea { display: block; width: 100%; min-width: 0; padding: 14px 16px; border: 1px solid var(--orbit-border); border-radius: 10px; background: rgb(16 25 42 / 88%); color: var(--orbit-text); font: inherit; line-height: 1.6; resize: vertical; }
@@ -41,9 +55,9 @@
   .study-topic { font-size: 12px; margin-bottom: 6px; }
   .study-session > .orbit-stage { margin-inline: -12px; }
   .study-body p { font-size: 15px; line-height: 1.8; }
-  .study-lesson-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 24px; }
+  .study-lesson-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 0; }
   .study-lesson-actions button { padding-inline: 8px; min-height: 48px; }
-  .study-conversation { margin-top: 28px; }
+  .study-conversation { margin-top: 0; }
   .study-body textarea { font-size: 16px; }
   .study-activity, .study-adapted { padding-left: 14px; }
   .study-body .study-answer { padding: 12px 14px; font-size: 14px; }

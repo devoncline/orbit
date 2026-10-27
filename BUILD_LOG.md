@@ -557,6 +557,17 @@ The goal is for Orbit to move with the learner instead of waiting passively for 
 
 ---
 
+## October 27, 2026 — Focused Study Threads & Course Position
+
+- Added one active Study interaction with compact history, showing only the latest conversational exchange. In-memory threads retain their mounted lesson, drafts, activities, anchors, and quiz feedback when navigating or switching objectives. Thread titles and summaries derive from existing learning content without extra model calls.
+- Added runtime local-date inference over past, current, future, and uncertain syllabus items. Starting priority is explicit learner position, current dated unit, upcoming work or weak mastery, then a useful inferred concept. Learner corrections and skip/not-yet constraints take precedence; unclear timelines ask for a starting point. Adding materials preserves earlier syllabus and assignment context.
+- Passed bounded course-position context to recommendations and study generation, retaining the existing bounded conversation/anchor context and topic-mastery compatibility fallback. Strengthened action surfaces and hover/focus feedback without changing the background, sidebar structure, OrbitStage, or artwork.
+- Production build, full-project lint, JavaScript syntax checks, all 85 tests, and diff checks pass. Date/override tests cover October versus old orientation, invalid/yearless dates, month boundaries, preserved past material, and stale model output. Rendering tests cover zero, one, and multiple spaces. The prior lint findings in the touched course-analysis/recommendation routes are resolved.
+- Live browser review covered desktop first use and lesson generation, a five-turn conversation at 375px, a quiz using an earlier learning connection, adapted feedback, mastery moving from 40% to 70%, creation of a second thread, and returning to the first thread with its answered quiz intact. Live PDF extraction, exhaustive draft/activity switching and error retries, and physical-device checks remain manual.
+- Updated Unreleased release notes and manual checks. No dependencies, database, migrations, persistence, authentication, or security-policy changes. Accounts, permanent history, calendar editing, notifications, generated visuals, achievements, and broad learning paths remain deferred.
+
+---
+
 # Next
 
 The next major development steps are:

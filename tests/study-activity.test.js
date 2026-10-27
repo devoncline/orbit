@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { coursePositionRequest } from '../src/services/coursePosition.js'
 import { test } from 'node:test'
 import handler from '../api/study-activity.js'
 import conversationHandler from '../api/respond-to-study-message.js'
@@ -245,8 +246,8 @@ test('named services send bounded context and cancellation signals without clien
     return JSON.parse(request.body)
   })
   const boundedHistory = history.slice(-4).map(({ message, response }) => ({ message, response }))
-  assert.deepEqual(bodies[0], { ...body, history: boundedHistory, activityContext })
-  assert.deepEqual(bodies[1], { ...evaluationBody, history: boundedHistory })
+  assert.deepEqual(bodies[0], { ...body, ...coursePositionRequest(course), history: boundedHistory, activityContext })
+  assert.deepEqual(bodies[1], { ...evaluationBody, ...coursePositionRequest(course), history: boundedHistory })
   assert.equal(history.length, 9)
   assert.deepEqual(course, before)
 })

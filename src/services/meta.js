@@ -1,5 +1,6 @@
 import { retainStudyExchanges } from './studyConversation.js'
 import { learningAnchorRequest } from './studyLearningContext.js'
+import { coursePositionRequest, localDate } from './coursePosition.js'
 
 export async function analyzeCourseFile(file) {
     const base64File = await fileToBase64(file)
@@ -13,6 +14,7 @@ export async function analyzeCourseFile(file) {
             fileName: file.name,
             fileType: file.type,
             fileData: base64File,
+            currentDate: localDate(),
         }),
     })
 
@@ -48,6 +50,7 @@ async function requestStudyLesson(course, mastery, action, lesson, example, anch
             upcomingWork: course.upcomingWork,
             mastery,
             topicMastery: course.mastery?.topics || {},
+            ...coursePositionRequest(course),
             action,
             lesson,
             example,
@@ -80,6 +83,7 @@ export async function respondToStudyMessage(
             upcomingWork: course.upcomingWork,
             mastery: course.mastery?.overall ?? 40,
             topicMastery: course.mastery?.topics || {},
+            ...coursePositionRequest(course),
             lesson,
             example,
             history: retainStudyExchanges(history).map((exchange) => ({
@@ -126,6 +130,7 @@ async function requestStudyActivity(
             upcomingWork: course.upcomingWork,
             mastery: course.mastery?.overall ?? 40,
             topicMastery: course.mastery?.topics || {},
+            ...coursePositionRequest(course),
             lesson,
             example,
             history: retainStudyExchanges(history).map((exchange) => ({
@@ -160,6 +165,7 @@ export async function generateStudyQuestion(course, mastery, lesson, { anchors =
             upcomingWork: course.upcomingWork,
             mastery: mastery,
             topicMastery: course.mastery?.topics || {},
+            ...coursePositionRequest(course),
             ...(lesson ? { lesson } : {}),
             ...learningAnchorRequest(anchors, { topic: lesson?.topic, concept: lesson?.concept, text: lesson?.content || course.nextTask }),
         }),
@@ -207,14 +213,16 @@ export async function evaluateStudyAnswer(
     return response.json()
 }
 
-export async function recommendCourse(courses) {
+export async function recommendCourse(courses, { signal, currentDate = localDate() } = {}) {
     const response = await fetch('/api/recommend-course', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
+        signal,
         body: JSON.stringify({
             courses: courses,
+            currentDate,
         }),
     })
 
