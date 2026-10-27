@@ -127,6 +127,51 @@ export default function App() {
     )
   }
 
+  function updateTopicMastery(courseName, topicName, newMastery) {
+    if (!topicName) return
+
+    setCourses((currentCourses) =>
+      currentCourses.map((course) => {
+        if (course.name !== courseName) {
+          return course
+        }
+
+        const currentTopics = course.mastery?.topics || {}
+
+        const existingTopic =
+          Object.keys(currentTopics).find(
+            (topic) =>
+              topic.toLowerCase() === topicName.toLowerCase()
+          ) || topicName
+
+        const updatedTopics = {
+          ...currentTopics,
+          [existingTopic]: newMastery,
+        }
+
+        const topicScores = Object.values(updatedTopics)
+
+        const overall =
+          topicScores.length > 0
+            ? Math.round(
+                topicScores.reduce(
+                  (total, score) => total + score,
+                  0
+                ) / topicScores.length
+              )
+            : course.mastery?.overall ?? 40
+
+        return {
+          ...course,
+          mastery: {
+            overall,
+            topics: updatedTopics,
+          },
+        }
+      })
+    )
+  }
+
   async function addCourseFile(file) {
     const analysis = await analyzeCourseFile(file)
 
@@ -239,6 +284,13 @@ export default function App() {
           setMastery={(newMastery) =>
             updateCourseMastery(
               recommendedCourse.name,
+              newMastery
+            )
+          }
+          updateTopicMastery={(topicName, newMastery) =>
+            updateTopicMastery(
+              recommendedCourse.name,
+              topicName,
               newMastery
             )
           }

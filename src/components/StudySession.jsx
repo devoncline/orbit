@@ -14,6 +14,7 @@ export default function StudySession({
     setFollowUpResult,
     mastery,
     setMastery,
+    updateTopicMastery,
 }) {
     const [studyQuestion, setStudyQuestion] = useState(null)
     const [loadingQuestion, setLoadingQuestion] = useState(true)
@@ -84,13 +85,21 @@ export default function StudySession({
                             setAnswerResult('correct')
                             setShowAdaptedLesson(false)
                             setFollowUpResult('')
-                            setMastery(80)
+                            if (studyQuestion.topic) {
+                                updateTopicMastery(studyQuestion.topic, 80)
+                            } else {
+                                setMastery(80)
+                            }
                             setEvaluation(null)
                         } else {
                             setAnswerResult('incorrect')
                             setShowAdaptedLesson(true)
                             setFollowUpResult('')
-                            setMastery(40)
+                            if (studyQuestion.topic) {
+                                updateTopicMastery(studyQuestion.topic, 40)
+                            } else {
+                                setMastery(40)
+                            }
                             setLoadingEvaluation(true)
 
                             try {
@@ -148,10 +157,18 @@ export default function StudySession({
                             onClick={() => {
                                 if (answer.correct) {
                                     setFollowUpResult('correct')
-                                    setMastery(70)
+                                    if (studyQuestion.topic) {
+                                        updateTopicMastery(studyQuestion.topic, 70)
+                                    } else {
+                                        setMastery(70)
+                                    }
                                 } else {
                                     setFollowUpResult('incorrect')
-                                    setMastery(40)
+                                    if (studyQuestion.topic) {
+                                        updateTopicMastery(studyQuestion.topic, 40)
+                                    } else {
+                                        setMastery(40)
+                                    }
                                 }
                             }}
                         >
