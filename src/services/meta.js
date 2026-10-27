@@ -1,4 +1,5 @@
 import { retainStudyExchanges } from './studyConversation.js'
+import { learningAnchorRequest } from './studyLearningContext.js'
 
 export async function analyzeCourseFile(file) {
     const base64File = await fileToBase64(file)
@@ -22,19 +23,19 @@ export async function analyzeCourseFile(file) {
     return response.json()
 }
 
-export function generateStudyLesson(course, mastery) {
-    return requestStudyLesson(course, mastery, 'lesson')
+export function generateStudyLesson(course, mastery, { anchors = [] } = {}) {
+    return requestStudyLesson(course, mastery, 'lesson', undefined, undefined, anchors)
 }
 
-export function explainStudyLessonDifferently(course, lesson, example = '') {
-    return requestStudyLesson(course, course.mastery?.overall ?? 40, 'simplify', lesson, example)
+export function explainStudyLessonDifferently(course, lesson, example = '', { anchors = [] } = {}) {
+    return requestStudyLesson(course, course.mastery?.overall ?? 40, 'simplify', lesson, example, anchors)
 }
 
-export function generateStudyExample(course, lesson, example = '') {
-    return requestStudyLesson(course, course.mastery?.overall ?? 40, 'example', lesson, example)
+export function generateStudyExample(course, lesson, example = '', { anchors = [] } = {}) {
+    return requestStudyLesson(course, course.mastery?.overall ?? 40, 'example', lesson, example, anchors)
 }
 
-async function requestStudyLesson(course, mastery, action, lesson, example) {
+async function requestStudyLesson(course, mastery, action, lesson, example, anchors) {
     const response = await fetch('/api/generate-study-lesson', {
         method: 'POST',
         headers: {
@@ -50,6 +51,7 @@ async function requestStudyLesson(course, mastery, action, lesson, example) {
             action,
             lesson,
             example,
+            ...learningAnchorRequest(anchors, { topic: lesson?.topic, concept: lesson?.concept, text: lesson?.content || course.nextTask }),
         }),
     })
 
@@ -63,7 +65,7 @@ async function requestStudyLesson(course, mastery, action, lesson, example) {
 export async function respondToStudyMessage(
     course,
     lesson,
-    { message, history = [], example = '', signal }
+    { message, history = [], example = '', activityContext, signal, anchors = [] }
 ) {
     const response = await fetch('/api/respond-to-study-message', {
         method: 'POST',
@@ -85,6 +87,8 @@ export async function respondToStudyMessage(
                 response: exchange.response,
             })),
             message,
+            ...(activityContext ? { activityContext } : {}),
+            ...learningAnchorRequest(anchors, { topic: lesson.topic, concept: lesson.concept, text: message }),
         }),
     })
 
@@ -95,7 +99,55 @@ export async function respondToStudyMessage(
     return response.json()
 }
 
-export async function generateStudyQuestion(course, mastery, lesson) {
+export function generateStudyActivity(course, lesson, options = {}) {
+    return requestStudyActivity(course, lesson, 'generate', options)
+}
+
+export function evaluateStudyActivity(course, lesson, activity, learnerResponse, options = {}) {
+    return requestStudyActivity(course, lesson, 'evaluate', { ...options, activity, learnerResponse })
+}
+
+async function requestStudyActivity(
+    course,
+    lesson,
+    action,
+    { history = [], example = '', activity, learnerResponse, activityContext, signal, anchors = [] }
+) {
+    const response = await fetch('/api/study-activity', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        signal,
+        body: JSON.stringify({
+            courseName: course.name,
+            nextTask: course.nextTask,
+            importantTopics: course.importantTopics,
+            upcomingWork: course.upcomingWork,
+            mastery: course.mastery?.overall ?? 40,
+            topicMastery: course.mastery?.topics || {},
+            lesson,
+            example,
+            history: retainStudyExchanges(history).map((exchange) => ({
+                message: exchange.message,
+                response: exchange.response,
+            })),
+            action,
+            activity,
+            learnerResponse,
+            activityContext,
+            ...learningAnchorRequest(anchors, { topic: lesson.topic, concept: lesson.concept, text: lesson.content }),
+        }),
+    })
+
+    if (!response.ok) {
+        throw new Error('Failed to process study activity')
+    }
+
+    return response.json()
+}
+
+export async function generateStudyQuestion(course, mastery, lesson, { anchors = [] } = {}) {
     const response = await fetch('/api/generate-study-question', {
         method: 'POST',
         headers: {
@@ -109,6 +161,7 @@ export async function generateStudyQuestion(course, mastery, lesson) {
             mastery: mastery,
             topicMastery: course.mastery?.topics || {},
             ...(lesson ? { lesson } : {}),
+            ...learningAnchorRequest(anchors, { topic: lesson?.topic, concept: lesson?.concept, text: lesson?.content || course.nextTask }),
         }),
     })
 
@@ -123,7 +176,8 @@ export async function evaluateStudyAnswer(
     course,
     studyQuestion,
     selectedAnswer,
-    mastery
+    mastery,
+    { anchors } = {}
 ) {
     const correctAnswer = studyQuestion.answers.find(
         (answer) => answer.correct
@@ -141,6 +195,8 @@ export async function evaluateStudyAnswer(
             correctAnswer: correctAnswer.text,
             importantTopics: course.importantTopics,
             mastery: mastery,
+            ...(anchors && studyQuestion.topic ? { topic: studyQuestion.topic } : {}),
+            ...learningAnchorRequest(anchors, { topic: studyQuestion.topic, text: studyQuestion.question }),
         }),
     })
 

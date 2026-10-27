@@ -23,17 +23,20 @@
   padding: 8px 12px;
 }
 
-.study-conversation {
+.study-conversation,
+.study-activity {
   margin-top: 24px;
 }
 
-.study-conversation form {
+.study-conversation form,
+.study-activity form {
   display: grid;
   gap: 8px;
   margin-top: 16px;
 }
 
-.study-conversation textarea {
+.study-conversation textarea,
+.study-activity textarea {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
@@ -42,6 +45,7 @@
   resize: vertical;
 }
 
-.study-conversation button {
+.study-conversation button,
+.study-activity button {
   justify-self: start;
 }

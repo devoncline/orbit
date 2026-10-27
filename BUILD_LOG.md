@@ -517,6 +517,26 @@ The goal is for Orbit to move with the learner instead of waiting passively for 
 
 ---
 
+## October 27, 2026 — Applied Activities in Learn
+
+- Added "Let me try it" for one small activity grounded in the current lesson, topic mastery, and the latest four conversational exchanges. The activity gives a concrete action that can be answered inside Orbit in a few minutes.
+- Added short conversational feedback with tentative applied-understanding, partial-understanding, misconception, curiosity, or neutral signals. Criteria and signals remain internal; activities do not update mastery or automatically advance the session.
+- Kept only the current activity, response, and latest feedback in StudySession state. Conversation can refer to that attempt; requesting another activity replaces it after a successful response. Failed requests preserve learner input, and "Quiz me" can interrupt pending activity requests.
+- Reused the server-side Meta credential pattern and existing Learn styles. No persistence, migrations, project library, external execution, learning paths, or visual redesign were added.
+- Production build, focused lint, syntax checks, and all 42 mocked tests passed, including 15 new activity and integration checks. Full-project lint still reports five existing errors in unchanged API routes. Live Meta and browser/mobile verification remain manual.
+
+---
+
+## October 27, 2026 — Session Learning Anchors
+
+- Added compact session anchors with type, topic, evidence summary, and tentative confidence. A shared helper retains up to eight useful anchors, updates redundant entries of the same type/topic, and selects at most three using the current topic, explicit concept connections, or recommended task.
+- Conversation and applied-response evaluation may suggest an anchor when there is meaningful learner evidence. Adapted quiz evaluation may record a tentative misconception; follow-up choices refine that observation without claiming proven understanding. Generated content and routine correct choices do not create anchors.
+- Explanations, examples, conversation, activities, quizzes, and adapted feedback receive relevant anchors through the existing services. APIs validate optional suggestions, discard malformed metadata without failing valid feedback, and filter incoming anchor context again before calling Meta.
+- Kept anchors only in StudySession state, separate from the bounded conversation transcript and current activity. No visible memory UI, styling changes, mastery changes, new requests, database, migration, cross-session memory, or permanent learning-style labels were added.
+- Production build, focused lint, syntax checks, and all 56 mocked tests passed, including 14 new anchor checks. Explicit Node process imports in the two touched quiz APIs resolved their existing lint findings; three unrelated errors remain in course analysis/recommendation. Live Meta and browser/mobile checks remain manual.
+
+---
+
 # Next
 
 The next major development steps are:

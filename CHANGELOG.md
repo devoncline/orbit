@@ -4,6 +4,8 @@
 
 ### Improvements
 
+- Orbit can now remember useful connections, successful activities, and tentative misconceptions during a study session, then reuse relevant examples in later teaching and practice. These memories stay within the current session and do not change mastery.
+- Learn now offers "Let me try it": a short, practical activity based on the current concept and conversation. Learners can share what they tried, get focused feedback, and keep talking or choose "Quiz me". Activities stay in the current session and do not change mastery.
 - Learners can now ask questions or share connections during a lesson and receive short, contextual replies from Orbit. The lesson shortcuts and "Quiz me" remain available, with conversation kept only for the current session.
 - Study sessions now begin with a short, topic-aware lesson. Learners can ask for a different explanation or a concrete example, then choose "Quiz me" to practice the concept before continuing through adaptive questions.
 - Home now places its learning recommendation and companion in a nebula environment, with dark text areas, soft edges, and a quieter crop on smaller screens.
@@ -15,6 +17,8 @@
 
 ### Manual test checklist
 
+- Explain a useful analogy or complete an activity, continue past several conversation turns, then request another explanation, example, activity, or quiz. Check that Orbit can refer naturally to relevant earlier work without repeating it every time or bringing in unrelated topics. Try an incorrect quiz answer and its adapted follow-up; verify mastery and Continue still work. Start a fresh session or refresh to check that session memories are cleared and no memory panel or internal labels appear.
+- During Learn, try "Let me try it", submit a response, revise it, and ask about the result in conversation. Check that feedback stays concise, mastery stays unchanged, and a new activity replaces the previous one. Try failed generation and feedback requests, retry without losing your response, and choose "Quiz me" before an activity, after feedback, and while an activity request is pending. Check the response input on mobile and with a keyboard.
 - During Learn, ask a question, share a connection, and send several follow-ups; check that replies stay concise and on topic. Try a failed send and retry, both lesson shortcuts, and "Quiz me" while a reply is pending; confirm the existing quiz, follow-up, and mastery flow still works. Check input usability on mobile and with a keyboard.
 - Start a session with and without topic mastery; confirm a short lesson appears before any question. Try "I lost you" and "Give me an example" repeatedly, then "Quiz me"; verify the first question covers the lesson and correct/incorrect answers, follow-ups, and Continue still update the active course's mastery.
 - Check the lesson on a narrow screen and with keyboard navigation. Simulate a failed lesson, explanation, example, or question request; confirm retry works, existing lesson content stays visible, and actions are disabled while a request is pending.

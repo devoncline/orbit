@@ -4,10 +4,13 @@ import {
     explainStudyLessonDifferently,
     generateStudyExample,
     respondToStudyMessage,
+    generateStudyActivity,
+    evaluateStudyActivity,
     generateStudyQuestion,
     evaluateStudyAnswer,
 } from '../services/meta'
 import { MAX_STUDY_MESSAGE_LENGTH, retainStudyExchanges } from '../services/studyConversation'
+import { rememberLearningAnchor, anchorAfterFollowUp } from '../services/studyLearningContext'
 import './StudySession.css'
 
 export default function StudySession({
@@ -29,10 +32,17 @@ export default function StudySession({
     const [lessonError, setLessonError] = useState('')
     const [lessonAttempt, setLessonAttempt] = useState(0)
     const [conversation, setConversation] = useState([])
+    const [learningAnchors, setLearningAnchors] = useState([])
     const [learnerMessage, setLearnerMessage] = useState('')
     const [loadingConversation, setLoadingConversation] = useState(false)
     const [conversationError, setConversationError] = useState('')
     const conversationRequest = useRef(null)
+    const [activity, setActivity] = useState(null)
+    const [activityResponse, setActivityResponse] = useState('')
+    const [activityFeedback, setActivityFeedback] = useState(null)
+    const [loadingActivity, setLoadingActivity] = useState('')
+    const [activityError, setActivityError] = useState(null)
+    const activityRequest = useRef(null)
     const [initialContext] = useState(() => ({ course, mastery }))
     const initialLessonRequest = useRef(null)
     const [studyQuestion, setStudyQuestion] = useState(null)
@@ -41,6 +51,11 @@ export default function StudySession({
     const [evaluation, setEvaluation] = useState(null)
     const [loadingEvaluation, setLoadingEvaluation] = useState(false)
     const [questionNumber, setQuestionNumber] = useState(0)
+    const activityContext = activity ? {
+        activity,
+        learnerResponse: activityFeedback?.learnerResponse || '',
+        feedback: activityFeedback?.feedback || '',
+    } : undefined
 
     useEffect(() => {
         let active = true
@@ -68,14 +83,21 @@ export default function StudySession({
     }, [initialContext, lessonAttempt])
 
     useEffect(() => {
-        return () => { conversationRequest.current?.abort() }
+        return () => {
+            conversationRequest.current?.abort()
+            activityRequest.current?.abort()
+        }
     }, [])
+
+    function rememberAnchor(anchor) {
+        if (anchor) setLearningAnchors((current) => rememberLearningAnchor(current, anchor))
+    }
 
     async function sendMessage(event) {
         event.preventDefault()
         const message = learnerMessage.trim()
         if (!lesson || stage !== 'learn' || !message || loadingLesson ||
-            loadingQuestion || conversationRequest.current) return
+            loadingQuestion || activityRequest.current || conversationRequest.current) return
 
         const controller = new AbortController()
         conversationRequest.current = controller
@@ -89,10 +111,13 @@ export default function StudySession({
                 message,
                 history: conversation,
                 example,
+                activityContext,
+                anchors: learningAnchors,
                 signal: controller.signal,
             })
             if (controller.signal.aborted) return
 
+            rememberAnchor(result.anchor)
             setConversation((current) => retainStudyExchanges([
                 ...current,
                 { message, response: result.response, signal: result.signal },
@@ -110,6 +135,56 @@ export default function StudySession({
         }
     }
 
+    async function runActivity(action) {
+        const response = activityResponse.trim()
+        if (!lesson || stage !== 'learn' || loadingLesson || loadingQuestion ||
+            conversationRequest.current || activityRequest.current ||
+            (action === 'evaluate' && (!activity || !response))) return
+
+        const controller = new AbortController()
+        activityRequest.current = controller
+        setLoadingActivity(action)
+        setActivityError(null)
+        setLessonError('')
+        setQuestionError('')
+
+        try {
+            const options = { history: conversation, example, signal: controller.signal, anchors: learningAnchors }
+            const result = action === 'generate'
+                ? await generateStudyActivity(course, lesson, { ...options, activityContext })
+                : await evaluateStudyActivity(course, lesson, activity, response, options)
+            if (controller.signal.aborted) return
+
+            if (action === 'generate') {
+                setActivity(result)
+                setActivityResponse('')
+                setActivityFeedback(null)
+            } else {
+                rememberAnchor(result.anchor)
+                setActivityFeedback({ ...result, learnerResponse: response })
+            }
+        } catch {
+            if (!controller.signal.aborted) {
+                setActivityError({
+                    action,
+                    message: action === 'generate'
+                        ? 'Orbit could not prepare an activity. Please try again.'
+                        : 'Orbit could not respond to your activity. Your response is still here; try again.',
+                })
+            }
+        } finally {
+            if (activityRequest.current === controller) {
+                activityRequest.current = null
+                setLoadingActivity('')
+            }
+        }
+    }
+
+    function submitActivity(event) {
+        event.preventDefault()
+        return runActivity('evaluate')
+    }
+
     function retryLesson() {
         initialLessonRequest.current = null
         setLessonError('')
@@ -118,15 +193,15 @@ export default function StudySession({
     }
 
     async function changeLesson(action) {
-        if (loadingLesson || loadingQuestion || loadingConversation) return
+        if (loadingLesson || loadingQuestion || loadingConversation || loadingActivity) return
         setLoadingLesson(action)
         setLessonError('')
         setQuestionError('')
 
         try {
             const result = action === 'simplify'
-                ? await explainStudyLessonDifferently(course, lesson, example)
-                : await generateStudyExample(course, lesson, example)
+                ? await explainStudyLessonDifferently(course, lesson, example, { anchors: learningAnchors })
+                : await generateStudyExample(course, lesson, example, { anchors: learningAnchors })
 
             if (action === 'simplify') {
                 setLesson(result)
@@ -147,6 +222,10 @@ export default function StudySession({
         conversationRequest.current = null
         setLoadingConversation(false)
         setConversationError('')
+        activityRequest.current?.abort()
+        activityRequest.current = null
+        setLoadingActivity('')
+        setActivityError(null)
         setLoadingQuestion(true)
         setQuestionError('')
         setLessonError('')
@@ -157,7 +236,7 @@ export default function StudySession({
         setEvaluation(null)
 
         try {
-            const question = await generateStudyQuestion(course, mastery, lessonContext)
+            const question = await generateStudyQuestion(course, mastery, lessonContext, { anchors: learningAnchors })
             setStudyQuestion(question)
             setQuestionNumber((number) => number + 1)
             setStage('quiz')
@@ -219,16 +298,22 @@ export default function StudySession({
                     {lesson && (
                         <div className="study-lesson-actions">
                             <button
-                                disabled={Boolean(loadingLesson) || loadingQuestion || loadingConversation}
+                                disabled={Boolean(loadingLesson || loadingActivity) || loadingQuestion || loadingConversation}
                                 onClick={() => changeLesson('simplify')}
                             >
                                 I lost you
                             </button>
                             <button
-                                disabled={Boolean(loadingLesson) || loadingQuestion || loadingConversation}
+                                disabled={Boolean(loadingLesson || loadingActivity) || loadingQuestion || loadingConversation}
                                 onClick={() => changeLesson('example')}
                             >
                                 Give me an example
+                            </button>
+                            <button
+                                disabled={Boolean(loadingLesson || loadingActivity) || loadingQuestion || loadingConversation}
+                                onClick={() => runActivity('generate')}
+                            >
+                                Let me try it
                             </button>
                             <button
                                 disabled={Boolean(loadingLesson) || loadingQuestion}
@@ -236,6 +321,61 @@ export default function StudySession({
                             >
                                 Quiz me
                             </button>
+                        </div>
+                    )}
+
+                    {(activity || loadingActivity || activityError) && (
+                        <div className="study-activity" aria-busy={Boolean(loadingActivity)}>
+                            {activity && (
+                                <>
+                                    <h4>{activity.title}</h4>
+                                    <p>{activity.instruction}</p>
+                                    <form onSubmit={submitActivity}>
+                                        <label htmlFor="study-activity-response">What did you try or notice?</label>
+                                        <textarea
+                                            id="study-activity-response"
+                                            rows={3}
+                                            maxLength={MAX_STUDY_MESSAGE_LENGTH}
+                                            value={activityResponse}
+                                            onChange={(event) => {
+                                                setActivityResponse(event.target.value)
+                                                if (activityError?.action === 'evaluate') setActivityError(null)
+                                            }}
+                                            readOnly={Boolean(loadingActivity)}
+                                            disabled={Boolean(loadingLesson) || loadingQuestion || loadingConversation}
+                                            required
+                                        />
+                                        <button
+                                            type="submit"
+                                            disabled={!activityResponse.trim() || Boolean(loadingLesson || loadingActivity) ||
+                                                loadingQuestion || loadingConversation}
+                                        >
+                                            {activityError?.action === 'evaluate' ? 'Try again' : 'Share response'}
+                                        </button>
+                                    </form>
+                                    <div aria-live="polite">
+                                        {activityFeedback?.learnerResponse === activityResponse.trim() && (
+                                            <p><strong>Orbit:</strong> {activityFeedback.feedback}</p>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+                            {loadingActivity && (
+                                <p role="status">
+                                    {loadingActivity === 'generate'
+                                        ? 'Orbit is preparing something to try...'
+                                        : 'Orbit is looking at your response...'}
+                                </p>
+                            )}
+                            {activityError && <p role="alert">{activityError.message}</p>}
+                            {activityError?.action === 'generate' && (
+                                <button
+                                    disabled={Boolean(loadingLesson || loadingActivity) || loadingQuestion || loadingConversation}
+                                    onClick={() => runActivity('generate')}
+                                >
+                                    Try again
+                                </button>
+                            )}
                         </div>
                     )}
 
@@ -263,12 +403,12 @@ export default function StudySession({
                                         setConversationError('')
                                     }}
                                     readOnly={loadingConversation}
-                                    disabled={Boolean(loadingLesson) || loadingQuestion}
+                                    disabled={Boolean(loadingLesson || loadingActivity) || loadingQuestion}
                                     required
                                 />
                                 <button
                                     type="submit"
-                                    disabled={!learnerMessage.trim() || Boolean(loadingLesson) ||
+                                    disabled={!learnerMessage.trim() || Boolean(loadingLesson || loadingActivity) ||
                                         loadingQuestion || loadingConversation}
                                 >
                                     {conversationError ? 'Try again' : 'Send'}
@@ -329,10 +469,12 @@ export default function StudySession({
                                             course,
                                             studyQuestion,
                                             answer,
-                                            mastery
+                                            mastery,
+                                            { anchors: learningAnchors }
                                         )
 
                                         setEvaluation(result)
+                                        rememberAnchor(result.anchor)
                                     } catch (error) {
                                         console.error(error)
                                     } finally {
@@ -377,6 +519,7 @@ export default function StudySession({
                                 <button
                                     key={answer.text}
                                     onClick={() => {
+                                        rememberAnchor(anchorAfterFollowUp(evaluation.anchor, answer.correct))
                                         if (answer.correct) {
                                             setFollowUpResult('correct')
                                             if (studyQuestion.topic) {
