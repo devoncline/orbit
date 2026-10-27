@@ -84,12 +84,16 @@
 .home-wordmark {
   display: inline-flex;
   align-items: center;
+  flex-shrink: 0;
+  width: clamp(104px, 12vw, 132px);
   min-height: 44px;
-  color: var(--home-text);
-  font-size: 26px;
-  font-weight: 600;
-  letter-spacing: -1px;
   text-decoration: none;
+}
+
+.home-logo {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .home-nav {
@@ -224,9 +228,37 @@
 
 .home-hero-scene {
   position: relative;
+  display: grid;
+  place-items: center;
   min-width: 0;
   min-height: 320px;
+  padding: 16px;
   pointer-events: none;
+}
+
+.home-mascot {
+  display: block;
+  width: min(100%, 360px);
+  height: auto;
+  object-fit: contain;
+}
+
+@keyframes home-mascot-float {
+  0%,
+  100% {
+    transform: translateY(4px) rotate(-0.5deg);
+  }
+
+  50% {
+    transform: translateY(-4px) rotate(0.5deg);
+  }
+}
+
+/* Static by default, including when reduced motion is requested. */
+@media (prefers-reduced-motion: no-preference) {
+  .home-mascot {
+    animation: home-mascot-float 16s ease-in-out infinite;
+  }
 }
 
 .home-courses {
@@ -430,7 +462,7 @@ details[open] > summary .home-disclosure-mark::before {
   margin-right: 12px;
 }
 
-/* Stack when the recommendation and future scene no longer have enough room. */
+/* Stack when the recommendation and scene no longer have enough room. */
 @media (max-width: 850px) {
   .home-hero {
     grid-template-columns: minmax(0, 1fr);
@@ -446,10 +478,12 @@ details[open] > summary .home-disclosure-mark::before {
   .home-hero-scene {
     min-height: 0;
     max-height: 180px;
+    padding-block: 8px;
+    justify-items: end;
   }
 
-  .home-hero-scene:empty {
-    display: none;
+  .home-mascot {
+    width: min(100%, 160px);
   }
 
   .home-course-row {
@@ -472,6 +506,10 @@ details[open] > summary .home-disclosure-mark::before {
 
   .home-hero {
     padding-block: 40px;
+  }
+
+  .home-mascot {
+    width: min(100%, 128px);
   }
 
   .home-hero h1 {

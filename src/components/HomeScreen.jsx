@@ -1,6 +1,8 @@
 import AddCourse from './AddCourse'
 import AddCourseFile from './AddCourseFile'
 import CourseDetails from './CourseDetails'
+import orbitLogo from '../assets/brand/orbit-logo-horizontal-dark.svg'
+import orbitMascot from '../assets/mascot/orbit-hero-asset-transparent.png'
 import './HomeScreen.css'
 
 export default function HomeScreen({
@@ -22,7 +24,9 @@ export default function HomeScreen({
 
       <header className="home-header">
         <div className="home-container home-header-content">
-          <a className="home-wordmark" href="#home" aria-label="Orbit home">Orbit</a>
+          <a className="home-wordmark" href="#home">
+            <img className="home-logo" src={orbitLogo} alt="Orbit home" width="528" height="176" />
+          </a>
           <nav className="home-nav" aria-label="Main navigation">
             <a href="#home" aria-current="page">Learn</a>
             <a href="#courses">Courses</a>
@@ -64,8 +68,16 @@ export default function HomeScreen({
             </div>
           </div>
 
-          {/* Open space for the future companion. Empty space collapses on small screens. */}
-          <div className="home-hero-scene" aria-hidden="true" />
+          <div className="home-hero-scene" aria-hidden="true">
+            <img
+              className="home-mascot"
+              src={orbitMascot}
+              alt=""
+              width="1600"
+              height="1600"
+              decoding="async"
+            />
+          </div>
         </section>
 
         <section className="home-courses" id="courses" aria-labelledby="courses-heading">
