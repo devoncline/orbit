@@ -1,3 +1,5 @@
+import { retainStudyExchanges } from './studyConversation.js'
+
 export async function analyzeCourseFile(file) {
     const base64File = await fileToBase64(file)
 
@@ -53,6 +55,41 @@ async function requestStudyLesson(course, mastery, action, lesson, example) {
 
     if (!response.ok) {
         throw new Error('Failed to generate study lesson')
+    }
+
+    return response.json()
+}
+
+export async function respondToStudyMessage(
+    course,
+    lesson,
+    { message, history = [], example = '', signal }
+) {
+    const response = await fetch('/api/respond-to-study-message', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        signal,
+        body: JSON.stringify({
+            courseName: course.name,
+            nextTask: course.nextTask,
+            importantTopics: course.importantTopics,
+            upcomingWork: course.upcomingWork,
+            mastery: course.mastery?.overall ?? 40,
+            topicMastery: course.mastery?.topics || {},
+            lesson,
+            example,
+            history: retainStudyExchanges(history).map((exchange) => ({
+                message: exchange.message,
+                response: exchange.response,
+            })),
+            message,
+        }),
+    })
+
+    if (!response.ok) {
+        throw new Error('Failed to respond to study message')
     }
 
     return response.json()

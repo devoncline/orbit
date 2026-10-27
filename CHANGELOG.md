@@ -4,6 +4,7 @@
 
 ### Improvements
 
+- Learners can now ask questions or share connections during a lesson and receive short, contextual replies from Orbit. The lesson shortcuts and "Quiz me" remain available, with conversation kept only for the current session.
 - Study sessions now begin with a short, topic-aware lesson. Learners can ask for a different explanation or a concrete example, then choose "Quiz me" to practice the concept before continuing through adaptive questions.
 - Home now places its learning recommendation and companion in a nebula environment, with dark text areas, soft edges, and a quieter crop on smaller screens.
 - Orbit now uses its own browser and app icons. The Home companion has a more noticeable, calm floating motion while remaining static for reduced-motion users.
@@ -14,6 +15,7 @@
 
 ### Manual test checklist
 
+- During Learn, ask a question, share a connection, and send several follow-ups; check that replies stay concise and on topic. Try a failed send and retry, both lesson shortcuts, and "Quiz me" while a reply is pending; confirm the existing quiz, follow-up, and mastery flow still works. Check input usability on mobile and with a keyboard.
 - Start a session with and without topic mastery; confirm a short lesson appears before any question. Try "I lost you" and "Give me an example" repeatedly, then "Quiz me"; verify the first question covers the lesson and correct/incorrect answers, follow-ups, and Continue still update the active course's mastery.
 - Check the lesson on a narrow screen and with keyboard navigation. Simulate a failed lesson, explanation, example, or question request; confirm retry works, existing lesson content stays visible, and actions are disabled while a request is pending.
 - Review the Home background on desktop and narrow screens; check text contrast, mascot visibility, the fade into courses, and the absence of horizontal scrolling.

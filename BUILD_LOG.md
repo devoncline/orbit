@@ -507,6 +507,16 @@ The goal is for Orbit to move with the learner instead of waiting passively for 
 
 ---
 
+## October 27, 2026 — Conversational Learn Stage
+
+- Added a compact freeform input for questions, confusion, and connections during Learn, with short replies grounded in the lesson, current example, and recent conversation.
+- Kept the latest four complete exchanges in session memory and request context, showing the latest two beneath the lesson. Message and reply lengths are bounded on the server.
+- Added tentative connection, confusion, curiosity, understanding, and neutral signals for the current session only; these labels stay out of the UI and do not change mastery.
+- Kept all lesson shortcuts and the existing quiz flow. "Quiz me" can interrupt a pending conversation request; failed sends preserve the learner's message for retry.
+- Reused the server-side Meta credential pattern. Persistence, learning-style memory, learning paths, and the dedicated Study UI redesign remain deferred.
+
+---
+
 # Next
 
 The next major development steps are:

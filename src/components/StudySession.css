@@ -22,3 +22,26 @@
   min-height: 44px;
   padding: 8px 12px;
 }
+
+.study-conversation {
+  margin-top: 24px;
+}
+
+.study-conversation form {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.study-conversation textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 8px;
+  font: inherit;
+  resize: vertical;
+}
+
+.study-conversation button {
+  justify-self: start;
+}

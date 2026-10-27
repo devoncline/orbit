@@ -3,9 +3,11 @@ import {
     generateStudyLesson,
     explainStudyLessonDifferently,
     generateStudyExample,
+    respondToStudyMessage,
     generateStudyQuestion,
     evaluateStudyAnswer,
 } from '../services/meta'
+import { MAX_STUDY_MESSAGE_LENGTH, retainStudyExchanges } from '../services/studyConversation'
 import './StudySession.css'
 
 export default function StudySession({
@@ -26,6 +28,11 @@ export default function StudySession({
     const [loadingLesson, setLoadingLesson] = useState('lesson')
     const [lessonError, setLessonError] = useState('')
     const [lessonAttempt, setLessonAttempt] = useState(0)
+    const [conversation, setConversation] = useState([])
+    const [learnerMessage, setLearnerMessage] = useState('')
+    const [loadingConversation, setLoadingConversation] = useState(false)
+    const [conversationError, setConversationError] = useState('')
+    const conversationRequest = useRef(null)
     const [initialContext] = useState(() => ({ course, mastery }))
     const initialLessonRequest = useRef(null)
     const [studyQuestion, setStudyQuestion] = useState(null)
@@ -60,6 +67,49 @@ export default function StudySession({
         return () => { active = false }
     }, [initialContext, lessonAttempt])
 
+    useEffect(() => {
+        return () => { conversationRequest.current?.abort() }
+    }, [])
+
+    async function sendMessage(event) {
+        event.preventDefault()
+        const message = learnerMessage.trim()
+        if (!lesson || stage !== 'learn' || !message || loadingLesson ||
+            loadingQuestion || conversationRequest.current) return
+
+        const controller = new AbortController()
+        conversationRequest.current = controller
+        setLoadingConversation(true)
+        setConversationError('')
+        setLessonError('')
+        setQuestionError('')
+
+        try {
+            const result = await respondToStudyMessage(course, lesson, {
+                message,
+                history: conversation,
+                example,
+                signal: controller.signal,
+            })
+            if (controller.signal.aborted) return
+
+            setConversation((current) => retainStudyExchanges([
+                ...current,
+                { message, response: result.response, signal: result.signal },
+            ]))
+            setLearnerMessage('')
+        } catch {
+            if (!controller.signal.aborted) {
+                setConversationError('Orbit could not reply. Your message is still here; try sending it again.')
+            }
+        } finally {
+            if (conversationRequest.current === controller) {
+                conversationRequest.current = null
+                setLoadingConversation(false)
+            }
+        }
+    }
+
     function retryLesson() {
         initialLessonRequest.current = null
         setLessonError('')
@@ -68,7 +118,7 @@ export default function StudySession({
     }
 
     async function changeLesson(action) {
-        if (loadingLesson || loadingQuestion) return
+        if (loadingLesson || loadingQuestion || loadingConversation) return
         setLoadingLesson(action)
         setLessonError('')
         setQuestionError('')
@@ -93,6 +143,10 @@ export default function StudySession({
 
     async function loadQuestion(lessonContext) {
         if (loadingQuestion || loadingLesson) return
+        conversationRequest.current?.abort()
+        conversationRequest.current = null
+        setLoadingConversation(false)
+        setConversationError('')
         setLoadingQuestion(true)
         setQuestionError('')
         setLessonError('')
@@ -165,13 +219,13 @@ export default function StudySession({
                     {lesson && (
                         <div className="study-lesson-actions">
                             <button
-                                disabled={Boolean(loadingLesson) || loadingQuestion}
+                                disabled={Boolean(loadingLesson) || loadingQuestion || loadingConversation}
                                 onClick={() => changeLesson('simplify')}
                             >
                                 I lost you
                             </button>
                             <button
-                                disabled={Boolean(loadingLesson) || loadingQuestion}
+                                disabled={Boolean(loadingLesson) || loadingQuestion || loadingConversation}
                                 onClick={() => changeLesson('example')}
                             >
                                 Give me an example
@@ -182,6 +236,46 @@ export default function StudySession({
                             >
                                 Quiz me
                             </button>
+                        </div>
+                    )}
+
+                    {lesson && (
+                        <div className="study-conversation">
+                            <div aria-live="polite">
+                                {conversation.slice(-2).map((exchange, index) => (
+                                    <div key={index}>
+                                        <p><strong>You:</strong> {exchange.message}</p>
+                                        <p><strong>Orbit:</strong> {exchange.response}</p>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <form onSubmit={sendMessage} aria-busy={loadingConversation}>
+                                <label htmlFor="study-message">What are you thinking?</label>
+                                <textarea
+                                    id="study-message"
+                                    rows={2}
+                                    maxLength={MAX_STUDY_MESSAGE_LENGTH}
+                                    placeholder="Ask about this idea, or share a connection."
+                                    value={learnerMessage}
+                                    onChange={(event) => {
+                                        setLearnerMessage(event.target.value)
+                                        setConversationError('')
+                                    }}
+                                    readOnly={loadingConversation}
+                                    disabled={Boolean(loadingLesson) || loadingQuestion}
+                                    required
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={!learnerMessage.trim() || Boolean(loadingLesson) ||
+                                        loadingQuestion || loadingConversation}
+                                >
+                                    {conversationError ? 'Try again' : 'Send'}
+                                </button>
+                            </form>
+                            {loadingConversation && <p role="status">Orbit is thinking about that...</p>}
+                            {conversationError && <p role="alert">{conversationError}</p>}
                         </div>
                     )}
                 </div>
