@@ -4,6 +4,7 @@
 
 ### Improvements
 
+- Home now leads with the current learning task or question and a contextual action. Study gives Orbit a larger visual stage, with a dedicated mobile composition, calmer motion, and clearer controls. Calendar, Library, and space setup use simpler copy and more open layouts with fewer dividers.
 - Orbit now has learning spaces for classes, skills, and personal interests, with a calm shared navigation, a mobile menu, and three ways to begin from an empty account. Home keeps one next action in focus and uses Orbit’s existing environment and companion artwork.
 - A lightweight Calendar and Home preview gather dated work from learning materials, keeping unclear dates separate for review. Materials can be added directly to a chosen space, with visible upload progress and retry feedback.
 - Study now has a quieter environment, clear Learn/Practice progress, and a way to return Home and resume the current session. Spaces and progress still last only until refresh.
@@ -20,6 +21,7 @@
 
 ### Manual test checklist
 
+- Review Home, Study, Calendar, Library, and space setup on desktop and mobile. Try a question as a starting point, resume a lesson after navigating away, and check keyboard focus, the menu, and reduced motion. Confirm lesson controls, conversation, applied activities, quizzes, and retries remain usable on a phone.
 - Start with no spaces and try the class, curiosity, and material entry points. Add one space, then several (including a long name); verify Home stays compact and the full list remains accessible in navigation and Library. Check the mobile menu, Escape, keyboard focus, and reduced motion.
 - Add a PDF to a chosen space and check its material list and any extracted dates in Calendar. Check a failed upload and retry, ambiguous dates, and a Home preview with more than three upcoming items. Leave Study for Home or Calendar and resume; verify the current lesson, conversation, activity, quiz, and mastery remain intact.
 - Explain a useful analogy or complete an activity, continue past several conversation turns, then request another explanation, example, activity, or quiz. Check that Orbit can refer naturally to relevant earlier work without repeating it every time or bringing in unrelated topics. Try an incorrect quiz answer and its adapted follow-up; verify mastery and Continue still work. Start a fresh session or refresh to check that session memories are cleared and no memory panel or internal labels appear.

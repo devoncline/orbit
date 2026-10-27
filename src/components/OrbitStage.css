@@ -1,0 +1,64 @@
+.orbit-stage {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  height: clamp(380px, 40vw, 620px);
+}
+
+.orbit-stage-environment {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: url('../assets/backgrounds/orbit-home-background-nebula.png') 80% 60% / auto 100% no-repeat;
+  mask-image: radial-gradient(ellipse at 58% 54%, #000 15%, transparent 69%);
+  opacity: .45;
+}
+
+.orbit-stage-companion {
+  position: absolute;
+  width: min(100%, 560px);
+  height: auto;
+  right: 0;
+  top: 5%;
+  pointer-events: none;
+  filter: drop-shadow(0 28px 32px rgb(2 5 14 / 32%));
+}
+
+.orbit-stage-object { position: relative; z-index: 1; width: 76%; margin-top: 10%; }
+.orbit-stage-annotations { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.orbit-stage-annotations > * { pointer-events: auto; }
+.orbit-stage-with-visual .orbit-stage-companion { width: 46%; top: 40%; right: -2%; }
+.orbit-stage-study { position: sticky; top: 64px; }
+.orbit-stage-study .orbit-stage-companion { top: 10%; }
+.orbit-stage-page { position: sticky; top: 100px; height: clamp(340px, 36vw, 540px); }
+.orbit-stage-page .orbit-stage-companion { width: min(100%, 460px); top: 10%; }
+
+@keyframes orbit-stage-drift {
+  0%, 100% { transform: translate(-3px, 5px) rotate(-.6deg); }
+  50% { transform: translate(3px, -7px) rotate(.6deg); }
+}
+
+/* Static first. Study moves less and rests longer than the broader environment. */
+@keyframes orbit-study-drift {
+  0%, 20%, 100% { transform: translateY(2px); }
+  55%, 65% { transform: translateY(-4px) rotate(.4deg); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .orbit-stage-home .orbit-stage-companion { animation: orbit-stage-drift 10s ease-in-out infinite; }
+  .orbit-stage-study .orbit-stage-companion { animation: orbit-study-drift 18s ease-in-out infinite; }
+}
+
+@media (max-width: 760px) {
+  .orbit-stage { position: relative; top: auto; height: 190px; overflow: clip; }
+  .orbit-stage:not(.orbit-stage-with-visual) { mask-image: linear-gradient(#000 82%, transparent); }
+  .orbit-stage-environment { inset: 0; opacity: .65; background-position: 70% center; mask-image: radial-gradient(ellipse closest-side at 60% 50%, #000, transparent); }
+  .orbit-stage-companion { width: 250px; max-width: 85%; top: -35px; right: 0; }
+  .orbit-stage-study .orbit-stage-companion { width: 270px; top: -42px; right: 0; }
+  .orbit-stage-page { height: 150px; }
+  .orbit-stage-page .orbit-stage-companion { width: 230px; top: -42px; }
+  .orbit-stage-with-visual { height: 280px; }
+  .orbit-stage-with-visual .orbit-stage-companion { width: 42%; top: 35%; right: 0; }
+  .orbit-stage-object { width: 72%; margin-top: 0; }
+}

@@ -22,7 +22,7 @@ export default function AddCourse({ onAddCourse, intent = 'topic', courses = [] 
     const newCourse = {
       name,
       nextTask: goal.trim() || `Explore ${name}`,
-      reason: goal.trim() ? 'Begin with the idea you want to work on.' : 'Build a starting point, one idea at a time.',
+      reason: '',
       ...(intent === 'class' ? { syllabus: { courseName: name, instructor: instructor.trim(), semester: '' } } : {}),
       files: [],
     }
@@ -35,7 +35,7 @@ export default function AddCourse({ onAddCourse, intent = 'topic', courses = [] 
 
   return (
       <form className="orbit-form" onSubmit={handleSubmit}>
-        <label>{intent === 'class' ? 'Class name' : 'What would you like to learn?'}
+        <label>{intent === 'class' ? 'Class name' : intent === 'material' ? 'Space name' : 'Topic or skill'}
         <input
           type="text"
           autoComplete="off"

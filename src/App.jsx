@@ -4,7 +4,7 @@ import HomeScreen from './components/HomeScreen'
 import AppShell from './components/AppShell'
 import SpaceScreen from './components/SpaceScreen'
 import UpcomingWork from './components/UpcomingWork'
-import orbitTeaching from './assets/mascot/orbit-teaching-tilt-transparent.png'
+import OrbitStage from './components/OrbitStage'
 import {
   analyzeCourseFile,
   recommendCourse,
@@ -223,7 +223,7 @@ export default function App() {
     >
       {sessionStarted && destination !== 'study' && !(destination === 'home' && recommendedCourse?.name === sessionCourseName) && (
         <div className="session-resume">
-          <span>Still here: {sessionCourse.name}</span>
+          <span>{sessionCourse.name}</span>
           <button className="orbit-text-button" onClick={() => navigate('learn')}>Resume your session →</button>
         </div>
       )}
@@ -237,63 +237,72 @@ export default function App() {
           onSelectSpace={selectSpace}
           onNewSpace={newSpace}
           onNavigate={navigate}
-          learning={destination === 'learn'}
           resuming={sessionStarted && recommendedCourse?.name === sessionCourseName}
         />
       )}
       {destination === 'new' && (
-        <section className="orbit-page">
-          <p className="orbit-eyebrow">Make room for something new</p>
-          <h1>{newSpaceIntent === 'class' ? 'Your class, your space.' : newSpaceIntent === 'material' ? 'Give your material a home.' : 'Follow your curiosity.'}</h1>
-          <p className="orbit-page-intro">A learning space can be a class, a topic, a skill, or a goal. Start with a name. You can bring in material along the way.</p>
-          <p className="orbit-muted">For now, spaces and progress stay here until you refresh.</p>
-          <AddCourse key={newSpaceIntent} onAddCourse={addCourse} intent={newSpaceIntent} courses={courses} />
+        <section className="orbit-page orbit-page-layout new-space-page">
+          <header className="orbit-page-header">
+            <h1>{newSpaceIntent === 'class' ? 'Add a class' : newSpaceIntent === 'material' ? 'Start from a PDF' : 'What do you want to learn?'}</h1>
+            {newSpaceIntent === 'material' && <p className="orbit-page-intro">Name your space, then add your material.</p>}
+          </header>
+          <OrbitStage variant="page" />
+          <div className="orbit-page-content">
+            <AddCourse key={newSpaceIntent} onAddCourse={addCourse} intent={newSpaceIntent} courses={courses} />
+            <p className="orbit-session-note">Spaces and progress are cleared when you refresh.</p>
+          </div>
         </section>
       )}
       {destination === 'space' && selectedCourse && (
         <SpaceScreen key={selectedCourse.name} course={selectedCourse} onContinue={startSession} onAddFile={addCourseFile} onSelectSpace={selectSpace} />
       )}
       {destination === 'calendar' && (
-        <section className="orbit-page">
-          <p className="orbit-eyebrow">A little room to look ahead</p>
-          <h1>On the horizon.</h1>
-          <p className="orbit-page-intro">Dates from your learning materials, gathered in one place. You can keep learning even when there’s nothing due.</p>
-          <UpcomingWork courses={courses} onSelectSpace={selectSpace} />
-          <div className="orbit-page-actions">
-            <button className="orbit-button" onClick={() => courses.length ? navigate('library') : newSpace('material')}>Add learning material <span aria-hidden="true">↗</span></button>
+        <section className="orbit-page orbit-page-layout calendar-page">
+          <header className="orbit-page-header">
+            <h1>Calendar</h1>
+            <p className="orbit-page-intro">Dates from your learning materials.</p>
+          </header>
+          <OrbitStage variant="page" />
+          <div className="orbit-page-content">
+            <UpcomingWork courses={courses} onSelectSpace={selectSpace} />
+            <div className="orbit-page-actions">
+              <button className="orbit-button" onClick={() => courses.length ? navigate('library') : newSpace('material')}>Add a syllabus or notes <span aria-hidden="true">↗</span></button>
+            </div>
           </div>
-          <p className="orbit-muted">Manual events and date editing are still to come.</p>
         </section>
       )}
       {destination === 'library' && (
-        <section className="orbit-page">
-          <p className="orbit-eyebrow">Everything you’re exploring</p>
-          <h1>Your library.</h1>
-          <p className="orbit-page-intro">Your spaces and the material you bring to them. Open a space to add a PDF or pick up an idea.</p>
+        <section className="orbit-page orbit-page-layout library-page">
+          <header className="orbit-page-header">
+            <h1>Library</h1>
+            <p className="orbit-page-intro">{courses.length ? 'Open a space to study or add material.' : 'Keep a class, topic, or skill and its materials together.'}</p>
+          </header>
+          <OrbitStage variant="page" />
+          <div className="orbit-page-content">
           {courses.length ? (
             <ul className="space-links">
               {courses.map((course) => (
                 <li key={course.name}>
                   <button onClick={() => selectSpace(course.name)}>
                     <span className="space-dot" />
-                    <span><strong>{course.name}</strong><small>{course.files?.length || 0} materials · {course.nextTask}</small></span>
+                    <span><strong>{course.name}</strong><small>{course.files?.length || 0} {course.files?.length === 1 ? 'material' : 'materials'} · {course.nextTask}</small></span>
                     <span aria-hidden="true">↗</span>
                   </button>
                 </li>
               ))}
             </ul>
-          ) : <p className="orbit-muted">Your first learning space starts with something you’re curious about.</p>}
+          ) : null}
           <div className="orbit-page-actions"><button className="orbit-button" onClick={() => newSpace('topic')}>＋ New space</button></div>
+          </div>
         </section>
       )}
       {sessionStarted && sessionCourse && (
         <div hidden={destination !== 'study'}>
           <div className="study-room-header">
             <button className="orbit-text-button" onClick={() => navigate('home')}>← Back home</button>
-            <span>Focused study · {sessionCourse.name}</span>
+            <span>{sessionCourse.name}</span>
           </div>
           <div className="study-room">
-            <img className="study-companion" src={orbitTeaching} alt="" width="1600" height="1600" aria-hidden="true" />
             <StudySession
               key={sessionCourse.name}
               course={sessionCourse}

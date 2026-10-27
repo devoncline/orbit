@@ -14,7 +14,7 @@ export default function UpcomingWork({ courses, preview = false, onSelectSpace }
   }
 
   return <>
-    {visible.length ? list(visible) : <p className="orbit-muted upcoming-empty">No dated work ahead. There’s room to explore at your own pace.</p>}
+    {visible.length ? list(visible) : <p className="orbit-muted upcoming-empty">No upcoming dates.</p>}
     {preview && unconfirmed.length > 0 && <p className="orbit-muted">{unconfirmed.length} {unconfirmed.length === 1 ? 'item needs' : 'items need'} a clear date. See Calendar.</p>}
     {!preview && unconfirmed.length > 0 && <section className="calendar-group"><h2>Dates to confirm</h2><p className="orbit-muted">These dates aren’t clear enough to put on the calendar. Check the original material.</p>{list(unconfirmed)}</section>}
     {!preview && past.length > 0 && <details className="calendar-group"><summary>Earlier dates</summary>{list(past)}</details>}

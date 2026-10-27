@@ -547,6 +547,16 @@ The goal is for Orbit to move with the learner instead of waiting passively for 
 
 ---
 
+## October 27, 2026 — Visual Refinement & Study Stage
+
+- Removed decorative headings, footer copy, setup filler, and full-width dividers. Home now leads with the actual recommended task or question; action labels derive from existing task text and session state without inventing missed work or adding requests.
+- Recomposed desktop Study as a wider learning zone beside Orbit. Added a shared visual stage with separate environment, companion, teaching-object, and annotation layers; empty slots render nothing. Existing artwork only; no generated visuals or generation API.
+- Gave mobile Study the order concept, visual strip, explanation, controls, input, then progress. Enlarged Orbit, softened mobile artwork crops, kept Home's mobile recommendation free of a full-screen glass panel, and adapted sparse pages to the same environment. Study drift is slower and smaller than Home and disabled for reduced motion.
+- Preserved navigation, date handling, learning request/response contracts, session retention, quiz callbacks, and mastery fallbacks. No dependencies, database changes, migrations, scheduling engine, or persistent memory.
+- Production build, focused lint, all 65 tests, and diff checks pass. Full-project lint retains three existing errors in the unchanged course-analysis/recommendation APIs. Browser review covers desktop and 399px/500px layouts, Home, Study, Calendar, Library, Space and New space, drawer/Escape, visible keyboard focus, reduced-motion emulation, live lesson/example generation, and resuming existing study state. Zero/many-space and date grouping cases are also covered by rendering tests. Physical-device testing, PDF upload, and exhaustive live conversation/activity/retry checks remain manual.
+
+---
+
 # Next
 
 The next major development steps are:

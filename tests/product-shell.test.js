@@ -4,6 +4,7 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { createServer } from 'vite'
 import { collectUpcomingWork, formatWorkDate, parseWorkDate } from '../src/services/upcomingWork.js'
+import { learningAction } from '../src/components/learningAction.js'
 
 let server
 let HomeScreen
@@ -36,9 +37,9 @@ test('zero spaces offers all three ways to begin without a recommendation or inv
 test('one space has a usable action during recommendation loading', () => {
   const html = renderToStaticMarkup(createElement(HomeScreen, { courses: courses.slice(0, 1), recommendedCourse: courses[0], loadingRecommendation: true }))
   assert.match(html, /Explore idea 1/)
-  assert.match(html, /Start learning/)
+  assert.match(html, /Show me idea 1/)
   assert.doesNotMatch(html, /disabled/)
-  assert.match(html, /No dated work ahead/)
+  assert.match(html, /No upcoming dates/)
 })
 
 test('many spaces stay in navigation while Home shows only two alternatives', () => {
@@ -57,6 +58,26 @@ test('Study removes the desktop sidebar and keeps the navigation drawer availabl
   assert.doesNotMatch(html, /<aside/)
   assert.match(html, /<dialog/)
   assert.match(html, /orbit-shell-focused/)
+})
+
+test('Home keeps a real question as its hook and does not invent learner history', () => {
+  const html = renderToStaticMarkup(createElement(HomeScreen, {
+    courses, recommendedCourse: courses[0],
+    recommendation: { recommendedAction: 'Why can props go down but not back up?' },
+  }))
+  assert.match(html, /Why can props go down but not back up\?/)
+  assert.match(html, /Show me /)
+  assert.doesNotMatch(html, /You were close|home-reason|YOUR NEXT STEP|WELCOME BACK/)
+})
+
+test('learning actions use the task context and keep an active session distinct', () => {
+  assert.equal(learningAction('Explore props', 'React'), 'Show me props')
+  assert.equal(learningAction('Review photosynthesis.', 'Biology'), 'Review photosynthesis')
+  assert.equal(learningAction('Practice quadratic equations', 'Algebra'), 'Practice quadratic equations')
+  assert.equal(learningAction('Prepare for the quiz', 'Biology'), 'Prepare for the quiz')
+  assert.equal(learningAction('Why does this happen?', 'Physics'), 'Show me')
+  assert.equal(learningAction(undefined, 'Physics'), 'Try this')
+  assert.equal(learningAction('Explore props', 'React', true), 'Return to React')
 })
 
 test('dates stay local and reject rollover or ambiguous values', () => {

@@ -1,43 +1,39 @@
-.orbit-home { max-width: 1240px; margin: auto; }
-.home-arrival { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: center; min-height: 680px; padding-block: 70px 60px; gap: 24px; }
-.home-copy { position: relative; z-index: 1; }
-.home-copy > h1 { margin: 20px 0; }
-.home-intro { max-width: 42ch; color: var(--orbit-muted); font-size: 15px; }
-.home-recommendation { margin-top: 38px; padding: 26px 30px 22px; border: 1px solid rgb(166 168 211 / 25%); border-radius: var(--orbit-radius); background: linear-gradient(120deg, rgb(22 29 49 / 89%), rgb(20 27 47 / 64%)); backdrop-filter: blur(14px); }
-.home-recommendation > .orbit-eyebrow { font-size: 9px; color: #a69acb; }
-.home-space-label { display: flex; align-items: center; gap: 10px; color: #d1c8f0; font-size: 13px !important; margin: 10px 0 4px; }
-.home-recommendation h2 { font-size: clamp(23px, 2.3vw, 31px); font-weight: 500; letter-spacing: -.025em; margin: 4px 0 14px; text-wrap: pretty; }
-.home-reason { font-size: 14px; color: #bcc4d6; max-width: 45ch; line-height: 1.7; }
-.home-recommendation > .orbit-button { margin-top: 24px; min-width: 210px; }
-.home-status { margin-top: 15px; color: #a0abc2; font-size: 10px; min-height: 16px; }
-.home-companion { position: relative; align-self: center; margin-top: 65px; pointer-events: none; text-align: center; }
-.home-companion img { display: block; width: 100%; max-width: 550px; height: auto; margin-inline: auto; filter: drop-shadow(0 22px 28px rgb(0 0 0 / 30%)); }
-.home-companion p { font-size: 11px; color: #b9bfdb; letter-spacing: .07em; margin-top: -12px; }
-.home-support { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: clamp(32px, 5vw, 80px); border-top: 1px solid rgb(169 179 201 / 16%); padding-top: 26px; }
-.home-entry-points { margin-top: 32px; border-top: 1px solid var(--orbit-border); }
-.home-entry-points button { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 20px; padding: 21px 0; border: 0; border-bottom: 1px solid var(--orbit-border); color: var(--orbit-text); background: none; text-align: left; }
-.home-entry-points strong { font-size: 16px; font-weight: 500; display: block; }
-.home-entry-points small { display: block; font-size: 12px; color: var(--orbit-muted); margin-top: 5px; }
-.home-entry-points button > span:last-child { font-size: 22px; color: var(--orbit-accent); }
+.orbit-home { max-width: 1400px; margin: 0 auto; }
+.home-arrival { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); align-items: center; min-height: 650px; padding-top: 40px; }
+.home-copy { position: relative; z-index: 1; min-width: 0; }
+.home-copy h1 { margin: 18px 0 26px; font-size: clamp(36px, 3.6vw, 56px); }
+.home-arrival-empty .home-copy h1 { margin-bottom: 40px; }
+.home-entry-points { display: grid; gap: 14px; max-width: 420px; }
+.home-entry-points button { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 56px; padding: 12px 0; background: none; border: 0; text-align: left; color: var(--orbit-text); }
+.home-entry-points strong { font-size: 17px; font-weight: 400; }
+.home-entry-points small { display: block; margin-top: 2px; font-size: 12px; color: var(--orbit-muted); }
+.home-entry-points button > span:last-child { color: var(--orbit-accent); }
 .home-entry-points button:hover strong { color: var(--orbit-accent); }
-@keyframes orbit-companion-float { 0%, 100% { transform: translate(-3px, 7px) rotate(-1deg); } 50% { transform: translate(3px, -9px) rotate(1deg); } }
-@media (prefers-reduced-motion: no-preference) { .home-companion img { animation: orbit-companion-float 9s ease-in-out infinite; } }
-@media (min-width: 1500px) { .home-arrival { min-height: 740px; } }
-@media (max-width: 1050px) {
-  .home-arrival { grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); min-height: 650px; gap: 12px; padding-top: 55px; }
-  .home-recommendation { padding: 24px; }
+.home-recommendation { padding: clamp(24px, 2.8vw, 44px); border: 1px solid rgb(180 176 220 / 21%); border-radius: var(--orbit-radius); background: linear-gradient(115deg, rgb(20 29 47 / 88%), rgb(18 27 45 / 65%)); backdrop-filter: blur(14px); }
+.home-recommendation h1 { max-width: 20ch; }
+.home-space-label { display: inline-flex; align-items: center; gap: 12px; font-size: 14px !important; }
+.home-space-label > span:last-child { margin-left: 8px; }
+.home-reason { max-width: 48ch; color: var(--orbit-muted); margin: 0 0 30px; font-size: 16px; line-height: 1.7; }
+.home-recommendation .orbit-button { min-height: 50px; margin-top: 6px; }
+.home-status { font-size: 12px; color: var(--orbit-muted); margin: 14px 0 0; }
+.home-status:empty { display: none; }
+.home-support { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(32px, 5vw, 90px); padding: 10px 0 40px; }
+.home-support .space-links button { padding-block: 14px; }
+.home-support .upcoming-list li { padding-block: 8px; }
+@media (max-width: 1100px) and (min-width: 761px) {
+  .home-arrival { min-height: 560px; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
+  .home-copy h1 { font-size: 38px; }
 }
 @media (max-width: 760px) {
-  .home-arrival { min-height: auto; padding: 28px 0 36px; grid-template-columns: minmax(0, 1fr); position: relative; }
-  .home-copy > h1 { font-size: clamp(36px, 8vw, 52px); padding-right: 58px; }
-  .home-copy > .orbit-eyebrow { max-width: 26ch; }
-  .home-intro { max-width: 35ch; }
-  .home-companion { position: absolute; top: 4px; right: -12px; width: 110px; margin: 0; opacity: .9; }
-  .home-companion img { width: 100%; margin: 0; }
-  .home-companion p { display: none; }
-  .home-recommendation { margin-top: 30px; padding: 24px; background: rgb(15 23 40 / 88%); }
-  .home-support { grid-template-columns: minmax(0, 1fr); gap: 32px; }
-  .home-arrival-empty .home-copy > h1 { padding-right: 0; }
-  .home-arrival-empty .home-companion { top: -26px; width: 80px; }
+  .home-arrival { display: flex; flex-direction: column; align-items: stretch; min-height: 0; padding-top: 0; }
+  .home-arrival > .orbit-stage { order: -1; height: 170px; margin-inline: -12px; }
+  .home-arrival > .orbit-stage .orbit-stage-companion { right: 4%; top: -40px; }
+  .home-copy h1 { font-size: clamp(32px, 8vw, 42px); line-height: 1.15; margin: 12px 0 20px; }
+  .home-recommendation { padding: 0; border: 0; border-radius: 0; background: none; backdrop-filter: none; }
+  .home-reason { font-size: 15px; margin-bottom: 20px; }
+  .home-recommendation .orbit-button { min-height: 48px; }
+  .home-arrival-empty .home-copy h1 { margin-bottom: 24px; }
+  .home-entry-points { gap: 6px; max-width: none; }
+  .home-entry-points strong { font-size: 16px; }
+  .home-support { grid-template-columns: 1fr; gap: 30px; padding: 46px 0 8px; }
 }
-@media (max-width: 380px) { .home-recommendation { padding: 20px; } .home-recommendation > .orbit-button { min-width: 0; width: 100%; } .home-status { font-size: 11px; } }

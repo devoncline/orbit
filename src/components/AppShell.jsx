@@ -39,10 +39,9 @@ export default function AppShell({ courses, destination, selectedSpace, onNaviga
         <nav className="shell-spaces" aria-label="Your learning spaces">
           {courses.length ? courses.map((course) => (
             <button key={course.name} title={course.name} aria-current={destination === 'space' && selectedSpace === course.name ? 'page' : undefined} onClick={() => navigate(() => onSelectSpace(course.name))}><span className="space-dot" /><span>{course.name}</span></button>
-          )) : <p>Something you’re studying.<br />Something you’re curious about.</p>}
+          )) : <p>No spaces yet</p>}
         </nav>
         <button className="shell-new-space" onClick={() => navigate(() => onNewSpace('topic'))}><span aria-hidden="true">＋</span> New space</button>
-        <p className="shell-footnote">A place for your curiosity.</p>
       </>
     )
   }

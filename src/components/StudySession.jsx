@@ -11,6 +11,7 @@ import {
 } from '../services/meta'
 import { MAX_STUDY_MESSAGE_LENGTH, retainStudyExchanges } from '../services/studyConversation'
 import { rememberLearningAnchor, anchorAfterFollowUp } from '../services/studyLearningContext'
+import OrbitStage from './OrbitStage'
 import './StudySession.css'
 
 export default function StudySession({
@@ -254,22 +255,15 @@ export default function StudySession({
     return (
         <section className="study-session">
             <header className="study-context">
-                <p className="orbit-eyebrow">{course.name}</p>
-                <h1>{stage === 'learn' ? lesson?.topic || 'Let’s explore an idea.' : studyQuestion?.topic || 'Put it into practice.'}</h1>
-                <p className="study-objective">{course.nextTask}</p>
-                <ol className="study-stages" aria-label="Session progress">
-                    <li aria-current={stage === 'learn' ? 'step' : undefined}>01 <span>Learn & try</span></li>
-                    <li aria-current={stage === 'quiz' ? 'step' : undefined}>02 <span>Practice{stage === 'quiz' ? ` · Question ${questionNumber}` : ''}</span></li>
-                </ol>
+                {stage === 'learn' && lesson && <p className="study-topic">{lesson.topic}</p>}
+                <h1>{stage === 'learn' ? lesson?.concept || course.nextTask || course.name : studyQuestion?.topic || lesson?.topic || 'Practice'}</h1>
             </header>
-
+            <OrbitStage />
+            <div className="study-body">
             {stage === 'learn' && (
                 <div className="study-lesson">
-                    <h3>Learn{lesson ? `: ${lesson.topic}` : ''}</h3>
-
                     {lesson && (
                         <div aria-live="polite">
-                            <h4>{lesson.concept}</h4>
                             <p>{lesson.content}</p>
                             {example && (
                                 <>
@@ -561,7 +555,14 @@ export default function StudySession({
                     )}
                 </div>
             )}
-            <p className="study-mastery">Current mastery in this space · {mastery}%</p>
+            </div>
+            <footer className="study-progress">
+                <ol className="study-stages" aria-label="Session progress">
+                    <li aria-current={stage === 'learn' ? 'step' : undefined}>Learn & try</li>
+                    <li aria-current={stage === 'quiz' ? 'step' : undefined}>Practice{stage === 'quiz' ? ` · Question ${questionNumber}` : ''}</li>
+                </ol>
+                <p className="study-mastery">Mastery · {mastery}%</p>
+            </footer>
         </section>
     )
 }
