@@ -101,7 +101,10 @@ export default function App() {
       ...courses,
       {
         ...newCourse,
-        mastery: 40,
+        mastery: {
+          overall: 40,
+          topics: {},
+        },
       },
     ])
   }
@@ -112,7 +115,10 @@ export default function App() {
         if (course.name === courseName) {
           return {
             ...course,
-            mastery: newMastery,
+            mastery: {
+              ...course.mastery,
+              overall: newMastery,
+            },
           }
         }
 
@@ -229,7 +235,7 @@ export default function App() {
           setShowAdaptedLesson={setShowAdaptedLesson}
           followUpResult={followUpResult}
           setFollowUpResult={setFollowUpResult}
-          mastery={recommendedCourse.mastery ?? 40}
+          mastery={recommendedCourse.mastery?.overall ?? 40}
           setMastery={(newMastery) =>
             updateCourseMastery(
               recommendedCourse.name,
@@ -246,7 +252,7 @@ export default function App() {
       {courses.map((course) => (
         <div key={course.name}>
           <h3>{course.name}</h3>
-          <p>Mastery: {course.mastery ?? 40}%</p>
+          <p>Mastery: {course.mastery?.overall ?? 40}%</p>
           <p>{course.nextTask}</p>
           <p>{course.reason}</p>
         </div>
