@@ -13,6 +13,7 @@ export default function App() {
   const [courses, setCourses] = useState([
     {
       name: 'Biology',
+      mastery: 40,
       nextTask: 'Review photosynthesis',
       reason: 'Quiz tomorrow and weak performance on light reactions',
 
@@ -39,13 +40,13 @@ export default function App() {
     },
     {
       name: 'Algebra',
+      mastery: 40,
       nextTask: 'Practice quadratic equations',
-      reason: 'Homework due tonight',
     },
     {
       name: 'History',
+      mastery: 40,
       nextTask: 'Review Industrial Revolution notes',
-      reason: 'Test on Friday',
     },
   ])
 
@@ -60,7 +61,6 @@ export default function App() {
   const [answerResult, setAnswerResult] = useState('')
   const [showAdaptedLesson, setShowAdaptedLesson] = useState(false)
   const [followUpResult, setFollowUpResult] = useState('')
-  const [mastery, setMastery] = useState(40)
 
   useEffect(() => {
     async function loadRecommendation() {
@@ -81,7 +81,28 @@ export default function App() {
   }, [courses])
 
   function addCourse(newCourse) {
-    setCourses([...courses, newCourse])
+    setCourses([
+      ...courses,
+      {
+        ...newCourse,
+        mastery: 40,
+      },
+    ])
+  }
+
+  function updateCourseMastery(courseName, newMastery) {
+    setCourses(
+      courses.map((course) => {
+        if (course.name === courseName) {
+          return {
+            ...course,
+            mastery: newMastery,
+          }
+        }
+
+        return course
+      })
+    )
   }
 
   async function addCourseFile(file) {
@@ -192,8 +213,13 @@ export default function App() {
           setShowAdaptedLesson={setShowAdaptedLesson}
           followUpResult={followUpResult}
           setFollowUpResult={setFollowUpResult}
-          mastery={mastery}
-          setMastery={setMastery}
+          mastery={recommendedCourse.mastery ?? 40}
+          setMastery={(newMastery) =>
+            updateCourseMastery(
+              recommendedCourse.name,
+              newMastery
+            )
+          }
         />
       )}
 
@@ -204,6 +230,7 @@ export default function App() {
       {courses.map((course) => (
         <div key={course.name}>
           <h3>{course.name}</h3>
+          <p>Mastery: {course.mastery ?? 40}%</p>
           <p>{course.nextTask}</p>
           <p>{course.reason}</p>
         </div>
