@@ -4,28 +4,29 @@
 
 > 🚧 **Work in progress** — Orbit is actively being developed for the 2026 Meta AI Developer Hackathon.
 
-Orbit is a personalized learning experience designed to help students understand difficult material, figure out where they are struggling, and decide what they should learn next.
+Orbit is a personalized learning experience designed to help people understand difficult material, figure out where they are struggling, and decide what they should learn next.
 
-Instead of acting like a traditional chatbot or simply generating flashcards from uploaded material, Orbit follows an adaptive learning loop:
+Instead of acting like a traditional chatbot or simply generating study material, Orbit follows an adaptive learning loop:
 
-**Learn → Quiz → Evaluate → Adapt → Continue**
+**Learn → Practice → Evaluate → Adapt → Continue**
 
-The goal is to make studying feel less like managing a school dashboard and more like having a learning companion that understands where you left off, what is confusing you, and how to explain it differently when something is not clicking.
+The goal is to make learning feel less like managing a school dashboard and more like having a learning companion that understands where you left off, what is confusing you, and how to explain something differently when it is not clicking.
 
 ---
 
 ## The Idea
 
-Most learning tools know **what content** a student is studying.
+Most learning tools know **what content** someone is studying.
 
 Orbit is being built to understand more:
 
 - What does this learner already understand?
 - Which concepts are still weak?
 - What should they work on next?
-- Which explanation styles seem to work best for them?
+- Which explanations seem to work best for them?
 - When should something be reviewed again?
 - How can a confusing concept be broken into a smaller, clearer step?
+- Where did the learner leave off?
 
 The long-term idea is simple:
 
@@ -35,21 +36,15 @@ The long-term idea is simple:
 
 ## Why Orbit?
 
-A lecture, textbook, or video has to explain something one way to everyone.
+A lecture, textbook, video, or traditional course usually has to explain something one way to everyone.
 
 But learners do not all get stuck in the same place.
 
-Someone might understand the overall concept but struggle with syntax. Someone else may need an example before a definition makes sense. Another learner may lose the thread when an explanation gets too long.
+Someone might understand the overall concept but struggle with one small part. Someone else may need an example before a definition makes sense. Another learner may lose the thread when an explanation becomes too long.
 
 Orbit is designed around the idea that learning should be able to change in response.
 
-Rather than simply saying an answer is wrong, Orbit should eventually be able to recognize patterns such as:
-
-> You understand the concept. The syntax is what's tripping you up.
-
-or:
-
-> You seem to understand these faster when I show you an example first.
+Instead of simply repeating the same explanation or marking an answer wrong, Orbit is being built to recognize where understanding is breaking down and try a different approach.
 
 That adaptive behavior is the core of the project.
 
@@ -57,37 +52,45 @@ That adaptive behavior is the core of the project.
 
 ## Attention-Aware Learning
 
-Orbit is also being designed with learners who struggle with attention, information overload, and task re-entry in mind.
+Orbit is being designed with learners who struggle with attention, information overload, task initiation, and returning to unfinished work in mind.
 
 This includes many learners with ADHD, but Orbit intentionally avoids treating ADHD as one universal learning style.
 
-Planned attention-aware interactions include:
+Rather than building a single "ADHD mode," Orbit focuses on adaptable behaviors that can help different learners in different situations.
+
+Attention-aware interactions include:
 
 - Short, focused lesson chunks
 - Clear next actions
 - Lightweight understanding checks
 - Adaptive explanation styles
-- Easy return-to-task summaries
-- Optional low-distraction focus tools
+- Easy return-to-task context
 - User-controlled pacing
-- Minimal guilt or streak-based pressure
+- Minimal information overload
+- No guilt or streak-based pressure
 
-One of the planned core interactions is:
+This is also an important part of Orbit's direction as a product.
+
+AI learning tools are becoming increasingly common, so Orbit is not trying to differentiate itself by simply generating lessons or quizzes. The focus is on building a learning experience that is especially useful for people who often struggle with traditional, one-size-fits-all teaching.
+
+The goal is not to claim that every learner with ADHD learns the same way.
+
+It is to build a system that can notice how an individual responds and adjust the experience around them.
+
+One of the core interactions is:
 
 ### "I lost you"
 
-During a lesson, a learner will be able to tell Orbit that the explanation stopped making sense.
+During a lesson, a learner can tell Orbit that the explanation stopped making sense.
 
-Instead of repeating everything, Orbit should identify the point where understanding broke down and try a different approach.
+Instead of simply repeating everything, Orbit can try a different approach and keep the learner inside the same learning flow.
 
-Other planned explanation controls include:
+Other learning controls include:
 
-- **Explain that simpler**
+- **Explain that differently**
 - **Give me an example**
-- **Show me visually**
-- **Why does this matter?**
-- **Quiz me on this**
-- **Go back one step**
+- **Let me try it**
+- **Quiz me**
 
 ---
 
@@ -95,57 +98,135 @@ Other planned explanation controls include:
 
 Orbit currently includes:
 
-### Adaptive course recommendations
+### Learning spaces
 
-Orbit evaluates available course information and recommends what the learner should work on next.
+Orbit organizes learning into spaces.
+
+A space can represent a class, skill, personal interest, or another subject someone wants to learn.
+
+This allows Orbit to support both structured coursework and self-directed learning.
+
+### Adaptive learning recommendations
+
+Orbit uses available learning context to recommend what the learner should work on next.
 
 The Home experience prioritizes the next useful learning action instead of presenting a traditional analytics dashboard.
 
-### Course management
+### Learning material input
 
-Learners can add courses and provide information about upcoming work.
+Learners can add learning material to a space so Orbit has more context about what they are studying.
 
-### Course material uploads
+PDF materials can currently be uploaded and analyzed.
 
-PDF course materials can be uploaded and analyzed to help Orbit understand the course context.
+### Short AI-generated lessons
 
-### AI-generated study questions
+Study sessions begin with a focused lesson based on the current topic and learning context.
 
-Orbit can generate questions based on the learner's course and current learning needs.
+Instead of immediately dropping the learner into a quiz, Orbit first gives them something to understand and interact with.
 
-### Adaptive follow-up learning
+### Guided lesson progression
 
-Study answers can trigger adapted explanations and follow-up questions instead of ending at a simple correct/incorrect result.
+Orbit can build a small, revisable learning path inside a study session.
+
+The learner can move forward when they feel ready without being forced to take a quiz first.
+
+Upcoming lessons are not treated as a permanent curriculum. They can change as Orbit receives new learning material, learner corrections, mastery information, or other useful context.
+
+Moving to the next lesson represents readiness to continue — not proof of mastery.
+
+### Conversational learning
+
+Learners can ask questions or share connections during a lesson without leaving the current learning flow.
+
+Orbit can respond using the context of the lesson and recent conversation.
+
+### Adaptive explanations
+
+If something is not clicking, the learner can ask Orbit to explain it differently or provide a concrete example.
+
+### Practical activities
+
+**Let me try it** generates a short activity based on the concept currently being learned.
+
+The learner can attempt the activity and receive focused feedback before continuing.
+
+### Adaptive quizzing
+
+Orbit can generate questions based on the current concept and learning context.
+
+Answers can lead to adapted follow-up questions instead of stopping at a simple correct or incorrect result.
+
+Quizzes and lesson progression remain separate: moving forward in a lesson does not automatically increase mastery.
 
 ### Topic-level mastery
 
 Mastery is tracked at the individual topic level.
 
-Answering questions updates the relevant topic rather than blindly changing the entire course score.
+Answering questions updates the relevant topic instead of blindly changing an entire course score.
 
-Overall course mastery is then calculated from the learner's topic mastery.
+Overall mastery can then be calculated from the learner's topic mastery.
 
 ### Intelligent topic selection
 
-When generating study material, Orbit can consider weaker topics and upcoming work when deciding what the learner should practice.
+When generating study material, Orbit can consider weaker topics, current learning context, and upcoming work when deciding what the learner should practice.
+
+### Course-aware learning
+
+For structured learning, Orbit can use course material and timing information to stay aligned with what the learner is actually studying.
+
+Learners can also correct Orbit when its understanding of their current position is wrong.
+
+Those corrections can influence future lessons without forcing the learner to abandon the lesson they are currently working through.
+
+### Calendar
+
+Orbit includes a lightweight Calendar experience for upcoming work and dated learning material.
+
+### Library
+
+The Library provides access to learning spaces, materials, and local learning controls.
+
+### Resumable learning sessions
+
+Orbit can retain recent learning context so a learner can leave and later continue without every session starting from zero.
+
+This includes recent lesson progress and learning-path context.
+
+Current persistence is stored locally in the browser.
 
 ---
 
 ## Current Home Experience
 
-The current Home screen is intentionally designed to answer one question:
+The current Home screen is designed to answer one question:
 
 > **What should I work on next?**
 
 Rather than using a dashboard full of statistics, Orbit prioritizes:
 
-1. The next recommended learning action
-2. The course and topic involved
+1. The next useful learning action
+2. The relevant learning space or topic
 3. Why the recommendation matters
 4. A clear way to continue
 5. Progress and mastery as supporting information
 
+Home also provides ways to begin from a class, personal interest, or learning material when no previous learning exists.
+
 The interface is responsive and designed for both desktop and smaller screens.
+
+---
+
+## Current Learn Experience
+
+Learn provides a more direct way to begin studying.
+
+A learner can enter something they want to learn and begin a focused session without needing to manually set up a full course first.
+
+If an existing learning space already matches the subject, Orbit can continue using that space instead of creating a duplicate.
+
+Active learning sessions can also be resumed through Learn.
+
+Once learning begins, Orbit can guide the learner through a small adaptive sequence of lessons rather than treating every interaction as an isolated prompt.
 
 ---
 
@@ -165,7 +246,7 @@ The interface is responsive and designed for both desktop and smaller screens.
 
 Orbit is also the name of the learning companion that lives inside the product.
 
-The current visual direction is a strange floating planetary creature made from:
+The current visual direction is a floating planetary creature made from:
 
 - a translucent glowing inner core
 - separated rocky crust fragments
@@ -173,17 +254,16 @@ The current visual direction is a strange floating planetary creature made from:
 
 The goal is for Orbit to feel less like a generic AI robot and more like a strange creature that gradually becomes familiar through its personality.
 
-The current Home version uses a static mascot asset with subtle low-gravity motion.
+Orbit currently uses gentle floating motion and can shift into a thinking state while preparing a response.
 
 Future character behavior may include:
 
-- floating and drifting
-- thinking / tilting
 - reacting to answers
 - listening
 - celebrating
 - becoming shy
 - pulling its rocky crust inward like a protective shell
+- reacting to learning progress
 - interacting with the learning environment
 
 Motion is intended to add personality without competing with the learner's attention.
@@ -200,9 +280,11 @@ The visual system currently uses:
 - Periwinkle and violet accents
 - Atmospheric space-inspired environments
 - Custom Orbit branding
-- Custom mascot artwork
+- Custom companion artwork
 - Subtle ambient movement
+- Open layouts
 - Minimal dashboard-style UI
+- Responsive desktop and mobile experiences
 
 The project intentionally avoids relying entirely on generated UI components.
 
@@ -226,6 +308,20 @@ The next learning action should usually be more prominent than the learner's sta
 
 If showing more information makes it harder to understand what to do next, show less.
 
+### Interruptible learning
+
+Learners should be able to stop an explanation when it stops making sense and ask for a different approach.
+
+### Practice over passive consumption
+
+When possible, Orbit should give the learner something to apply rather than only more information to read.
+
+### Progress without forced testing
+
+A learner should be able to continue when they feel ready without every lesson requiring a quiz.
+
+Practice and mastery checks remain available when they are useful.
+
 ### Motion around the product
 
 Most motion should come from Orbit and the surrounding environment rather than constantly moving buttons and cards.
@@ -242,6 +338,10 @@ Orbit should eventually react to and participate in the learning experience rath
 
 The system should learn which approaches work for an individual rather than assuming every learner needs the same teaching style.
 
+### Support existing learning
+
+When someone is already following a class, curriculum, or structured learning path, Orbit should work alongside it instead of replacing it with a completely separate curriculum.
+
 ---
 
 ## Tech Stack
@@ -253,9 +353,11 @@ Orbit is currently built with:
 - **Vite**
 - **CSS**
 - **ESLint**
-- **Meta Muse / AI-powered course and study logic**
+- **Meta Muse**
+- **Vercel serverless functions**
+- Browser-based local persistence
 
-Custom visual assets are being created separately and integrated into the React interface.
+Custom visual assets are created separately and integrated into the React interface.
 
 ---
 
@@ -269,9 +371,13 @@ src/
 │   └── mascot/
 │
 ├── components/
+│   ├── AppShell.jsx
 │   ├── HomeScreen.jsx
-│   ├── HomeScreen.css
+│   ├── LearnScreen.jsx
 │   ├── StudySession.jsx
+│   ├── OrbitStage.jsx
+│   ├── SpaceScreen.jsx
+│   ├── CoursePosition.jsx
 │   ├── CourseDetails.jsx
 │   ├── AddCourse.jsx
 │   └── AddCourseFile.jsx
@@ -280,15 +386,11 @@ src/
 ├── App.jsx
 └── main.jsx
 
-public/
-├── favicon-16.png
-├── favicon-32.png
-├── icon-180.png
-├── icon-192.png
-└── icon-512.png
+api/
+└── AI-powered learning endpoints
 ```
 
-The project structure will continue evolving as additional screens and adaptive-learning systems are added.
+The project structure will continue evolving as additional adaptive-learning systems and visual experiences are added.
 
 ---
 
@@ -298,7 +400,13 @@ The project structure will continue evolving as additional screens and adaptive-
 
 - Node.js
 - npm
-- Vercel CLI (`npm install --global vercel`) for local API routes
+- Vercel CLI
+
+Install the Vercel CLI if needed:
+
+```bash
+npm install --global vercel
+```
 
 ### Install dependencies
 
@@ -306,25 +414,49 @@ The project structure will continue evolving as additional screens and adaptive-
 npm install
 ```
 
-### Start the full app (frontend and API routes)
+### Configure the API
 
-For a fresh checkout, authenticate with `vercel login` and link it to the existing Orbit project with `vercel link`. This checkout may already be linked; check with `vercel project inspect`.
+Orbit's AI features use server-side API routes.
 
-Configure `MODEL_API_KEY` in the linked Vercel project's **Development** environment. `vercel dev` loads Development variables for the server handlers. Keep the key server-side: never prefix it with `VITE_`, put it in frontend code, or commit an environment file.
+To run them locally, configure your own required API credentials as environment variables.
+
+For example:
+
+```text
+MODEL_API_KEY=your_api_key
+```
+
+Keep API keys server-side.
+
+Do not:
+
+- prefix private keys with `VITE_`
+- place them in frontend code
+- commit them to the repository
+
+You can use a local Vercel environment or your own linked Vercel project for development.
+
+### Start the full app
+
+To run both the Vite frontend and the serverless API routes:
 
 ```bash
 npm run dev:api
 ```
 
-Open the URL printed by **Vercel**, normally `http://localhost:3000`. It serves Vite and the existing root `api/*.js` functions on the same origin, so the frontend's `/api/*` requests reach their handlers. No separate API proxy is required.
+Open the local URL printed by Vercel.
 
-To keep using port 5173, first stop any Vite process already using it, then run:
+This runs the frontend and the root `api/*.js` functions together so `/api/*` requests reach the local server handlers.
+
+### Frontend only
 
 ```bash
-npm run dev:api -- --listen 5173
+npm run dev
 ```
 
-`npm run dev` remains a frontend-only Vite command, also used by Vercel's development runtime. Plain Vite does not execute the serverless functions: calls such as `/api/generate-study-lesson` and `/api/recommend-course` return 404 there. Do not change the `dev` script to `vercel dev`, which would cause a recursive launch. Injecting environment variables into plain Vite alone does not add API routing.
+This starts the Vite frontend only.
+
+Plain Vite does **not** execute Orbit's serverless API routes, so AI-powered features will not work correctly when using this command by itself.
 
 ### Production build
 
@@ -338,12 +470,20 @@ npm run build
 npm run preview
 ```
 
-This previews the frontend build only; use `npm run dev:api` for local testing that needs `/api/*`. Production continues to use Vercel's existing function routing and `npm run build`.
+This previews the frontend build only.
+
+Use `npm run dev:api` when testing features that require `/api/*`.
 
 ### Run ESLint
 
 ```bash
 npm run lint
+```
+
+### Run tests
+
+```bash
+npm test
 ```
 
 ---
@@ -352,97 +492,114 @@ npm run lint
 
 Orbit is under active development.
 
-The current focus is building the core product experience before expanding the feature set.
+The current focus is strengthening the core learning experience and preparing a polished hackathon demo.
 
 ### Completed / in progress
 
 - [x] React/Vite project foundation
-- [x] Course data structure
-- [x] Course creation
-- [x] PDF course-material input
-- [x] AI course recommendations
-- [x] AI-generated study questions
+- [x] Responsive application shell
+- [x] Learning spaces
+- [x] Separate Home and Learn experiences
+- [x] Learning material input
+- [x] AI-generated lessons
+- [x] Guided adaptive lesson progression
+- [x] Conversational learning
+- [x] Adaptive explanations
+- [x] Concrete examples
+- [x] "Let me try it" activities
+- [x] Activity feedback
+- [x] AI-generated quizzes
 - [x] Adaptive follow-up questions
-- [x] Course mastery
 - [x] Topic-level mastery
 - [x] Topic-aware question generation
-- [x] Responsive Home experience
+- [x] Learning recommendations
+- [x] Course-aware learning context
+- [x] Calendar experience
+- [x] Library experience
+- [x] Resumable study sessions
+- [x] Local learning persistence
 - [x] Orbit visual identity
-- [x] Orbit mascot direction
-- [x] Atmospheric Home environment
-- [ ] Redesigned Study Mode
-- [ ] "I lost you" interaction
-- [ ] Alternate explanation controls
-- [ ] Learning-style adaptation
-- [ ] Return-to-task recovery
-- [ ] Course learning paths
-- [ ] Library experience
-- [ ] Optional Focus Toy
-- [ ] Persistent learner/course state
-- [ ] Expanded Orbit character states and animation
-- [ ] Final hackathon demo experience
+- [x] Orbit companion artwork
+- [x] Atmospheric learning environment
+- [x] Responsive desktop/mobile UI
+- [ ] Deeper adaptive learning behavior
+- [ ] Dynamic learning visuals
+- [ ] Expanded Orbit character interactions
+- [ ] Additional attention-aware learning tools
+- [ ] Final hackathon demo polish
 
 ---
 
-## Planned Study Experience
+## Adaptive Learning Paths
 
-Study Mode is intended to become the core Orbit experience.
+Orbit is designed to support both structured and open-ended learning.
 
-Rather than presenting long AI-generated explanations, lessons will be broken into smaller steps.
+Rather than generating one large permanent curriculum upfront, Orbit can maintain a smaller learning path that changes as the learner moves forward.
 
-A future session may work like:
+For structured learning, that path can adapt around the material the learner is already expected to cover.
 
-```text
-Learn
-  ↓
-Quick understanding check
-  ↓
-Evaluate the response
-  ↓
-Identify what caused the mistake
-  ↓
-Adapt the explanation
-  ↓
-Practice again
-  ↓
-Continue
-```
+For self-directed learning, Orbit can gradually decide what the most useful next concept should be.
 
-Orbit should become increasingly aware of both:
+The path can evolve based on:
 
-**what the learner knows**
+- what the learner already understands
+- what they are struggling with
+- what they have recently studied
+- what material they provide
+- how they respond to lessons and practice
+- corrections they make
+- changes in their goals or progress
 
-and
+Orbit can reconsider upcoming lessons without interrupting the lesson currently in progress.
 
-**how the learner learns.**
+It may eventually insert review steps, skip material that is already understood, or branch into prerequisite concepts when necessary.
 
 ---
 
-## Future Learning Paths
+## Dynamic Learning Visuals
 
-Structured courses will eventually have topic-level learning paths.
+A major direction for Orbit is making explanations more visual and interactive.
 
-For example:
+The goal is not simply to place a static diagram inside a card.
 
-```text
-React Fundamentals
+Instead, parts of the learning environment could eventually respond to what is being taught.
 
-JSX
- │
-Components
- │
-Props        ← current
- │
-State
- │
-Effects
-```
+Visuals may help show:
 
-Orbit may insert review steps or change the recommended path based on learner performance.
+- relationships between concepts
+- sequences and processes
+- spatial ideas
+- changes over time
+- cause and effect
+- abstract ideas that are difficult to explain with text alone
 
-Not every subject needs a finite mastery percentage.
+Orbit itself may eventually participate in those visuals.
 
-Orbit is also intended to support open-ended learning for someone who simply wants to explore a topic such as quantum physics, astronomy, programming, history, or another subject without being enrolled in a formal class.
+The learning system is already being structured so lessons can eventually describe when a visual would help, but visual generation and rendering are still future work.
+
+The goal is for visual learning to feel integrated into the experience rather than added on top of it.
+
+---
+
+## Learning How the Learner Learns
+
+Orbit currently remembers useful learning context and recent interactions.
+
+The larger goal is for that history to influence future teaching decisions.
+
+Over time, Orbit could become better at noticing patterns such as:
+
+> This explanation style seems to work better for this learner.
+
+> This concept keeps causing confusion in different situations.
+
+> The learner understands the main idea but is missing one underlying piece.
+
+> A practical example may work better than another definition.
+
+The goal is not to assign someone a permanent "learning style."
+
+It is to adapt based on what actually helps them learn.
 
 ---
 
@@ -454,8 +611,9 @@ Orbit should eventually allow someone to start with almost anything:
 - a syllabus
 - lecture notes
 - a PDF
-- a photo of a classroom board
+- an image
 - pasted text
+- a question
 - or simply a subject they want to understand
 
 and turn it into a personalized learning journey.
@@ -474,11 +632,15 @@ The system should continuously ask:
 
 That is the experience Orbit is being built toward.
 
+Features such as account-based persistence and cross-device learning may be explored later if Orbit continues beyond the hackathon, but they are not part of the current hackathon scope.
+
 ---
 
 ## Hackathon
 
 Orbit is being developed as an entry for the **2026 Meta AI Developer Hackathon**.
+
+The project explores how Meta Muse can power an AI experience that goes beyond one-shot generation or a traditional chatbot and instead participates in an ongoing adaptive learning loop.
 
 The project is actively evolving, so features, visuals, architecture, and documentation may change throughout development.
 
@@ -501,4 +663,4 @@ For the project's visual and interaction design principles, see:
 
 **Devon Cline**
 
-Built as an exploration of adaptive AI, personalized education, and learning experiences that respond to the individual instead of forcing every learner through the same path.
+Built as an exploration of adaptive AI, personalized education, attention-aware learning, and learning experiences that respond to the individual instead of forcing every learner through the same path.
