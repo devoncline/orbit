@@ -23,10 +23,10 @@ export default function HomeScreen({
         <div className="home-copy">
           {empty ? (
             <>
-              <h1 id="home-heading">What do you want<br />to learn?</h1>
+              <h1 id="home-heading">What do you want<br />to do?</h1>
               <div className="home-entry-points" aria-label="Start learning">
                 <button onClick={() => onNewSpace('class')}><strong>I’m taking a class</strong></button>
-                <button onClick={() => onNewSpace('topic')}><strong>I want to learn something</strong></button>
+                <button onClick={() => onNavigate('learn')}><strong>I want to learn something</strong></button>
                 <button onClick={() => onNewSpace('material')}><span><strong>I already have material</strong><small>Add a PDF</small></span></button>
               </div>
             </>

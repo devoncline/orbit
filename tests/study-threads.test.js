@@ -1,6 +1,32 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { createStudyThread, initialThreads, selectStudyInteraction, studyThreadMetadata, studyThreadsReducer } from '../src/services/studyThreads.js'
+import { createStudyThread, initialThreads, resolveLearningSpace, selectStudyInteraction, studyThreadMetadata, studyThreadsReducer } from '../src/services/studyThreads.js'
+import { inferCoursePosition } from '../src/services/coursePosition.js'
+
+test('a subject starts a self-directed space and thread without course enrollment or syllabus setup', () => {
+  const course = resolveLearningSpace([], '  Quantum physics  ')
+  assert.equal(course.name, 'Quantum physics')
+  assert.equal(course.type, 'topic')
+  assert.equal(course.nextTask, 'Explore Quantum physics')
+  assert.equal(course.syllabus, undefined)
+  assert.equal(inferCoursePosition(course).needsConfirmation, false)
+  const state = studyThreadsReducer(initialThreads, { type: 'create', thread: createStudyThread(course, '', 'first') })
+  assert.equal(state.activeId, 'first')
+  assert.equal(state.threads[0].courseName, 'Quantum physics')
+})
+
+test('choosing an existing subject preserves its identity, mastery and explicit course position', () => {
+  const existing = { name: 'React', type: 'class', mastery: { overall: 80, topics: { Props: 80 } }, learnerPosition: { currentTopic: 'Props', exclusions: [], statement: 'We are on Props' } }
+  const before = structuredClone(existing)
+  const result = resolveLearningSpace([existing], '  REACT  ')
+  assert.equal(result, existing)
+  assert.deepEqual(existing, before)
+  assert.equal(inferCoursePosition(result).currentTopic, 'Props')
+})
+
+test('empty and oversized subject entries cannot create a space or thread', () => {
+  for (const topic of ['', '   ', null, 'a'.repeat(121)]) assert.equal(resolveLearningSpace([], topic), null)
+})
 
 test('new threads have independent identities, topic goals, summaries, and session order', () => {
   const first = createStudyThread({ name: 'React' }, 'Props basics', 'one', new Date('2026-10-27T12:00:00Z'))

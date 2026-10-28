@@ -1,13 +1,14 @@
 import StudySession from './components/StudySession'
 import AddCourse from './components/AddCourse'
 import HomeScreen from './components/HomeScreen'
+import LearnScreen from './components/LearnScreen'
 import AppShell from './components/AppShell'
 import SpaceScreen from './components/SpaceScreen'
 import UpcomingWork from './components/UpcomingWork'
 import OrbitStage from './components/OrbitStage'
 import StudyThreads from './components/StudyThreads'
 import { applyPositionOverride, inferCoursePosition, localDate, mergeCourseAnalysis, positionAction } from './services/coursePosition'
-import { createStudyThread, studyThreadsReducer } from './services/studyThreads'
+import { createStudyThread, resolveLearningSpace, studyThreadsReducer } from './services/studyThreads'
 import { clearLearnerMemory, learnerPositionKey, loadLearnerMemory, saveLearnerMemory } from './services/learnerMemory'
 import { retainLearningAnchors } from './services/studyLearningContext'
 import {
@@ -96,7 +97,7 @@ export default function App() {
     setResetMessage('Local Orbit learning data cleared.')
   }
 
-  function addCourse(newCourse) {
+  function addCourse(newCourse, { beginLearning = false } = {}) {
     setCourses((currentCourses) => [
       ...currentCourses,
       {
@@ -108,7 +109,8 @@ export default function App() {
       },
     ])
     setSelectedSpace(newCourse.name)
-    setDestination('space')
+    if (beginLearning) newThread(newCourse)
+    else setDestination('space')
   }
 
   function updateCourseMastery(courseName, newMastery) {
@@ -244,6 +246,13 @@ export default function App() {
     else newThread(course)
   }
 
+  function startLearning(topic) {
+    const course = resolveLearningSpace(courses, topic)
+    if (!course) return
+    if (courses.includes(course)) startSession(course)
+    else addCourse(course, { beginLearning: true })
+  }
+
   function newThread(course, topic = '') {
     const position = inferCoursePosition(course, today)
     if (!topic && position.needsConfirmation) {
@@ -297,7 +306,7 @@ export default function App() {
           <button className="orbit-text-button" onClick={() => navigate('learn')}>Resume your session</button>
         </div>
       )}
-      {(destination === 'home' || destination === 'learn') && (
+      {destination === 'home' && (
         <HomeScreen
           courses={courses}
           recommendedCourse={recommendedCourse}
@@ -311,6 +320,9 @@ export default function App() {
           today={today}
           onPositionChange={(update) => updatePosition(recommendedCourse.name, update)}
         />
+      )}
+      {destination === 'learn' && (
+        <LearnScreen courses={courses} recommendedCourse={recommendedCourse} onStart={startLearning} />
       )}
       {destination === 'new' && (
         <section className="orbit-page orbit-page-layout new-space-page">

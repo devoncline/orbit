@@ -20,6 +20,15 @@ export function createStudyThread(course, topic = '', id = crypto.randomUUID(), 
   return { id, courseName: course.name, positionKey: JSON.stringify(course.learnerPosition || null), requestedTopic: topic.trim().slice(0, 120), title: (topic || course.nextTask || course.name).slice(0, 80), topic, context: 'lesson', summary: 'Ready for a short lesson.', createdAt: now.toISOString(), status: 'active' }
 }
 
+export function resolveLearningSpace(courses, topic) {
+  const name = typeof topic === 'string' ? topic.trim() : ''
+  if (!name || name.length > 120) return null
+  // Reuse an existing space and its learning memory instead of resetting its progress.
+  return courses.find((course) => course.name.toLowerCase() === name.toLowerCase()) || {
+    name, type: 'topic', nextTask: `Explore ${name}`, reason: '', files: [],
+  }
+}
+
 export function studyThreadMetadata({ lesson, activeInteraction, conversation, activity, activityFeedback, questionNumber, answerResult, followUpResult }) {
   const summary = activeInteraction === 'conversation' ? conversation.at(-1)?.message
     : activeInteraction === 'activity' ? activityFeedback?.feedback || activity?.instruction

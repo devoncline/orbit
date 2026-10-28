@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { after, before, test } from 'node:test'
-import { createElement } from 'react'
+import { Children, createElement, isValidElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { createServer } from 'vite'
 import { collectUpcomingWork, formatWorkDate, parseWorkDate } from '../src/services/upcomingWork.js'
@@ -9,6 +9,7 @@ import { LEARNER_MEMORY_KEY, saveLearnerMemory } from '../src/services/learnerMe
 
 let server
 let HomeScreen
+let LearnScreen
 let AppShell
 let UpcomingWork
 let StudyThreads
@@ -18,6 +19,7 @@ let StudySession
 before(async () => {
   server = await createServer({ server: { middlewareMode: true, watch: null }, appType: 'custom' })
   HomeScreen = (await server.ssrLoadModule('/src/components/HomeScreen.jsx')).default
+  LearnScreen = (await server.ssrLoadModule('/src/components/LearnScreen.jsx')).default
   AppShell = (await server.ssrLoadModule('/src/components/AppShell.jsx')).default
   UpcomingWork = (await server.ssrLoadModule('/src/components/UpcomingWork.jsx')).default
   StudyThreads = (await server.ssrLoadModule('/src/components/StudyThreads.jsx')).default
@@ -35,10 +37,45 @@ const renderHome = (spaces) => renderToStaticMarkup(createElement(HomeScreen, { 
 
 test('zero spaces offers all three ways to begin without a recommendation or invented work', () => {
   const html = renderHome([])
+  assert.match(html, /What do you want<br\/>to do\?/)
   assert.match(html, /I’m taking a class/)
   assert.match(html, /I want to learn something/)
   assert.match(html, /I already have material/)
   assert.doesNotMatch(html, /Start learning <|home-recommendation|Coming up/)
+})
+
+test('empty Home sends curiosity to Learn while keeping class and material setup paths', () => {
+  const actions = []
+  const home = HomeScreen({ courses: [], onNewSpace: (intent) => actions.push(intent), onNavigate: (route) => actions.push(route) })
+  function visit(element) {
+    if (!isValidElement(element)) return
+    if (element.type === 'button') element.props.onClick()
+    else Children.forEach(element.props.children, visit)
+  }
+  visit(home)
+  assert.deepEqual(actions, ['class', 'learn', 'material'])
+})
+
+test('empty Learn provides one topic field and a direct study action without Home paths or enrollment fields', () => {
+  const html = renderToStaticMarkup(createElement(LearnScreen, { courses: [] }))
+  assert.match(html, /What do you want to learn\?/)
+  assert.match(html, /Subject or topic/)
+  assert.equal((html.match(/<input /g) || []).length, 1)
+  assert.match(html, /name="topic"/)
+  assert.match(html, />Start learning<\/button>/)
+  for (const subject of ['React', 'Quantum physics', 'Biology', 'Music theory', 'History of ancient Rome']) assert.ok(html.includes(subject))
+  assert.doesNotMatch(html, /I’m taking a class|I already have material|Instructor|Class name|Create space|Coming up|home-entry-points/)
+})
+
+for (const count of [1, 7]) test(`Learn with ${count} spaces keeps a direct study form and offers existing spaces`, () => {
+  const spaces = courses.slice(0, count)
+  const html = renderToStaticMarkup(createElement(LearnScreen, { courses: spaces, recommendedCourse: spaces.at(-1) }))
+  assert.match(html, /What do you want to learn\?/)
+  assert.ok(html.includes(`value="${spaces.at(-1).name}"`))
+  for (const space of spaces) assert.ok(html.includes(`<option value="${space.name}">`))
+  assert.match(html, /type="submit">Start learning/)
+  assert.doesNotMatch(html, /home-recommendation|home-support|Coming up|I’m taking a class/)
+  assert.match(renderHome(spaces), /home-recommendation/)
 })
 
 test('one space has a usable action during recommendation loading', () => {

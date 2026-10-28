@@ -1,0 +1,7 @@
+.learn-entry { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: clamp(32px, 5vw, 80px); align-items: center; }
+.learn-entry-content { min-width: 0; }
+.learn-entry > .orbit-stage { position: relative; top: auto; }
+@media (max-width: 760px) {
+  .learn-entry { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+  .learn-entry .orbit-page-header h1 { margin-bottom: 24px; }
+}
