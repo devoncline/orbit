@@ -602,6 +602,15 @@ The goal is for Orbit to move with the learner instead of waiting passively for 
 
 ---
 
+## October 27, 2026 — Study Composition & Navigation Cleanup
+
+- Brought active Study into the shared page width, top spacing, column proportions, heading scale, stage dimensions, and responsive spacing. Removed the remaining masked nebula copy from OrbitStage; existing transparent artwork, gentle drift, and reduced-motion behavior remain unchanged.
+- Removed the stacked Back home/course row and global resume banners, including their reserved space. Kept the course/lesson context and existing Home/Learn resume behavior. Grouped the collapsed Study threads control with a compact plus/New thread action; thread creation and persistence logic are unchanged.
+- Validation: production build, full lint, all 123 existing tests, and diff checks pass. Browser review on the existing local app covered desktop and an approximately 500px-wide window: active lesson, long title wrapping, mascot/background, lesson actions, progression controls, thread-history expansion/collapse, new-thread form open/close, and mobile navigation. Calendar/Library have no session banner; Learn and Home's contextual return reopen the same Music theory lesson. No new server was started.
+- Narrower phone sizes, physical devices, reduced-motion emulation, and full live generation/quiz/activity flows remain manual. No lesson logic, prompts, learning paths, mastery, API contracts, storage logic, dependencies, artwork files, database, or migrations changed. Updated Unreleased notes and manual checks.
+
+---
+
 # Next
 
 The next major development steps are:

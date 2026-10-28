@@ -299,14 +299,8 @@ export default function App() {
       onSelectSpace={selectSpace}
       onNewSpace={newSpace}
     >
-      <div className={`shell-page-notices${sessionStarted && destination !== 'study' ? ' shell-page-notices-resumable' : ''}`}>
+      <div className="shell-page-notices">
       {!storageAvailable && <p className="orbit-session-note" role="status">Browser storage is unavailable or full. Your current session still works, but recent changes may not survive a refresh.</p>}
-      {sessionStarted && destination !== 'study' && !(destination === 'home' && recommendedCourse?.name === sessionCourseName) && (
-        <div className="session-resume">
-          <span>{sessionCourse.name}</span>
-          <button className="orbit-text-button" onClick={() => navigate('learn')}>Resume your session</button>
-        </div>
-      )}
       </div>
       {destination === 'home' && (
         <HomeScreen
@@ -393,11 +387,7 @@ export default function App() {
         </section>
       )}
       {sessionStarted && sessionCourse && (
-        <div hidden={destination !== 'study'}>
-          <div className="study-room-header">
-            <button className="orbit-text-button" onClick={() => navigate('home')}>← Back home</button>
-            <span>{sessionCourse.name}</span>
-          </div>
+        <div className="orbit-page study-page" hidden={destination !== 'study'}>
           <StudyThreads threads={threads} activeId={activeId} courses={courses} onSwitch={switchThread} onCreate={newThread} />
           {threads.map((thread) => {
             const originalCourse = courses.find((course) => course.name === thread.courseName)

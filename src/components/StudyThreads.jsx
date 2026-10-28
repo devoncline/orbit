@@ -17,7 +17,7 @@ export default function StudyThreads({ threads, activeId, courses, onSwitch, onC
         </button>
       </li>)}</ul>
     </details>
-    <button className="orbit-button" onClick={() => { setCourseName(active?.courseName || courses[0]?.name || ''); setCreating(!creating) }} aria-expanded={creating}>New study thread</button>
+    <button className="orbit-button study-thread-new" onClick={() => { setCourseName(active?.courseName || courses[0]?.name || ''); setCreating(!creating) }} aria-expanded={creating}><span aria-hidden="true">＋</span>New thread</button>
     {creating && <form className="orbit-form thread-create" onSubmit={(event) => {
       event.preventDefault()
       const course = courses.find((entry) => entry.name === courseName)

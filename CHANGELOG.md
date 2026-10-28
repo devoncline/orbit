@@ -4,6 +4,7 @@
 
 ### Improvements
 
+- Active lessons now share Orbit's page alignment, heading scale, and companion placement, with a clean background and compact Study threads / New thread controls. Removed the extra Back home row and session banners on other pages; Home and Learn still return to the active lesson.
 - Learn now offers a guided lesson flow with a clear current lesson, optional readiness check, and a way to continue without taking a quiz. A compact, expandable learning path adapts to course materials, learner corrections, and study context; reading or moving forward does not increase mastery.
 - Lessons, examples, and Muse replies are easier to scan with short sections, key concepts, and concrete examples. Conversations keep the current lesson in view, and recent lesson progress resumes in the same browser.
 - Home, Learn, Calendar, Library, and learning spaces now share consistent heading, content, and companion placement on desktop and mobile. Removed the extra background behind Orbit and gave Library's local-data controls more breathing room.
@@ -32,6 +33,7 @@
 
 ### Manual test checklist
 
+- Open an existing lesson on desktop and a phone. Check the companion, long title wrapping, lesson actions, progression controls, and Study threads / New thread placement. Expand/collapse history, open/close the new-thread form, and navigate through Calendar, Library, Home, and Learn; the same lesson should resume without global banners. Check narrower phones, keyboard focus, and reduced motion.
 - Start Introduction to Psychology without materials. Check for a useful introductory concept, readable sections, one suggested next lesson, and a collapsed path. Mark "I understand" and continue twice without a quiz; mastery should stay unchanged. Refresh and check the current lesson, lesson number, and small path resume.
 - Ask a question, request an example, use "Let me try it", and try correct/incorrect quizzes before continuing. Check that the lesson title and next-lesson action remain visible; the first quiz in a new lesson should cover that lesson. Check "Next question" still runs adaptive practice.
 - Change the current topic or add a dated syllabus after a lesson starts. Keep the current lesson until continuing, hide outdated suggestions, and use the new context for the next lesson. Check skipped/not-yet topics, correction during a pending request, retry after a failed continuation, and returning through Home or another thread.

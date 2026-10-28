@@ -2,25 +2,15 @@
   position: relative;
   isolation: isolate;
   min-width: 0;
-  height: clamp(380px, 40vw, 620px);
-}
-
-.orbit-stage-environment {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background: url('../assets/backgrounds/orbit-home-background-nebula.png') 80% 60% / auto 100% no-repeat;
-  mask-image: radial-gradient(ellipse at 58% 54%, #000 15%, transparent 69%);
-  opacity: .45;
+  height: var(--orbit-page-stage-height);
 }
 
 .orbit-stage-companion {
   position: absolute;
-  width: min(100%, 560px);
+  width: var(--orbit-page-companion-width);
   height: auto;
   right: 0;
-  top: 5%;
+  top: var(--orbit-page-companion-top);
   pointer-events: none;
   filter: drop-shadow(0 28px 32px rgb(2 5 14 / 32%));
 }
@@ -29,10 +19,6 @@
 .orbit-stage-annotations { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
 .orbit-stage-annotations > * { pointer-events: auto; }
 .orbit-stage-with-visual .orbit-stage-companion { width: 46%; top: 40%; right: -2%; }
-.orbit-stage-study { position: sticky; top: 64px; }
-.orbit-stage-study .orbit-stage-companion { top: 10%; }
-.orbit-stage-page, .orbit-stage-home { position: relative; top: auto; height: var(--orbit-page-stage-height); }
-:is(.orbit-stage-page, .orbit-stage-home) .orbit-stage-companion { width: var(--orbit-page-companion-width); top: var(--orbit-page-companion-top); }
 
 @keyframes orbit-stage-drift {
   0%, 100% { transform: translate(-3px, 5px) rotate(-.6deg); }
@@ -44,12 +30,7 @@
 }
 
 @media (max-width: 760px) {
-  .orbit-stage { position: relative; top: auto; height: 190px; }
-  .orbit-stage-environment { inset: 0; opacity: .65; background-position: 70% center; mask-image: radial-gradient(ellipse closest-side at 60% 50%, #000, transparent); }
-  .orbit-stage-companion { width: 250px; max-width: 85%; top: -35px; right: 0; }
-  .orbit-stage-study .orbit-stage-companion { width: 270px; top: -42px; right: 0; }
-  .orbit-stage-page, .orbit-stage-home { height: var(--orbit-page-stage-height); }
-  :is(.orbit-stage-page, .orbit-stage-home) .orbit-stage-companion { width: var(--orbit-page-companion-width); top: var(--orbit-page-companion-top); }
+  .orbit-stage-companion { max-width: 85%; }
   .orbit-stage-with-visual { height: 280px; }
   .orbit-stage-with-visual .orbit-stage-companion { width: 42%; top: 35%; right: 0; }
   .orbit-stage-object { width: 72%; margin-top: 0; }
