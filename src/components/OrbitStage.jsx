@@ -14,7 +14,7 @@ export default function OrbitStage({ variant = 'study', thinking = false, childr
       role={hasVisual ? 'group' : undefined}
       aria-label={hasVisual ? 'Visual explanation' : undefined}
     >
-      <div className="orbit-stage-environment" aria-hidden="true" />
+      {variant === 'study' && <div className="orbit-stage-environment" aria-hidden="true" />}
       <img className="orbit-stage-companion" src={thinking ? orbitTeaching : orbitHero} alt="" width="1600" height="1600" decoding="async" />
       {children && <div className="orbit-stage-object">{children}</div>}
       {annotations && <div className="orbit-stage-annotations">{annotations}</div>}

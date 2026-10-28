@@ -18,22 +18,22 @@ export default function HomeScreen({
   const otherSpaces = courses.filter((course) => course.name !== recommendedCourse?.name).slice(0, 2)
 
   return (
-    <div className="orbit-home">
-      <section className={`home-arrival${empty ? ' home-arrival-empty' : ''}`} aria-labelledby="home-heading">
+    <div className="orbit-page orbit-home">
+      <section className="orbit-page-layout home-arrival" aria-labelledby="home-heading">
         <div className="home-copy">
           {empty ? (
             <>
               <h1 id="home-heading">What do you want<br />to do?</h1>
               <div className="home-entry-points" aria-label="Start learning">
-                <button onClick={() => onNewSpace('class')}><strong>I’m taking a class</strong></button>
-                <button onClick={() => onNavigate('learn')}><strong>I want to learn something</strong></button>
-                <button onClick={() => onNewSpace('material')}><span><strong>I already have material</strong><small>Add a PDF</small></span></button>
+                <button className="orbit-button" onClick={() => onNewSpace('class')}><strong>I’m taking a class</strong></button>
+                <button className="orbit-button" onClick={() => onNavigate('learn')}><strong>I want to learn something</strong></button>
+                <button className="orbit-button" onClick={() => onNewSpace('material')}><span><strong>I already have material</strong><small>Add a PDF</small></span></button>
               </div>
             </>
           ) : (
             <div className="home-recommendation">
-              <button className="orbit-text-button home-space-label" onClick={() => onSelectSpace(recommendedCourse.name)}><span className="space-dot" />{recommendedCourse.name}</button>
               <h1 id="home-heading">{nextAction}</h1>
+              <button className="orbit-text-button home-space-label" onClick={() => onSelectSpace(recommendedCourse.name)}><span className="space-dot" />{recommendedCourse.name}</button>
               {reason && <p className="home-reason">{reason}</p>}
               <button className="orbit-button orbit-button-primary" onClick={() => onContinue(recommendedCourse)}>{learningAction(nextAction, recommendedCourse.name, resuming)}</button>
               <CoursePosition course={recommendedCourse} today={today} onChange={onPositionChange} showSummary={false} />

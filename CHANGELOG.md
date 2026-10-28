@@ -4,6 +4,7 @@
 
 ### Improvements
 
+- Home, Learn, Calendar, Library, and learning spaces now share consistent heading, content, and companion placement on desktop and mobile. Removed the extra background behind Orbit and gave Library's local-data controls more breathing room.
 - Home and Learn now have distinct starting experiences: Home offers class, curiosity, and material paths; Learn opens a focused topic entry that starts studying directly. Existing spaces can be reused, and active sessions resume through Learn.
 - Orbit now remembers learning spaces, syllabus context, mastery, learner corrections, and useful learning anchors in the same browser. Home continues from recent work, with explicit corrections taking priority over inferred starting points.
 - Recent study threads retain compact summaries, the latest lesson, and two recent exchanges after refresh. A confirmed Library control clears local learning data. Memory stays on this device, with relevant context used by the existing learning service; there is no account or cross-device sync.
@@ -29,6 +30,7 @@
 
 ### Manual test checklist
 
+- Compare Home, Learn, Calendar, Library, Space, and New space at the same desktop and phone widths, including an active session and a long space name. Check aligned headings, stable companion size and placement, no background rectangle or horizontal scrolling, keyboard focus, reduced motion, and drawer open/close/Escape. In Library, open and cancel the reset confirmation; verify the utility action is separated from its explanation. Recheck populated Home's space link and primary action spacing.
 - With no spaces, compare Home's three paths with Learn's single topic field. Enter a subject and press Enter or Start learning; confirm a lesson begins directly in a self-directed space. With one and seven spaces, choose an existing subject (including different capitalization) and verify progress is retained without duplicates. Leave Study for Home, then select Learn and confirm the active thread resumes. Check the entry form on mobile and with a keyboard.
 - Start with zero, one, and seven spaces; refresh and reopen the browser. Check space names, syllabus information, upcoming work, course/topic mastery, and corrected starting points. Confirm Home offers a relevant continuation without an empty-state flash.
 - Build a useful analogy or activity anchor, then refresh and resume a thread or create a related one. Check saved summaries, the lesson, and up to two recent exchanges; activities, quiz screens, drafts, and original uploads should not be restored. Only the opened thread should request a missing lesson.

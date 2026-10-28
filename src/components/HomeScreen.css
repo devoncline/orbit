@@ -1,38 +1,21 @@
-.orbit-home { max-width: 1400px; margin: 0 auto; }
-.home-arrival { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); align-items: center; min-height: 650px; padding-top: 40px; }
-.home-copy { position: relative; z-index: 1; min-width: 0; }
-.home-copy h1 { margin: 18px 0 26px; font-size: clamp(36px, 3.6vw, 56px); }
-.home-arrival-empty .home-copy h1 { margin-bottom: 40px; }
+.home-copy { grid-column: 1; grid-row: 1 / -1; position: relative; z-index: 1; min-width: 0; }
 .home-entry-points { display: grid; gap: 14px; max-width: 420px; }
-.home-entry-points button { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 56px; padding: 12px 16px; background: rgb(17 27 44 / 75%); border: 1px solid var(--orbit-border); border-radius: 8px; text-align: left; color: var(--orbit-text); }
-.home-entry-points strong { font-size: 17px; font-weight: 400; }
+.home-entry-points button { justify-content: flex-start; text-align: left; }
+.home-entry-points strong { font-size: inherit; font-weight: inherit; }
 .home-entry-points small { display: block; margin-top: 2px; font-size: 12px; color: var(--orbit-muted); }
-.home-entry-points button:hover { background: #202a40; border-color: #8a83b4; }
-.home-entry-points button:hover strong { color: var(--orbit-accent); }
-.home-recommendation { padding: clamp(24px, 2.8vw, 44px); border: 1px solid rgb(180 176 220 / 21%); border-radius: var(--orbit-radius); background: linear-gradient(115deg, rgb(20 29 47 / 88%), rgb(18 27 45 / 65%)); backdrop-filter: blur(14px); }
-.home-recommendation h1 { max-width: 20ch; }
-.home-space-label { display: inline-flex; align-items: center; gap: 12px; font-size: 14px !important; }
-.home-reason { max-width: 48ch; color: var(--orbit-muted); margin: 0 0 30px; font-size: 16px; line-height: 1.7; }
-.home-recommendation .orbit-button { min-height: 50px; margin-top: 6px; }
+.home-recommendation { position: relative; isolation: isolate; }
+.home-recommendation::before { content: ''; position: absolute; z-index: -1; inset: calc(-1 * var(--orbit-page-heading-gap)); border: 1px solid rgb(180 176 220 / 21%); border-radius: var(--orbit-radius); background: linear-gradient(115deg, rgb(20 29 47 / 88%), rgb(18 27 45 / 65%)); backdrop-filter: blur(14px); pointer-events: none; }
+.home-space-label { display: flex; width: fit-content; max-width: 100%; align-items: center; gap: 12px; margin-bottom: var(--orbit-page-heading-gap); font-size: 14px !important; }
+.home-reason { max-width: 48ch; color: var(--orbit-muted); margin: 0 0 var(--orbit-page-action-gap); font-size: 16px; line-height: 1.7; }
 .home-status { font-size: 12px; color: var(--orbit-muted); margin: 14px 0 0; }
 .home-status:empty { display: none; }
-.home-support { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(32px, 5vw, 90px); padding: 10px 0 40px; }
+.home-support { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: var(--orbit-page-gap); padding: var(--orbit-page-utility-gap) 0 40px; }
 .home-support .space-links button { padding-block: 14px; }
 .home-support .upcoming-list li { padding-block: 8px; }
-@media (max-width: 1100px) and (min-width: 761px) {
-  .home-arrival { min-height: 560px; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
-  .home-copy h1 { font-size: 38px; }
-}
 @media (max-width: 760px) {
-  .home-arrival { display: flex; flex-direction: column; align-items: stretch; min-height: 0; padding-top: 0; }
-  .home-arrival > .orbit-stage { order: -1; height: 170px; margin-inline: -12px; }
-  .home-arrival > .orbit-stage .orbit-stage-companion { right: 4%; top: -40px; }
-  .home-copy h1 { font-size: clamp(32px, 8vw, 42px); line-height: 1.15; margin: 12px 0 20px; }
-  .home-recommendation { padding: 0; border: 0; border-radius: 0; background: none; backdrop-filter: none; }
-  .home-reason { font-size: 15px; margin-bottom: 20px; }
-  .home-recommendation .orbit-button { min-height: 48px; }
-  .home-arrival-empty .home-copy h1 { margin-bottom: 24px; }
+  .home-copy { grid-area: header; }
+  .home-recommendation::before { display: none; }
+  .home-reason { font-size: 15px; }
   .home-entry-points { gap: 6px; max-width: none; }
-  .home-entry-points strong { font-size: 16px; }
-  .home-support { grid-template-columns: 1fr; gap: 30px; padding: 46px 0 8px; }
+  .home-support { grid-template-columns: 1fr; padding-bottom: 8px; }
 }

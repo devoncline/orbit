@@ -31,8 +31,8 @@
 .orbit-stage-with-visual .orbit-stage-companion { width: 46%; top: 40%; right: -2%; }
 .orbit-stage-study { position: sticky; top: 64px; }
 .orbit-stage-study .orbit-stage-companion { top: 10%; }
-.orbit-stage-page { position: sticky; top: 100px; height: clamp(340px, 36vw, 540px); }
-.orbit-stage-page .orbit-stage-companion { width: min(100%, 460px); top: 10%; }
+.orbit-stage-page, .orbit-stage-home { position: relative; top: auto; height: var(--orbit-page-stage-height); }
+:is(.orbit-stage-page, .orbit-stage-home) .orbit-stage-companion { width: var(--orbit-page-companion-width); top: var(--orbit-page-companion-top); }
 
 @keyframes orbit-stage-drift {
   0%, 100% { transform: translate(-3px, 5px) rotate(-.6deg); }
@@ -48,8 +48,8 @@
   .orbit-stage-environment { inset: 0; opacity: .65; background-position: 70% center; mask-image: radial-gradient(ellipse closest-side at 60% 50%, #000, transparent); }
   .orbit-stage-companion { width: 250px; max-width: 85%; top: -35px; right: 0; }
   .orbit-stage-study .orbit-stage-companion { width: 270px; top: -42px; right: 0; }
-  .orbit-stage-page { height: 150px; }
-  .orbit-stage-page .orbit-stage-companion { width: 230px; top: -42px; }
+  .orbit-stage-page, .orbit-stage-home { height: var(--orbit-page-stage-height); }
+  :is(.orbit-stage-page, .orbit-stage-home) .orbit-stage-companion { width: var(--orbit-page-companion-width); top: var(--orbit-page-companion-top); }
   .orbit-stage-with-visual { height: 280px; }
   .orbit-stage-with-visual .orbit-stage-companion { width: 42%; top: 35%; right: 0; }
   .orbit-stage-object { width: 72%; margin-top: 0; }

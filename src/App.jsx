@@ -299,6 +299,7 @@ export default function App() {
       onSelectSpace={selectSpace}
       onNewSpace={newSpace}
     >
+      <div className={`shell-page-notices${sessionStarted && destination !== 'study' ? ' shell-page-notices-resumable' : ''}`}>
       {!storageAvailable && <p className="orbit-session-note" role="status">Browser storage is unavailable or full. Your current session still works, but recent changes may not survive a refresh.</p>}
       {sessionStarted && destination !== 'study' && !(destination === 'home' && recommendedCourse?.name === sessionCourseName) && (
         <div className="session-resume">
@@ -306,6 +307,7 @@ export default function App() {
           <button className="orbit-text-button" onClick={() => navigate('learn')}>Resume your session</button>
         </div>
       )}
+      </div>
       {destination === 'home' && (
         <HomeScreen
           courses={courses}
@@ -376,6 +378,7 @@ export default function App() {
             </ul>
           ) : null}
           <div className="orbit-page-actions"><button className="orbit-button" onClick={() => newSpace('topic')}>＋ New space</button></div>
+          <div className="orbit-page-utility">
           <p className="orbit-session-note">Orbit keeps compact learning memory in this browser, accessible to anyone using this browser profile. Clearing browser data removes it. Original uploads, drafts, and full conversation history are not saved; relevant context is used by Orbit's existing learning service.</p>
           {resetPending ? <div>
             <p>Clear all local Orbit spaces, progress, and learning memory? This cannot be undone.</p>
@@ -385,6 +388,7 @@ export default function App() {
             </div>
           </div> : <button className="orbit-text-button" onClick={() => { setResetPending(true); setResetMessage('') }}>Clear local learning data</button>}
           {resetMessage && <p role="status">{resetMessage}</p>}
+          </div>
           </div>
         </section>
       )}

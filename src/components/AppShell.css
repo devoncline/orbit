@@ -8,6 +8,16 @@
   --orbit-muted: #a9b3c9;
   --orbit-accent: #beb3f5;
   --orbit-radius: 14px;
+  --orbit-page-width: 1360px;
+  --orbit-page-top: clamp(48px, 6vw, 90px);
+  --orbit-page-gap: clamp(32px, 5vw, 80px);
+  --orbit-page-heading-size: clamp(36px, 3.6vw, 54px);
+  --orbit-page-heading-gap: 24px;
+  --orbit-page-action-gap: 32px;
+  --orbit-page-utility-gap: 48px;
+  --orbit-page-stage-height: clamp(340px, 36vw, 540px);
+  --orbit-page-companion-width: min(100%, 500px);
+  --orbit-page-companion-top: 10%;
   --text-h: var(--orbit-text);
   --text: var(--orbit-muted);
   --code-bg: #1b2436;
@@ -90,16 +100,19 @@
 .orbit-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 10px; }
 .orbit-section-heading h2 { font-size: 16px; font-weight: 500; margin: 0; }
 .orbit-section-heading button { font-size: 12px; }
-.orbit-page { max-width: 1360px; margin-inline: auto; padding-top: clamp(48px, 6vw, 90px); }
-.orbit-page-layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); grid-template-rows: min-content 1fr; grid-template-areas: 'header stage' 'content stage'; column-gap: clamp(32px, 5vw, 80px); align-items: start; }
-.orbit-page-header { grid-area: header; }
-.orbit-page-header h1 { margin: 0 0 24px; font-size: clamp(36px, 3.6vw, 52px); }
-.orbit-page-intro { max-width: 42ch; color: var(--orbit-muted); margin: 0 0 32px; }
+.orbit-page { max-width: var(--orbit-page-width); margin-inline: auto; padding-top: var(--orbit-page-top); }
+.orbit-page-layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); grid-template-rows: min-content 1fr; grid-template-areas: 'header stage' 'content stage'; column-gap: var(--orbit-page-gap); align-items: start; }
+.orbit-page-header { grid-area: header; min-width: 0; }
+.orbit-shell .orbit-page h1 { max-width: 22ch; margin: 0 0 var(--orbit-page-heading-gap); font-size: var(--orbit-page-heading-size); line-height: 1.12; font-weight: 500; letter-spacing: -.045em; }
+.orbit-page-intro { max-width: 42ch; color: var(--orbit-muted); margin: 0 0 var(--orbit-page-action-gap); }
 .orbit-page-layout > .orbit-stage { grid-area: stage; }
 .orbit-page-content { grid-area: content; min-width: 0; }
 .orbit-page-content > h2 { font-size: 24px; font-weight: 500; margin: 0 0 18px; }
 .orbit-session-note { font-size: 12px; color: #939fb8; margin-top: 24px; }
 .orbit-page-actions { display: flex; gap: 16px; flex-wrap: wrap; margin: 28px 0; }
+.orbit-page-content > .orbit-page-actions:first-child { margin-top: 0; }
+.orbit-page-utility { margin-top: var(--orbit-page-utility-gap); display: grid; justify-items: start; gap: var(--orbit-page-heading-gap); }
+.orbit-page-utility > .orbit-session-note { margin: 0; }
 .orbit-form { max-width: 500px; display: grid; gap: 20px; }
 .orbit-form label { display: grid; gap: 8px; color: var(--orbit-muted); font-size: 13px; }
 .orbit-form :where(input, select), .orbit-upload input { width: 100%; min-width: 0; min-height: 48px; border: 1px solid var(--orbit-border); border-radius: 8px; background: #101a2b; color: var(--orbit-text); padding: 12px 14px; font: inherit; }
@@ -126,7 +139,7 @@
 .calendar-page .upcoming-list li { position: relative; padding: 14px 0 24px 22px; }
 .calendar-page .upcoming-list li::before { content: ''; position: absolute; width: 7px; height: 7px; left: 0; top: 24px; background: var(--orbit-accent); border-radius: 50%; }
 .calendar-page .upcoming-list li:not(:last-child)::after { content: ''; position: absolute; left: 3px; top: 35px; bottom: -14px; width: 1px; background: #3a3852; }
-.calendar-page .upcoming-empty { font-size: 22px; font-weight: 400; color: var(--orbit-text); padding: 0; margin: 12px 0 24px; }
+.calendar-page .upcoming-empty { font-size: 22px; font-weight: 400; color: var(--orbit-text); padding: 0; margin: 0 0 var(--orbit-page-action-gap); }
 .space-details { margin-top: 40px; color: var(--orbit-muted); }
 .space-details summary { cursor: pointer; padding-bottom: 16px; }
 .space-details h2 { display: none; }
@@ -134,6 +147,12 @@
 .space-details p { font-size: 14px; }
 .session-resume { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding-block: 18px; color: var(--orbit-muted); font-size: 13px; }
 .session-resume button { color: var(--orbit-accent); }
+.shell-page-notices { max-width: var(--orbit-page-width); margin-inline: auto; }
+/* Home can hide the resume action, but keeps the same page start as sibling routes. */
+.shell-page-notices-resumable { min-height: 80px; }
+.shell-page-notices-resumable .session-resume { flex-wrap: nowrap; }
+.shell-page-notices-resumable .session-resume > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shell-page-notices-resumable .session-resume button { flex-shrink: 0; }
 .orbit-shell-focused .orbit-environment { opacity: .28; }
 .study-room-header { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 26px 0 12px; color: var(--orbit-muted); font-size: 12px; }
 .study-room { position: relative; }
@@ -160,15 +179,23 @@
   .orbit-environment { left: 190px; }
 }
 @media (max-width: 760px) {
+  .orbit-shell {
+    --orbit-page-top: 24px;
+    --orbit-page-heading-size: clamp(32px, 8vw, 40px);
+    --orbit-page-heading-gap: 20px;
+    --orbit-page-action-gap: 28px;
+    --orbit-page-utility-gap: 40px;
+    --orbit-page-stage-height: 190px;
+    --orbit-page-companion-width: 250px;
+    --orbit-page-companion-top: -35px;
+  }
   .shell-sidebar { display: none; }
   .shell-mobile-header { display: flex; padding: 20px 24px; }
   .shell-mobile-header .shell-brand { width: 100px; }
   .shell-main { margin: 0; padding: 0 24px 40px; }
   .orbit-environment { left: 0; min-height: 650px; background-position: 65% top; }
-  .orbit-page { padding-top: 24px; }
-  .orbit-page-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; grid-template-areas: 'header' 'stage' 'content'; gap: 0; }
-  .orbit-page-header h1 { font-size: clamp(32px, 8vw, 40px); margin-bottom: 16px; }
-  .orbit-page-intro { margin-bottom: 0; font-size: 14px; }
+  .orbit-page-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; grid-template-areas: 'stage' 'header' 'content'; gap: 0; }
+  .orbit-page-intro { font-size: 14px; }
   .orbit-page-layout > .orbit-stage { margin-inline: -12px; }
   .orbit-page-content > h2 { font-size: 22px; }
   .orbit-form { gap: 18px; }

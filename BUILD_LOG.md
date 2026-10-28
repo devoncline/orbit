@@ -581,6 +581,16 @@ The goal is for Orbit to move with the learner instead of waiting passively for 
 
 ---
 
+## October 27, 2026 — Consistent Page Composition
+
+- Moved Home and Learn onto the existing non-Study page grid, with shared width, top spacing, heading scale, content/stage gap, and utility spacing. Removed Learn's redundant stylesheet. Home keeps its recommendation surface while its text aligns with other pages; entry buttons reuse the shared button treatment. Reserved consistent resume-bar space across non-Study routes during an active session.
+- Unified Home/page companion dimensions and placement, removed their extra nebula image layer, and standardized mobile ordering as companion, heading, then content. Kept Study's stage, layout, and motion treatment intact. Separated Library's local-memory explanation and reset controls without changing confirmation behavior.
+- Validation: production build, full lint, all 108 existing tests, and diff checks pass. Desktop screenshots at the same maximized Chrome viewport cover Home, Learn, Calendar, Library, New Space, and a populated Space. Confirmed matching heading/content anchors and companion scale/region, no extra background rectangle, Library confirmation/cancel, space creation, and visible input focus. Home was also inspected in an approximately 500px-wide browser window.
+- Browser automation then stopped on refresh because it could not determine the Windows browser URL confidently enough to enforce policy. Remaining mobile routes, drawer/reduced-motion checks, the final populated-Home button-spacing fix, and the active-session notice reservation still need browser review. No live API, PDF upload, physical-device, or complete end-to-end behavior testing is claimed; the preview serves the frontend only.
+- Updated Unreleased notes and manual checks. No new dependencies, artwork, APIs, authentication, persistence logic, database changes, migrations, or manual SQL.
+
+---
+
 # Next
 
 The next major development steps are:

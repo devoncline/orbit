@@ -1,6 +1,5 @@
 import { useId, useState } from 'react'
 import OrbitStage from './OrbitStage'
-import './LearnScreen.css'
 
 const subjects = ['React', 'Quantum physics', 'Biology', 'Music theory', 'History of ancient Rome']
 
@@ -11,9 +10,10 @@ export default function LearnScreen({ courses, recommendedCourse, onStart }) {
     .map((name) => [name.toLowerCase(), name])).values()]
 
   return (
-    <section className="orbit-page learn-entry" aria-labelledby="learn-heading">
-      <div className="learn-entry-content">
-        <header className="orbit-page-header"><h1 id="learn-heading">What do you want to learn?</h1></header>
+    <section className="orbit-page orbit-page-layout" aria-labelledby="learn-heading">
+      <header className="orbit-page-header"><h1 id="learn-heading">What do you want to learn?</h1></header>
+      <OrbitStage variant="page" />
+      <div className="orbit-page-content">
         <form className="orbit-form" onSubmit={(event) => {
           event.preventDefault()
           if (topic.trim()) onStart(topic.trim())
@@ -26,7 +26,6 @@ export default function LearnScreen({ courses, recommendedCourse, onStart }) {
           <button className="orbit-button orbit-button-primary" type="submit" disabled={!topic.trim()}>Start learning</button>
         </form>
       </div>
-      <OrbitStage variant="page" />
     </section>
   )
 }
