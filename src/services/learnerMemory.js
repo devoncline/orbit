@@ -1,5 +1,6 @@
 import { inferCoursePosition, normalizeLearnerPosition, normalizeSyllabusItems } from './coursePosition.js'
 import { retainLearningAnchors } from './studyLearningContext.js'
+import { normalizeLearningPath, normalizeLessonVisual } from './learningPath.js'
 
 export const LEARNER_MEMORY_KEY = 'orbit.learner-memory'
 export const LEARNER_MEMORY_VERSION = 1
@@ -21,7 +22,9 @@ export function compactThreadResume(value) {
   const lesson = value?.lesson
   return {
     lesson: text(lesson?.topic) && text(lesson?.concept) && text(lesson?.content, 900)
-      ? { topic: text(lesson.topic), concept: text(lesson.concept), content: text(lesson.content, 900) } : null,
+      ? { topic: text(lesson.topic), concept: text(lesson.concept), content: text(lesson.content, 900),
+        ...(normalizeLessonVisual(lesson.visual) ? { visual: normalizeLessonVisual(lesson.visual) } : {}) } : null,
+    learningPath: normalizeLearningPath(value?.learningPath),
     conversation: list(value?.conversation, MAX_SAVED_EXCHANGES)
       .filter((exchange) => text(exchange?.message, 600) && text(exchange?.response, 900))
       .map((exchange) => ({ message: text(exchange.message, 600), response: text(exchange.response, 900) })),

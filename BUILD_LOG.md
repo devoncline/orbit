@@ -591,6 +591,17 @@ The goal is for Orbit to move with the learner instead of waiting passively for 
 
 ---
 
+## October 27, 2026 — Guided Adaptive Lessons
+
+- Added a small, revisable learning path to each study thread: current lesson, two tentative next lessons, eight recent visited lessons, and a lesson counter. "I understand" records self-reported readiness; "Continue to next lesson" advances without requiring a quiz or changing mastery. Quiz continuation is labeled "Next question" to distinguish it from lesson progression.
+- Extended the existing lesson service/endpoint with a next-lesson action. Guided generation uses extracted syllabus/assignment context and explicit course corrections before inferred activity, reconsiders suggestions with current mastery/anchors, and rejects repeated recent concepts and disallowed topics. New evidence invalidates future suggestions without interrupting the current lesson. Existing Home inference and legacy API contracts remain compatible.
+- Kept lesson identity visible across conversation and practice. A successful transition resets lesson-specific controls while retaining anchors and bounded history; failures retain the current interaction and drafts. Corrections arriving during a request prevent installation of the stale result. Successfully continuing at a corrected position updates the thread's resume identity, with one added App prop carrying the actual course correction key.
+- Added a small React text renderer for headings, paragraphs, bullets, and bold emphasis; raw HTML and image/link syntax remain inert. Muse prompts request a compact explanatory idea and concrete example, avoiding course-title definitions and repeated UI labels.
+- Added optional allowlisted visual metadata (type, teaching purpose, bounded labeled data, and focus) for future teaching visuals. No visual generation/rendering, mascot changes, new dependencies, or graphics system. The existing local-memory projection retains the path and optional visual metadata; older saves load with an empty path. No database, migrations, historical migration edits, manual SQL, cloud persistence, or authentication changes.
+- Validation: production build, full lint, and 123 tests pass, including new API/service progression, course-evidence revision, unclear-position recovery, bounds, safe formatting, rendered UI, and local-resume checks. A new test initially used an unsupported anchor confidence value; the fixture was corrected to the existing contract. Browser/live Meta and physical-device verification remain manual; no interactive dev server was started. Updated Unreleased release notes and the manual checklist.
+
+---
+
 # Next
 
 The next major development steps are:

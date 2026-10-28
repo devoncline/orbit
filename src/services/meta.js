@@ -1,6 +1,7 @@
 import { retainStudyExchanges } from './studyConversation.js'
 import { learningAnchorRequest } from './studyLearningContext.js'
 import { coursePositionRequest, inferCoursePosition, localDate } from './coursePosition.js'
+import { learningPathContextKey, normalizeLearningPath } from './learningPath.js'
 
 export async function analyzeCourseFile(file) {
     const base64File = await fileToBase64(file)
@@ -25,8 +26,15 @@ export async function analyzeCourseFile(file) {
     return response.json()
 }
 
-export function generateStudyLesson(course, mastery, { anchors = [] } = {}) {
-    return requestStudyLesson(course, mastery, 'lesson', undefined, undefined, anchors)
+export function generateStudyLesson(course, mastery, { anchors = [], path, signal } = {}) {
+    return requestStudyLesson(course, mastery, 'lesson', undefined, undefined, anchors, path, signal)
+}
+
+export function generateNextStudyLesson(course, mastery, lesson, { anchors = [], path, signal } = {}) {
+    const currentPath = normalizeLearningPath(path)
+    // Do not present outdated suggestions as the plan after new material or learner evidence.
+    if (currentPath.contextKey !== learningPathContextKey(course)) currentPath.upcoming = []
+    return requestStudyLesson(course, mastery, 'next', lesson, undefined, anchors, currentPath, signal)
 }
 
 export function explainStudyLessonDifferently(course, lesson, example = '', { anchors = [] } = {}) {
@@ -37,12 +45,13 @@ export function generateStudyExample(course, lesson, example = '', { anchors = [
     return requestStudyLesson(course, course.mastery?.overall ?? 40, 'example', lesson, example, anchors)
 }
 
-async function requestStudyLesson(course, mastery, action, lesson, example, anchors) {
+async function requestStudyLesson(course, mastery, action, lesson, example, anchors, path, signal) {
     const response = await fetch('/api/generate-study-lesson', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
+        signal,
         body: JSON.stringify({
             courseName: course.name,
             nextTask: course.nextTask,
@@ -54,12 +63,15 @@ async function requestStudyLesson(course, mastery, action, lesson, example, anch
             action,
             lesson,
             example,
+            ...(path !== undefined ? { learningPath: normalizeLearningPath(path) } : {}),
             ...learningAnchorRequest(anchors, { topic: lesson?.topic || inferCoursePosition(course).currentTopic, concept: lesson?.concept, text: lesson?.content || course.nextTask }),
         }),
     })
 
     if (!response.ok) {
-        throw new Error('Failed to generate study lesson')
+        const error = new Error('Failed to generate study lesson')
+        if (response.status === 422) error.code = 'COURSE_POSITION_REQUIRED'
+        throw error
     }
 
     return response.json()

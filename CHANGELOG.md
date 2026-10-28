@@ -4,6 +4,8 @@
 
 ### Improvements
 
+- Learn now offers a guided lesson flow with a clear current lesson, optional readiness check, and a way to continue without taking a quiz. A compact, expandable learning path adapts to course materials, learner corrections, and study context; reading or moving forward does not increase mastery.
+- Lessons, examples, and Muse replies are easier to scan with short sections, key concepts, and concrete examples. Conversations keep the current lesson in view, and recent lesson progress resumes in the same browser.
 - Home, Learn, Calendar, Library, and learning spaces now share consistent heading, content, and companion placement on desktop and mobile. Removed the extra background behind Orbit and gave Library's local-data controls more breathing room.
 - Home and Learn now have distinct starting experiences: Home offers class, curiosity, and material paths; Learn opens a focused topic entry that starts studying directly. Existing spaces can be reused, and active sessions resume through Learn.
 - Orbit now remembers learning spaces, syllabus context, mastery, learner corrections, and useful learning anchors in the same browser. Home continues from recent work, with explicit corrections taking priority over inferred starting points.
@@ -30,6 +32,10 @@
 
 ### Manual test checklist
 
+- Start Introduction to Psychology without materials. Check for a useful introductory concept, readable sections, one suggested next lesson, and a collapsed path. Mark "I understand" and continue twice without a quiz; mastery should stay unchanged. Refresh and check the current lesson, lesson number, and small path resume.
+- Ask a question, request an example, use "Let me try it", and try correct/incorrect quizzes before continuing. Check that the lesson title and next-lesson action remain visible; the first quiz in a new lesson should cover that lesson. Check "Next question" still runs adaptive practice.
+- Change the current topic or add a dated syllabus after a lesson starts. Keep the current lesson until continuing, hide outdated suggestions, and use the new context for the next lesson. Check skipped/not-yet topics, correction during a pending request, retry after a failed continuation, and returning through Home or another thread.
+- At desktop and phone widths, check headings, bullets, long titles, continuation controls, collapsed path, keyboard focus, and no horizontal scrolling. Fail a next-lesson request while viewing a conversation, activity, or quiz; existing content and drafts should remain available.
 - Compare Home, Learn, Calendar, Library, Space, and New space at the same desktop and phone widths, including an active session and a long space name. Check aligned headings, stable companion size and placement, no background rectangle or horizontal scrolling, keyboard focus, reduced motion, and drawer open/close/Escape. In Library, open and cancel the reset confirmation; verify the utility action is separated from its explanation. Recheck populated Home's space link and primary action spacing.
 - With no spaces, compare Home's three paths with Learn's single topic field. Enter a subject and press Enter or Start learning; confirm a lesson begins directly in a self-directed space. With one and seven spaces, choose an existing subject (including different capitalization) and verify progress is retained without duplicates. Leave Study for Home, then select Learn and confirm the active thread resumes. Check the entry form on mobile and with a keyboard.
 - Start with zero, one, and seven spaces; refresh and reopen the browser. Check space names, syllabus information, upcoming work, course/topic mastery, and corrected starting points. Confirm Home offers a relevant continuation without an empty-state flash.

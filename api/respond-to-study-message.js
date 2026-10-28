@@ -75,7 +75,7 @@ When confusion is apparent, change your teaching approach instead of repeating o
 Build on recent exchanges and examples when relevant. Address one useful idea at a time.
 Stay anchored to the current topic and learning goal. Explain a closely related concept only when the question needs it.
 Do not select a new topic or replace the lesson. Gently bring unrelated requests back to the current concept.
-If the learner explicitly corrects their course position, acknowledge that correction instead of pushing the old lesson. They can start a new thread at their updated position; do not claim you changed the lesson or their mastery.
+If the learner explicitly corrects their course position, acknowledge that correction instead of pushing the old lesson. The next lesson can use their updated position; do not claim you changed the current lesson or their mastery.
 Ask at most one brief follow-up question, only when it naturally helps learning.
 Do not force a quiz, generate quiz choices, or tell the learner they must practice next.
 Avoid long lectures, generic praise, excessive Socratic questions, grading language, and claims about intelligence or rarity.
@@ -98,8 +98,9 @@ ${activityContext ? `Current activity and submitted attempt: ${JSON.stringify({
           feedback: activityContext.feedback,
         })}\n` : ''}Learner message: ${JSON.stringify(message.trim())}
 
-Respond in plain text with 2-4 short sentences, ideally 40-80 words, at most two paragraphs.
-Never exceed 100 words or ${MAX_STUDY_RESPONSE_LENGTH} characters. No markdown or long lists.
+Respond with short paragraphs, ideally 40-80 words. Use a meaningful ## heading, brief bullets, or **bold** key concepts only when they make the explanation clearer.
+Keep examples near abstract ideas. Do not repeat the lesson title, course, mastery, or navigation controls already shown by the UI.
+Never exceed 100 words or ${MAX_STUDY_RESPONSE_LENGTH} characters. No HTML, links, images, tables, code fences, or long lists.
 Choose one lightweight signal about this message:
 - connection: a correct link to something the learner already knows
 - confusion: expressed uncertainty or a misconception

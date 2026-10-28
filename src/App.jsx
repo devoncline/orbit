@@ -409,6 +409,7 @@ export default function App() {
                 course={course}
                 threadId={thread.id}
                 initialThread={thread}
+                coursePositionKey={learnerPositionKey(originalCourse)}
                 active={destination === 'study' && thread.id === activeId}
                 onThreadUpdate={updateThread}
                 onPositionChange={(update) => updatePosition(course.name, update)}

@@ -6,6 +6,7 @@ import { createServer } from 'vite'
 import { collectUpcomingWork, formatWorkDate, parseWorkDate } from '../src/services/upcomingWork.js'
 import { learningAction } from '../src/components/learningAction.js'
 import { LEARNER_MEMORY_KEY, saveLearnerMemory } from '../src/services/learnerMemory.js'
+import { acceptPathLesson, learningPathContextKey } from '../src/services/learningPath.js'
 
 let server
 let HomeScreen
@@ -15,6 +16,7 @@ let UpcomingWork
 let StudyThreads
 let App
 let StudySession
+let StudyContent
 
 before(async () => {
   server = await createServer({ server: { middlewareMode: true, watch: null }, appType: 'custom' })
@@ -25,6 +27,7 @@ before(async () => {
   StudyThreads = (await server.ssrLoadModule('/src/components/StudyThreads.jsx')).default
   App = (await server.ssrLoadModule('/src/App.jsx')).default
   StudySession = (await server.ssrLoadModule('/src/components/StudySession.jsx')).default
+  StudyContent = (await server.ssrLoadModule('/src/components/StudyContent.jsx')).default
 })
 after(async () => { await server?.close() })
 
@@ -156,6 +159,52 @@ test('restored Study starts from its saved lesson and summary without replaying 
   assert.match(html, /Parents supply props to children/)
   assert.match(html, /Last time: Practiced component inputs/)
   assert.doesNotMatch(html, /Orbit is preparing a short lesson|Question 1|study-answer/)
+})
+
+test('guided Study exposes course, lesson, readiness and continuation while the wider path stays collapsed', () => {
+  const course = { name: 'Introduction to Psychology', mastery: { overall: 40, topics: {} } }
+  const lesson = { topic: 'Perspectives', concept: 'Explaining behavior', content: '## A useful lens\n**Perspectives** explain behavior.\n\n## Example\nCompare memory with social influence.' }
+  const learningPath = acceptPathLesson({ ...lesson, nextLessons: [{ topic: 'Research', concept: 'Testing an idea' }, { topic: 'Research', concept: 'Comparing groups' }] }, undefined, undefined, learningPathContextKey(course))
+  const html = renderToStaticMarkup(createElement(StudySession, {
+    course, mastery: 40, initialThread: { resume: { lesson, learningPath } },
+    setMastery: () => assert.fail('Reading is not mastery'), updateTopicMastery: () => assert.fail('Reading is not mastery'),
+  }))
+  assert.match(html, /Introduction to Psychology · Lesson 1/)
+  assert.match(html, /<h1>Explaining behavior<\/h1>/)
+  assert.match(html, /<h3>A useful lens<\/h3>/)
+  assert.match(html, /<strong>Perspectives<\/strong>/)
+  assert.match(html, />I understand<\/button>/)
+  assert.match(html, />Continue to next lesson<\/button>/)
+  assert.match(html, /Up next · <strong>Testing an idea<\/strong>/)
+  assert.match(html, /<details class="study-path"><summary>View learning path<\/summary>/)
+  assert.match(html, /Mastery · 40%/)
+  assert.match(html, /Let me try it/)
+  assert.match(html, /Talk it through/)
+  assert.match(html, /Quiz me/)
+  assert.doesNotMatch(html, /<details[^>]*open|<img[^>]*generated/)
+})
+
+test('resuming after course evidence changes preserves the current lesson but hides stale future lessons', () => {
+  const course = { name: 'Psychology' }
+  const lesson = { topic: 'Perspectives', concept: 'Explaining behavior', content: 'Consider several explanations.' }
+  const learningPath = acceptPathLesson({ ...lesson, nextLessons: [{ topic: 'Research', concept: 'STALE_SUGGESTION' }] }, undefined, undefined, learningPathContextKey(course))
+  const html = renderToStaticMarkup(createElement(StudySession, {
+    course: { ...course, importantTopics: ['Memory'] }, mastery: 40, initialThread: { resume: { lesson, learningPath } },
+  }))
+  assert.match(html, /Explaining behavior/)
+  assert.match(html, /latest course context/)
+  assert.doesNotMatch(html, /STALE_SUGGESTION/)
+})
+
+test('teaching formatting renders headings, paragraphs, bullets and emphasis while HTML and image syntax stay inert', () => {
+  const html = renderToStaticMarkup(createElement(StudyContent, {
+    content: '## A useful idea\nA **key concept**.\n\n- First example\n- Second example\n\n<script>alert(1)</script>\n![image](javascript:alert(1))',
+  }))
+  assert.match(html, /<h3>A useful idea<\/h3>/)
+  assert.match(html, /<p>A <strong>key concept<\/strong>\.<\/p>/)
+  assert.match(html, /<ul><li>First example<\/li><li>Second example<\/li><\/ul>/)
+  assert.match(html, /&lt;script&gt;/)
+  assert.doesNotMatch(html, /<script|<img|<a /)
 })
 
 test('Home keeps a real question as its hook and does not invent learner history', () => {

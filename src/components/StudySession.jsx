@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import {
     generateStudyLesson,
+    generateNextStudyLesson,
     explainStudyLessonDifferently,
     generateStudyExample,
     respondToStudyMessage,
@@ -14,14 +15,17 @@ import { rememberLearningAnchor, anchorAfterFollowUp, retainLearningAnchors } fr
 import { compactThreadResume } from '../services/learnerMemory'
 import { applyPositionOverride, readPositionStatement } from '../services/coursePosition'
 import { selectStudyInteraction, studyThreadMetadata } from '../services/studyThreads'
+import { acceptPathLesson, learningPathContextKey, normalizeLearningPath } from '../services/learningPath'
 import CoursePosition from './CoursePosition'
 import OrbitStage from './OrbitStage'
+import StudyContent from './StudyContent'
 import './StudySession.css'
 
 export default function StudySession({
     course,
     threadId,
     initialThread,
+    coursePositionKey,
     active = true,
     onThreadUpdate,
     onPositionChange,
@@ -32,7 +36,9 @@ export default function StudySession({
     updateTopicMastery,
 }) {
     const [resume] = useState(() => compactThreadResume(initialThread?.resume))
-    const [initialThreadContext] = useState(initialThread)
+    const [threadContext, setThreadContext] = useState(() => ({
+        positionKey: initialThread?.positionKey || 'null', requestedTopic: initialThread?.requestedTopic || '',
+    }))
     const [resumeSummary, setResumeSummary] = useState(initialThread?.resume ? initialThread.summary : '')
     const [activeInteraction, setActiveInteraction] = useState('lesson')
     const stage = activeInteraction === 'quiz' ? 'quiz' : 'learn'
@@ -47,6 +53,13 @@ export default function StudySession({
     const panel = useRef(null)
     const id = useId()
     const [lesson, setLesson] = useState(resume.lesson)
+    const [learningPath, setLearningPath] = useState(() => normalizeLearningPath(resume.learningPath))
+    const [progressionError, setProgressionError] = useState('')
+    const nextLessonRequest = useRef(null)
+    const contextKey = learningPathContextKey(course, today)
+    const latestContextKey = useRef(contextKey)
+    const pathIsCurrent = learningPath.contextKey === contextKey
+    const upcomingLessons = pathIsCurrent ? learningPath.upcoming : []
     const [example, setExample] = useState('')
     const [loadingLesson, setLoadingLesson] = useState(resume.lesson ? '' : 'lesson')
     const [lessonError, setLessonError] = useState('')
@@ -80,9 +93,11 @@ export default function StudySession({
     const busy = Boolean(loadingLesson || loadingConversation || loadingActivity || loadingQuestion || loadingEvaluation)
     const lastPublished = useRef('')
 
+    useEffect(() => { latestContextKey.current = contextKey }, [contextKey])
+
     useEffect(() => {
         if (!lesson) return
-        const snapshot = compactThreadResume({ lesson, conversation, learningAnchors })
+        const snapshot = compactThreadResume({ lesson, conversation, learningAnchors, learningPath })
         const metadata = studyThreadMetadata({ lesson, activeInteraction, conversation, activity, activityFeedback, questionNumber, answerResult, followUpResult })
         const signature = JSON.stringify({ snapshot, metadata })
         if (lastPublished.current === signature) return
@@ -91,12 +106,12 @@ export default function StudySession({
         // Restoring a lesson is not new learning evidence and must not replace its saved summary.
         if (firstPublish && resume.lesson) return
         onThreadUpdate?.(threadId, { ...metadata, resume: snapshot, courseName: initialContext.course.name,
-            positionKey: initialThreadContext?.positionKey || 'null', updatedAt: new Date().toISOString() })
-    }, [threadId, onThreadUpdate, lesson, activeInteraction, conversation, activity, activityFeedback, questionNumber, answerResult, followUpResult, learningAnchors, resume, initialContext, initialThreadContext])
+            ...threadContext, updatedAt: new Date().toISOString() })
+    }, [threadId, onThreadUpdate, lesson, activeInteraction, conversation, activity, activityFeedback, questionNumber, answerResult, followUpResult, learningAnchors, learningPath, resume, initialContext, threadContext])
 
     useEffect(() => {
         if (active) panel.current?.focus({ preventScroll: false })
-    }, [active, activeInteraction])
+    }, [active, activeInteraction, lesson?.concept])
 
     function openInteraction(next) {
         setResumeSummary('')
@@ -122,13 +137,17 @@ export default function StudySession({
             initialLessonRequest.current = generateStudyLesson(
                 initialContext.course,
                 initialContext.mastery,
-                { anchors: initialContext.course.learningAnchors || [] }
+                { anchors: initialContext.course.learningAnchors || [], path: normalizeLearningPath() }
             )
         }
 
         initialLessonRequest.current
             .then((result) => {
-                if (current) { initialLessonLoaded.current = true; setLesson(result) }
+                if (current) {
+                    initialLessonLoaded.current = true
+                    setLesson(result)
+                    setLearningPath(acceptPathLesson(result, undefined, undefined, learningPathContextKey(initialContext.course)))
+                }
             })
             .catch(() => {
                 if (current) setLessonError('Orbit could not load your lesson. Please try again.')
@@ -144,6 +163,7 @@ export default function StudySession({
         return () => {
             conversationRequest.current?.abort()
             activityRequest.current?.abort()
+            nextLessonRequest.current?.abort()
         }
     }, [])
 
@@ -283,6 +303,73 @@ export default function StudySession({
         }
     }
 
+    async function continueLesson() {
+        if (!lesson || busy || nextLessonRequest.current) return
+        const controller = new AbortController()
+        nextLessonRequest.current = controller
+        const requestedContextKey = contextKey
+        setLoadingLesson('next')
+        setProgressionError('')
+        try {
+            const result = await generateNextStudyLesson(course, mastery, lesson, {
+                path: learningPath, anchors: learningAnchors, signal: controller.signal,
+            })
+            if (controller.signal.aborted) return
+            // A correction or material upload during generation must not install a stale lesson.
+            if (latestContextKey.current !== requestedContextKey) {
+                setProgressionError('Your course context changed while Orbit was preparing the next lesson. Please try again.')
+                return
+            }
+            rememberInteraction('lesson', lesson.concept, lesson.content)
+            if (conversation.length) {
+                const last = conversation.at(-1)
+                rememberInteraction('conversation', last.message, last.message, last.response)
+            }
+            if (activity) rememberInteraction('activity', activity.title, activity.instruction, activityFeedback?.feedback || activityResponse)
+            if (studyQuestion) rememberInteraction('quiz', studyQuestion.topic || 'Practice', studyQuestion.question, evaluation?.feedback || studyQuestion.explanation || '')
+            const positionKey = coursePositionKey ?? JSON.stringify(course.learnerPosition || null)
+            setThreadContext((current) => ({ positionKey, requestedTopic: current.positionKey === positionKey ? current.requestedTopic : '' }))
+            setLearningPath(acceptPathLesson(result, learningPath, lesson, requestedContextKey))
+            setLesson(result)
+            // Clear only lesson-specific interactions after a successful transition.
+            // Learning anchors, thread history, and course mastery continue independently.
+            setExample('')
+            setConversation([])
+            setLearnerMessage('')
+            setConversationError('')
+            setActivity(null)
+            setActivityResponse('')
+            setActivityFeedback(null)
+            setActivityError(null)
+            setStudyQuestion(null)
+            setQuestionNumber(0)
+            setAnswerResult('')
+            setFollowUpResult('')
+            setShowAdaptedLesson(false)
+            setEvaluation(null)
+            setEvaluationError('')
+            setSelectedAnswer(null)
+            setQuestionError('')
+            setLessonError('')
+            setPositionChanged(false)
+            openInteraction('lesson')
+        } catch (error) {
+            if (!controller.signal.aborted) {
+                if (error.code === 'COURSE_POSITION_REQUIRED') {
+                    openInteraction('lesson')
+                    setProgressionError('Choose what your class is working on above, then continue to the next lesson.')
+                } else {
+                    setProgressionError('Orbit could not prepare the next lesson. Your place is saved; try again or keep exploring this lesson.')
+                }
+            }
+        } finally {
+            if (nextLessonRequest.current === controller) {
+                nextLessonRequest.current = null
+                setLoadingLesson('')
+            }
+        }
+    }
+
     async function loadQuestion(lessonContext) {
         if (loadingQuestion || loadingLesson || loadingEvaluation) return
         if (studyQuestion) rememberInteraction('quiz', studyQuestion.topic || 'Practice', studyQuestion.question, `${answerResult || 'Not answered'}${evaluation ? `\n${evaluation.feedback}\n${evaluation.adaptedExplanation}\nFollow-up: ${followUpResult || 'Not answered'}` : studyQuestion.explanation ? `\n${studyQuestion.explanation}` : ''}`)
@@ -349,8 +436,9 @@ export default function StudySession({
     return (
         <section className="study-session">
             <header className="study-context">
-                {stage === 'learn' && lesson && <p className="study-topic">{lesson.topic}</p>}
-                <h1>{stage === 'learn' ? lesson?.concept || course.nextTask || course.name : studyQuestion?.topic || lesson?.topic || 'Practice'}</h1>
+                <p className="study-topic">{course.name}{lesson ? ` · Lesson ${learningPath.step}` : ''}</p>
+                {lesson && lesson.topic !== lesson.concept && <p className="study-topic">{lesson.topic}</p>}
+                <h1>{lesson?.concept || course.nextTask || course.name}</h1>
             </header>
             <OrbitStage thinking={Boolean(loadingLesson || loadingConversation || loadingActivity || loadingQuestion || loadingEvaluation)} />
             <div className="study-body">
@@ -359,7 +447,7 @@ export default function StudySession({
                 <button disabled={busy} aria-pressed={activeInteraction === 'example'} onClick={() => example ? openInteraction('example') : changeLesson('example')}>Give me an example</button>
                 <button disabled={busy} aria-pressed={activeInteraction === 'activity'} onClick={() => activity ? openInteraction('activity') : runActivity('generate')}>Let me try it</button>
                 <button disabled={busy} aria-pressed={activeInteraction === 'conversation'} onClick={() => openInteraction('conversation')}>Talk it through</button>
-                <button className="study-primary-action" disabled={Boolean(loadingLesson || loadingQuestion || loadingEvaluation)} aria-pressed={activeInteraction === 'quiz'} onClick={() => studyQuestion ? openInteraction('quiz') : loadQuestion(lesson)}>Quiz me</button>
+                <button disabled={Boolean(loadingLesson || loadingQuestion || loadingEvaluation)} aria-pressed={activeInteraction === 'quiz'} onClick={() => studyQuestion ? openInteraction('quiz') : loadQuestion(lesson)}>Quiz me</button>
             </div>}
             {history.length > 0 && <details className="study-history">
                 <summary>Earlier in this thread <span>{history.length}</span></summary>
@@ -371,26 +459,26 @@ export default function StudySession({
             </details>}
             <section className="study-active-panel" data-study-interaction={activeInteraction} ref={panel} tabIndex={-1} aria-label="Current study interaction">
             {resumeSummary && <p className="orbit-muted">Last time: {resumeSummary} Your lesson is ready to revisit; activities and quizzes start fresh.</p>}
-            {positionChanged && <div className="study-position-notice" role="status">Your course starting point is updated. This thread is still here.
+            {positionChanged && <div className="study-position-notice" role="status">Your course starting point is updated. Continue when you are ready to use it.
                 <button onClick={onNewThread}>Start a thread there</button>
             </div>}
             {selectedHistory && activeInteraction === 'history' && <div className="study-history-entry">
-                <h3>{selectedHistory.title}</h3><p>{selectedHistory.content}</p>
-                {selectedHistory.response && <p><strong>Orbit:</strong> {selectedHistory.response}</p>}
-                <button onClick={() => openInteraction(selectedHistory.type)}>Return to current {selectedHistory.type}</button>
+                <h3>{selectedHistory.title}</h3><StudyContent content={selectedHistory.content} />
+                {selectedHistory.response && <StudyContent content={selectedHistory.response} />}
+                <button onClick={() => openInteraction('lesson')}>Return to current lesson</button>
             </div>}
-            {activeInteraction === 'example' && example && <div className="study-example"><h3>One example</h3><p>{example}</p><button disabled={busy} onClick={() => changeLesson('example')}>Another example</button></div>}
+            {activeInteraction === 'example' && example && <div className="study-example"><StudyContent content={example} /><button disabled={busy} onClick={() => changeLesson('example')}>Another example</button></div>}
             {stage === 'learn' && (
                 <div className="study-lesson">
                     {lesson && activeInteraction === 'lesson' && (
                         <div aria-live="polite">
-                            <p>{lesson.content}</p>
+                            <StudyContent content={lesson.content} />
                             <button disabled={busy} onClick={() => changeLesson('simplify')}>I lost you</button>
-                            <CoursePosition course={course} today={today} onChange={onPositionChange ? changePosition : undefined} />
+                            <CoursePosition course={course} today={today} showSummary={false} onChange={onPositionChange ? changePosition : undefined} />
                         </div>
                     )}
 
-                    {loadingLesson && (
+                    {loadingLesson && loadingLesson !== 'next' && (
                         <p role="status">
                             {loadingLesson === 'lesson'
                                 ? 'Orbit is preparing a short lesson...'
@@ -465,7 +553,7 @@ export default function StudySession({
                                 {conversation.slice(-1).map((exchange, index) => (
                                     <div key={index}>
                                         <details className="study-thought"><summary>Your thought: {exchange.message.slice(0, 80)}{exchange.message.length > 80 ? '…' : ''}</summary><p>{exchange.message}</p></details>
-                                        <p><strong>Orbit:</strong> {exchange.response}</p>
+                                        <StudyContent content={exchange.response} />
                                     </div>
                                 ))}
                             </div>
@@ -501,7 +589,7 @@ export default function StudySession({
                 </div>
             )}
 
-            {stage === 'quiz' && <h3>Question {questionNumber}</h3>}
+            {stage === 'quiz' && <h3>Question {questionNumber}{studyQuestion?.topic && studyQuestion.topic !== lesson?.topic ? ` · ${studyQuestion.topic}` : ''}</h3>}
 
             {loadingQuestion && <p role="status">Orbit is building your question...</p>}
             {questionError && (
@@ -537,7 +625,7 @@ export default function StudySession({
 
                     {answerResult === 'correct' && (
                         <button className="study-primary-action" onClick={loadNextQuestion}>
-                            Continue
+                            Next question
                         </button>
                     )}
 
@@ -563,6 +651,7 @@ export default function StudySession({
                             {evaluation.followUpAnswers.map((answer) => (
                                 <button className="study-answer"
                                     key={answer.text}
+                                    disabled={busy}
                                     onClick={() => {
                                         rememberAnchor(anchorAfterFollowUp(evaluation.anchor, answer.correct))
                                         if (answer.correct) {
@@ -594,7 +683,7 @@ export default function StudySession({
 
                             {followUpResult === 'correct' && (
                                 <button className="study-primary-action" onClick={loadNextQuestion}>
-                                    Continue
+                                    Next question
                                 </button>
                             )}
 
@@ -608,6 +697,30 @@ export default function StudySession({
                 </div>
             )}
             </section>
+            {lesson && <nav className="study-continuation" aria-label="Lesson progression" aria-busy={loadingLesson === 'next'}>
+                <div className="study-continue-actions">
+                    <button disabled={busy} aria-pressed={learningPath.understood} onClick={() => setLearningPath((current) => ({ ...current, understood: !current.understood }))}>
+                        {learningPath.understood ? 'Feeling ready' : 'I understand'}
+                    </button>
+                    <button className="study-primary-action" disabled={busy} onClick={continueLesson}>
+                        {loadingLesson === 'next' ? 'Preparing next lesson…' : progressionError ? 'Try next lesson again' : 'Continue to next lesson'}
+                    </button>
+                </div>
+                <p className="orbit-muted">{learningPath.understood ? 'You can move on whenever you are ready.' : 'Keep exploring, or continue when you are ready.'} Practice updates mastery.</p>
+                {loadingLesson === 'next' && <p role="status">Orbit is choosing the next useful lesson…</p>}
+                {progressionError && <p role="alert">{progressionError}</p>}
+                {upcomingLessons[0] && <p className="study-up-next">Up next · <strong>{upcomingLessons[0].concept}</strong></p>}
+                {!pathIsCurrent && <p className="orbit-muted">Orbit will use your latest course context to choose what comes next.</p>}
+                <details className="study-path">
+                    <summary>View learning path</summary>
+                    <p className="orbit-muted">A flexible plan that changes with your course and what you need. Lessons visited are separate from mastery.</p>
+                    <ol>
+                        {learningPath.visited.map((item, index) => <li key={`visited-${index}`}><small>Visited{item.understood ? ' · Felt ready' : ''}</small><span>{item.concept}</span></li>)}
+                        <li aria-current="step"><small>Current lesson</small><span>{lesson.concept}</span></li>
+                        {upcomingLessons.map((item, index) => <li key={`next-${index}`}><small>Suggested next</small><span>{item.concept}</span></li>)}
+                    </ol>
+                </details>
+            </nav>}
             </div>
             <footer className="study-progress">
                 <ol className="study-stages" aria-label="Session progress">
