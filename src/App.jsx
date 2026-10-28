@@ -7,30 +7,38 @@ import UpcomingWork from './components/UpcomingWork'
 import OrbitStage from './components/OrbitStage'
 import StudyThreads from './components/StudyThreads'
 import { applyPositionOverride, inferCoursePosition, localDate, mergeCourseAnalysis, positionAction } from './services/coursePosition'
-import { createStudyThread, initialThreads, studyThreadsReducer } from './services/studyThreads'
+import { createStudyThread, studyThreadsReducer } from './services/studyThreads'
+import { clearLearnerMemory, learnerPositionKey, loadLearnerMemory, saveLearnerMemory } from './services/learnerMemory'
+import { retainLearningAnchors } from './services/studyLearningContext'
 import {
   analyzeCourseFile,
   recommendCourse,
+  recommendationCourses,
 } from './services/meta'
 import { useCallback, useEffect, useReducer, useState } from 'react'
 import './App.css'
 
 export default function App() {
-  const [courses, setCourses] = useState([])
+  const [restored] = useState(loadLearnerMemory)
+  const [courses, setCourses] = useState(restored.courses)
+  const [storageAvailable, setStorageAvailable] = useState(true)
+  const [resetMessage, setResetMessage] = useState('')
+  const [resetPending, setResetPending] = useState(false)
   const [destination, setDestination] = useState('home')
   const [selectedSpace, setSelectedSpace] = useState(null)
   const [newSpaceIntent, setNewSpaceIntent] = useState('topic')
 
-  const [recommendation, setRecommendation] = useState(null)
+  const [recommendation, setRecommendation] = useState(restored.recommendation)
   const [loadingRecommendation, setLoadingRecommendation] = useState(false)
   const [today, setToday] = useState(localDate)
-  const [{ threads, activeId }, dispatchThreads] = useReducer(studyThreadsReducer, initialThreads)
+  const [{ threads, activeId }, dispatchThreads] = useReducer(studyThreadsReducer, { threads: restored.threads, activeId: restored.activeId })
   const activeThread = threads.find((thread) => thread.id === activeId)
+  const recommendationInput = JSON.stringify(recommendationCourses(courses))
 
   const recommendedCourse =
     courses.find(
       (course) => course.name === recommendation?.courseName
-    ) || courses[0]
+    ) || courses.find((course) => course.name === activeThread?.courseName) || courses[0]
   const sessionStarted = Boolean(activeThread)
   const sessionCourseName = activeThread?.courseName
   const sessionCourse =
@@ -45,16 +53,24 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (!courses.length) return
+    const saved = saveLearnerMemory({ courses, threads, activeId, recommendation })
+    let current = true
+    queueMicrotask(() => { if (current) setStorageAvailable(saved) })
+    return () => { current = false }
+  }, [courses, threads, activeId, recommendation])
+
+  useEffect(() => {
+    const context = JSON.parse(recommendationInput)
+    if (!context.length) return
     let active = true
     const controller = new AbortController()
     async function loadRecommendation() {
       try {
         setLoadingRecommendation(true)
 
-        const result = await recommendCourse(courses, { currentDate: today, signal: controller.signal })
+        const result = await recommendCourse(context, { currentDate: today, signal: controller.signal })
 
-        if (active) setRecommendation(result)
+        if (active && context.some((course) => course.name === result?.courseName)) setRecommendation(result)
       } catch {
         // Keep the previous recommendation and local position-based action available.
       } finally {
@@ -64,7 +80,21 @@ export default function App() {
 
     loadRecommendation()
     return () => { active = false; controller.abort() }
-  }, [courses, today])
+  }, [recommendationInput, today])
+
+  function resetLearningData() {
+    if (!clearLearnerMemory()) {
+      setResetMessage('Orbit could not clear browser storage. Check your browser storage settings and try again.')
+      return
+    }
+    setCourses([])
+    dispatchThreads({ type: 'reset' })
+    setRecommendation(null)
+    setLoadingRecommendation(false)
+    setSelectedSpace(null)
+    setResetPending(false)
+    setResetMessage('Local Orbit learning data cleared.')
+  }
 
   function addCourse(newCourse) {
     setCourses((currentCourses) => [
@@ -207,7 +237,8 @@ export default function App() {
 
   function startSession(course) {
     if (!course) return
-    const matching = (thread) => thread?.courseName === course.name && thread.positionKey === JSON.stringify(course.learnerPosition || null)
+    const position = inferCoursePosition(course, today)
+    const matching = (thread) => thread?.courseName === course.name && thread.positionKey === learnerPositionKey(course) && (!position.currentTopic || thread.topic?.toLowerCase() === position.currentTopic.toLowerCase())
     const previous = matching(activeThread) ? activeThread : [...threads].reverse().find(matching)
     if (previous) switchThread(previous.id)
     else newThread(course)
@@ -228,11 +259,22 @@ export default function App() {
     setDestination('study')
   }
 
-  const updateThread = useCallback((id, metadata) => dispatchThreads({ type: 'update', id, metadata }), [])
+  const updateThread = useCallback((id, metadata) => {
+    dispatchThreads({ type: 'update', id, metadata })
+    if (!metadata.topic || !metadata.resume) return
+    setCourses((current) => current.map((course) => course.name === metadata.courseName ? {
+      ...course,
+      // An older thread can be reviewed without undoing a later explicit correction.
+      recentLearning: metadata.positionKey === learnerPositionKey(course) ? {
+        topic: metadata.topic, summary: metadata.summary, updatedAt: metadata.updatedAt, positionKey: metadata.positionKey,
+      } : course.recentLearning,
+      learningAnchors: retainLearningAnchors([...(course.learningAnchors || []), ...metadata.resume.learningAnchors]),
+    } : course))
+  }, [])
 
   function updatePosition(courseName, update) {
     setCourses((current) => current.map((course) => course.name === courseName
-      ? { ...course, learnerPosition: update ? applyPositionOverride(course.learnerPosition, update) : undefined }
+      ? { ...course, learnerPosition: update ? applyPositionOverride(course.learnerPosition, update) : undefined, recentLearning: null }
       : course))
   }
 
@@ -248,6 +290,7 @@ export default function App() {
       onSelectSpace={selectSpace}
       onNewSpace={newSpace}
     >
+      {!storageAvailable && <p className="orbit-session-note" role="status">Browser storage is unavailable or full. Your current session still works, but recent changes may not survive a refresh.</p>}
       {sessionStarted && destination !== 'study' && !(destination === 'home' && recommendedCourse?.name === sessionCourseName) && (
         <div className="session-resume">
           <span>{sessionCourse.name}</span>
@@ -278,7 +321,7 @@ export default function App() {
           <OrbitStage variant="page" />
           <div className="orbit-page-content">
             <AddCourse key={newSpaceIntent} onAddCourse={addCourse} intent={newSpaceIntent} courses={courses} />
-            <p className="orbit-session-note">Spaces and progress are cleared when you refresh.</p>
+            <p className="orbit-session-note">Learning memory is saved in this browser. No account or cross-device sync.</p>
           </div>
         </section>
       )}
@@ -321,6 +364,15 @@ export default function App() {
             </ul>
           ) : null}
           <div className="orbit-page-actions"><button className="orbit-button" onClick={() => newSpace('topic')}>＋ New space</button></div>
+          <p className="orbit-session-note">Orbit keeps compact learning memory in this browser, accessible to anyone using this browser profile. Clearing browser data removes it. Original uploads, drafts, and full conversation history are not saved; relevant context is used by Orbit's existing learning service.</p>
+          {resetPending ? <div>
+            <p>Clear all local Orbit spaces, progress, and learning memory? This cannot be undone.</p>
+            <div className="orbit-page-actions">
+              <button className="orbit-text-button" onClick={() => setResetPending(false)}>Keep my data</button>
+              <button className="orbit-text-button" onClick={resetLearningData}>Confirm clear learning data</button>
+            </div>
+          </div> : <button className="orbit-text-button" onClick={() => { setResetPending(true); setResetMessage('') }}>Clear local learning data</button>}
+          {resetMessage && <p role="status">{resetMessage}</p>}
           </div>
         </section>
       )}
@@ -340,6 +392,7 @@ export default function App() {
               <StudySession
                 course={course}
                 threadId={thread.id}
+                initialThread={thread}
                 active={destination === 'study' && thread.id === activeId}
                 onThreadUpdate={updateThread}
                 onPositionChange={(update) => updatePosition(course.name, update)}

@@ -25,7 +25,7 @@ export default function CoursePosition({ course, today, onChange, showSummary = 
       <div className="position-actions">
         <button className="orbit-button" type="submit">Use this starting point</button>
         {!position.needsConfirmation && <button className="orbit-text-button" type="button" onClick={() => setEditing(false)}>Cancel</button>}
-        {course.learnerPosition && <button className="orbit-text-button" type="button" onClick={() => { onChange(null); setEditing(false) }}>Use syllabus again</button>}
+        {course.learnerPosition && <button className="orbit-text-button" type="button" onClick={() => { onChange(null); setEditing(false) }}>Clear my correction</button>}
       </div>
     </form>}
   </div>

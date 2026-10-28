@@ -9,8 +9,9 @@ import {
     generateStudyQuestion,
     evaluateStudyAnswer,
 } from '../services/meta'
-import { MAX_STUDY_MESSAGE_LENGTH } from '../services/studyConversation'
-import { rememberLearningAnchor, anchorAfterFollowUp } from '../services/studyLearningContext'
+import { MAX_STUDY_MESSAGE_LENGTH, retainStudyExchanges } from '../services/studyConversation'
+import { rememberLearningAnchor, anchorAfterFollowUp, retainLearningAnchors } from '../services/studyLearningContext'
+import { compactThreadResume } from '../services/learnerMemory'
 import { applyPositionOverride, readPositionStatement } from '../services/coursePosition'
 import { selectStudyInteraction, studyThreadMetadata } from '../services/studyThreads'
 import CoursePosition from './CoursePosition'
@@ -20,6 +21,7 @@ import './StudySession.css'
 export default function StudySession({
     course,
     threadId,
+    initialThread,
     active = true,
     onThreadUpdate,
     onPositionChange,
@@ -29,6 +31,9 @@ export default function StudySession({
     setMastery,
     updateTopicMastery,
 }) {
+    const [resume] = useState(() => compactThreadResume(initialThread?.resume))
+    const [initialThreadContext] = useState(initialThread)
+    const [resumeSummary, setResumeSummary] = useState(initialThread?.resume ? initialThread.summary : '')
     const [activeInteraction, setActiveInteraction] = useState('lesson')
     const stage = activeInteraction === 'quiz' ? 'quiz' : 'learn'
     const [answerResult, setAnswerResult] = useState('')
@@ -41,13 +46,13 @@ export default function StudySession({
     const [selectedAnswer, setSelectedAnswer] = useState(null)
     const panel = useRef(null)
     const id = useId()
-    const [lesson, setLesson] = useState(null)
+    const [lesson, setLesson] = useState(resume.lesson)
     const [example, setExample] = useState('')
-    const [loadingLesson, setLoadingLesson] = useState('lesson')
+    const [loadingLesson, setLoadingLesson] = useState(resume.lesson ? '' : 'lesson')
     const [lessonError, setLessonError] = useState('')
     const [lessonAttempt, setLessonAttempt] = useState(0)
-    const [conversation, setConversation] = useState([])
-    const [learningAnchors, setLearningAnchors] = useState([])
+    const [conversation, setConversation] = useState(resume.conversation)
+    const [learningAnchors, setLearningAnchors] = useState(() => retainLearningAnchors([...(course.learningAnchors || []), ...resume.learningAnchors]))
     const [learnerMessage, setLearnerMessage] = useState('')
     const [loadingConversation, setLoadingConversation] = useState(false)
     const [conversationError, setConversationError] = useState('')
@@ -60,6 +65,7 @@ export default function StudySession({
     const activityRequest = useRef(null)
     const [initialContext] = useState(() => ({ course, mastery }))
     const initialLessonRequest = useRef(null)
+    const initialLessonLoaded = useRef(Boolean(resume.lesson))
     const [studyQuestion, setStudyQuestion] = useState(null)
     const [loadingQuestion, setLoadingQuestion] = useState(false)
     const [questionError, setQuestionError] = useState('')
@@ -72,22 +78,34 @@ export default function StudySession({
         feedback: activityFeedback?.feedback || '',
     } : undefined
     const busy = Boolean(loadingLesson || loadingConversation || loadingActivity || loadingQuestion || loadingEvaluation)
+    const lastPublished = useRef('')
 
     useEffect(() => {
-        onThreadUpdate?.(threadId, studyThreadMetadata({ lesson, activeInteraction, conversation, activity, activityFeedback, questionNumber, answerResult, followUpResult }))
-    }, [threadId, onThreadUpdate, lesson, activeInteraction, conversation, activity, activityFeedback, questionNumber, answerResult, followUpResult])
+        if (!lesson) return
+        const snapshot = compactThreadResume({ lesson, conversation, learningAnchors })
+        const metadata = studyThreadMetadata({ lesson, activeInteraction, conversation, activity, activityFeedback, questionNumber, answerResult, followUpResult })
+        const signature = JSON.stringify({ snapshot, metadata })
+        if (lastPublished.current === signature) return
+        const firstPublish = !lastPublished.current
+        lastPublished.current = signature
+        // Restoring a lesson is not new learning evidence and must not replace its saved summary.
+        if (firstPublish && resume.lesson) return
+        onThreadUpdate?.(threadId, { ...metadata, resume: snapshot, courseName: initialContext.course.name,
+            positionKey: initialThreadContext?.positionKey || 'null', updatedAt: new Date().toISOString() })
+    }, [threadId, onThreadUpdate, lesson, activeInteraction, conversation, activity, activityFeedback, questionNumber, answerResult, followUpResult, learningAnchors, resume, initialContext, initialThreadContext])
 
     useEffect(() => {
         if (active) panel.current?.focus({ preventScroll: false })
     }, [active, activeInteraction])
 
     function openInteraction(next) {
+        setResumeSummary('')
         setSelectedHistory(null)
         setActiveInteraction((current) => selectStudyInteraction(current, next))
     }
 
     function rememberInteraction(type, title, content, response = '') {
-        setHistory((current) => [...current, { type, title: title.slice(0, 80), content, response }])
+        setHistory((current) => [...current, { type, title: title.slice(0, 80), content, response }].slice(-12))
     }
 
     function changePosition(update) {
@@ -96,29 +114,31 @@ export default function StudySession({
     }
 
     useEffect(() => {
-        let active = true
+        if (!active || initialLessonLoaded.current) return
+        let current = true
 
         // Reuse the request when StrictMode repeats effect setup on mount.
         if (!initialLessonRequest.current) {
             initialLessonRequest.current = generateStudyLesson(
                 initialContext.course,
-                initialContext.mastery
+                initialContext.mastery,
+                { anchors: initialContext.course.learningAnchors || [] }
             )
         }
 
         initialLessonRequest.current
             .then((result) => {
-                if (active) setLesson(result)
+                if (current) { initialLessonLoaded.current = true; setLesson(result) }
             })
             .catch(() => {
-                if (active) setLessonError('Orbit could not load your lesson. Please try again.')
+                if (current) setLessonError('Orbit could not load your lesson. Please try again.')
             })
             .finally(() => {
-                if (active) setLoadingLesson('')
+                if (current) setLoadingLesson('')
             })
 
-        return () => { active = false }
-    }, [initialContext, lessonAttempt])
+        return () => { current = false }
+    }, [initialContext, lessonAttempt, active, resume])
 
     useEffect(() => {
         return () => {
@@ -159,11 +179,11 @@ export default function StudySession({
             if (controller.signal.aborted) return
 
             rememberAnchor(result.anchor)
-            // Keep session exchanges for review; services still send only the last four to Muse.
-            setConversation((current) => [
+            // Keep raw exchanges bounded in memory as well as in persistent storage.
+            setConversation((current) => retainStudyExchanges([
                 ...current,
                 { message, response: result.response, signal: result.signal },
-            ])
+            ]))
             rememberInteraction('conversation', message, message, result.response)
             setLearnerMessage('')
         } catch {
@@ -350,6 +370,7 @@ export default function StudySession({
                 </li>)}</ol>
             </details>}
             <section className="study-active-panel" data-study-interaction={activeInteraction} ref={panel} tabIndex={-1} aria-label="Current study interaction">
+            {resumeSummary && <p className="orbit-muted">Last time: {resumeSummary} Your lesson is ready to revisit; activities and quizzes start fresh.</p>}
             {positionChanged && <div className="study-position-notice" role="status">Your course starting point is updated. This thread is still here.
                 <button onClick={onNewThread}>Start a thread there</button>
             </div>}

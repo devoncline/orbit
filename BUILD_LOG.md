@@ -568,6 +568,19 @@ The goal is for Orbit to move with the learner instead of waiting passively for 
 
 ---
 
+## October 27, 2026 — Local Learner Memory & Mobile Navigation
+
+- Added a versioned, allowlisted localStorage snapshot restored before the first Home render. It keeps space identity/type, extracted syllabus and work dates, file metadata, course/topic mastery, structured learner corrections, a recomputed position snapshot, bounded anchors (including tentative teaching preferences), recent learning context, thread metadata, and the last valid recommendation. Invalid or incompatible snapshots fall back safely; unavailable/full storage leaves the running session usable and shows a save warning.
+- Save limits: 20 recent threads while retaining the active one, eight anchors per space/thread, one compact lesson and two recent exchanges per saved thread (600 characters per learner message and 900 per response). Live conversation is bounded to four exchanges and interaction history to 12 entries. No raw uploads, full transcripts, unsent drafts, quiz/activity screens, credentials, or arbitrary state fields are serialized. The total snapshot is capped at one million characters; storage failures preserve the last successful snapshot.
+- Home uses explicit correction, recent learner state, mastery/anchors, dated syllabus context, then inferred ordering. Recent state is eligible for two weeks and only while its correction context still matches; explicit corrections remain until changed. Dates are recomputed on return. Resumed threads show their prior summary and lesson; activities and quizzes start fresh after reload without awarding mastery again. Unopened restored threads do not generate lessons.
+- Existing Meta endpoints receive only relevant position/anchor context. Recommendation requests omit file data and transcripts and do not refetch for every summary change. Library explains device-local storage and includes a two-step reset that removes only Orbit's key and clears active learning state. Anyone using the same browser profile can access the local memory; browser data clearing removes it. No account security, encryption, or cross-device sync is claimed.
+- Moved the mobile drawer trigger immediately before the Orbit brand, using a three-line icon, a 44px target, an accessible Open navigation label, expanded state, and the existing hover/pressed/focus treatments. Kept the native modal drawer and its Escape/focus behavior. No changes to OrbitStage, artwork, or desktop navigation structure.
+- Validation: production build, full lint, all 101 tests, and diff checks pass. New tests cover zero/one/seven-space storage round trips, App hydration, restored lessons/summaries, malformed/versioned state, corrections and priority, mastery, anchors/preferences, bounds, reset, failed storage, omission of credential/upload fields, and minimal service context. Existing mocked learning, conversation, activity, quiz, and mastery checks continue to pass. Earlier test failures reflected the changed priority/copy/contracts and were updated; a new synchronous-effect lint finding was fixed.
+- Live browser verification was attempted but the computer-use tool stopped because it could not confidently determine the Windows browser URL. No browser or physical-device testing is claimed for this milestone; real reload interaction, live Meta/PDF flows, reset confirmation, and mobile open/close/Escape/focus remain on the manual checklist. No dev server was started. The browser connection inventory was also unavailable; a shell listener inventory was denied by the environment and was not needed for the code checks.
+- Updated Unreleased notes and manual checks. No dependencies, authentication, database, migrations, historical migration edits, manual SQL, new external services, or backend persistence. Accounts, cloud sync, production profiles, social features, collaboration, and unlimited history remain deferred.
+
+---
+
 # Next
 
 The next major development steps are:
@@ -580,7 +593,7 @@ The next major development steps are:
 - Design the main recommendation experience around the learning agent rather than a traditional education dashboard.
 - Add the Orbit companion character.
 - Make study sessions visually focused and remove prototype/debug information during learning.
-- Add persistence so courses, files, mastery, and learning progress survive page refreshes.
+- Evaluate optional production persistence and sync after the local-first demo; original uploaded files are not currently retained across refreshes.
 - Explore proactive Muse-powered check-ins, reminders, and pop quizzes.
 - Add a future self-directed learning mode for subjects without a formal syllabus.
 - Prepare the final hackathon demo around Orbit's decision-making and adaptive behavior.

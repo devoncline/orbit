@@ -1,6 +1,6 @@
 import { retainStudyExchanges } from './studyConversation.js'
 import { learningAnchorRequest } from './studyLearningContext.js'
-import { coursePositionRequest, localDate } from './coursePosition.js'
+import { coursePositionRequest, inferCoursePosition, localDate } from './coursePosition.js'
 
 export async function analyzeCourseFile(file) {
     const base64File = await fileToBase64(file)
@@ -54,7 +54,7 @@ async function requestStudyLesson(course, mastery, action, lesson, example, anch
             action,
             lesson,
             example,
-            ...learningAnchorRequest(anchors, { topic: lesson?.topic, concept: lesson?.concept, text: lesson?.content || course.nextTask }),
+            ...learningAnchorRequest(anchors, { topic: lesson?.topic || inferCoursePosition(course).currentTopic, concept: lesson?.concept, text: lesson?.content || course.nextTask }),
         }),
     })
 
@@ -213,6 +213,22 @@ export async function evaluateStudyAnswer(
     return response.json()
 }
 
+export function recommendationCourses(courses) {
+    // No files, transcripts, or unrelated memories leave the browser for recommendations.
+    return courses.map((course) => {
+        const position = coursePositionRequest(course)
+        return {
+        name: course.name, nextTask: course.nextTask, importantTopics: course.importantTopics,
+        upcomingWork: course.upcomingWork, mastery: course.mastery,
+        ...position,
+        ...(position.recentLearning ? { recentLearning: {
+            topic: position.recentLearning.topic, positionKey: position.recentLearning.positionKey,
+            updatedAt: position.recentLearning.updatedAt,
+        } } : {}),
+        }
+    })
+}
+
 export async function recommendCourse(courses, { signal, currentDate = localDate() } = {}) {
     const response = await fetch('/api/recommend-course', {
         method: 'POST',
@@ -221,7 +237,7 @@ export async function recommendCourse(courses, { signal, currentDate = localDate
         },
         signal,
         body: JSON.stringify({
-            courses: courses,
+            courses: recommendationCourses(courses),
             currentDate,
         }),
     })

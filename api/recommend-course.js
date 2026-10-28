@@ -35,7 +35,7 @@ Consider:
 - available course context
 - today's runtime date, current syllabus area, explicit learner position, and weak mastery
 
-Within a course, use this priority: explicit learner position > current dated syllabus area > upcoming work / weak topic > next useful concept.
+Within a course, use this priority: explicit learner correction > recent learner state > mastery / learning anchors > dated syllabus context > inferred position > generic ordering.
 Learner exclusions (skip or notYet) override inferred dates. Never start old orientation material merely because it is listed first.
 Past material remains useful for weak mastery, requested review, prerequisites or test coverage. Do not claim dated coverage proves completion.
 If the timeline is uncertain, ask a concise starting-point question. Never expose confidence labels.

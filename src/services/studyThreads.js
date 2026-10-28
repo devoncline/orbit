@@ -1,6 +1,7 @@
 export const initialThreads = { threads: [], activeId: null }
 
 export function studyThreadsReducer(state, action) {
+  if (action.type === 'reset') return initialThreads
   if (action.type === 'create') {
     return { threads: [...state.threads, action.thread], activeId: action.thread.id }
   }

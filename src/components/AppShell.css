@@ -66,7 +66,9 @@
 .shell-new-space { font-size: 13px; margin-top: 12px; flex-shrink: 0; }
 .shell-new-space > span { font-size: 19px; line-height: 1; }
 .shell-main { margin-left: 220px; padding: 0 clamp(28px, 4.5vw, 80px) 64px; min-width: 0; outline: none; }
-.shell-mobile-header { display: none; align-items: center; justify-content: space-between; gap: 20px; }
+.shell-mobile-header { display: none; align-items: center; justify-content: flex-start; gap: 12px; }
+.shell-menu-toggle { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 44px; width: 44px; height: 44px; padding: 10px; }
+.shell-menu-toggle svg { width: 22px; height: 22px; }
 .orbit-skip-link { position: fixed; left: 20px; top: 12px; z-index: 20; padding: 12px 18px; background: var(--orbit-accent); color: var(--orbit-base); transform: translateY(-180%); border-radius: 6px; }
 .orbit-skip-link:focus { transform: none; }
 .shell-drawer { position: fixed; inset: 0 auto 0 0; max-height: none; height: 100dvh; width: min(310px, 90vw); max-width: none; margin: 0; padding: 0; border: 0; border-right: 1px solid var(--orbit-border); background: #0a1120; color: var(--orbit-text); }
@@ -159,9 +161,8 @@
 }
 @media (max-width: 760px) {
   .shell-sidebar { display: none; }
-  .shell-mobile-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 20px 24px; }
+  .shell-mobile-header { display: flex; padding: 20px 24px; }
   .shell-mobile-header .shell-brand { width: 100px; }
-  .shell-mobile-header > .orbit-button { min-height: 40px; padding: 7px 14px; background: rgb(10 17 30 / 65%); font-size: 13px; }
   .shell-main { margin: 0; padding: 0 24px 40px; }
   .orbit-environment { left: 0; min-height: 650px; background-position: 65% top; }
   .orbit-page { padding-top: 24px; }

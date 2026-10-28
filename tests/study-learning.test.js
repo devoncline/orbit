@@ -217,7 +217,7 @@ test('existing evaluation and recommendation services retain their request contr
     mastery: 50,
   })
   assert.equal(recommendation.url, '/api/recommend-course')
-  assert.deepEqual(recommendation.body, { courses: [course], currentDate: localDate() })
+  assert.deepEqual(recommendation.body, { courses: [{ ...course, ...coursePositionRequest(course) }], currentDate: localDate() })
 })
 
 test('a focused quiz cannot silently change topics; legacy questions can still omit a topic', async (t) => {

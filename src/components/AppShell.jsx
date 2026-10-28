@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import orbitLogo from '../assets/brand/orbit-logo-horizontal-dark.svg'
 import './AppShell.css'
 
@@ -11,6 +11,7 @@ const destinations = [
 
 export default function AppShell({ courses, destination, selectedSpace, onNavigate, onSelectSpace, onNewSpace, children }) {
   const drawer = useRef(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
   const main = useRef(null)
   const focused = destination === 'study'
 
@@ -52,10 +53,12 @@ export default function AppShell({ courses, destination, selectedSpace, onNaviga
       <div className="orbit-environment" aria-hidden="true" />
       <aside className="shell-sidebar">{navigation()}</aside>
       <header className="shell-mobile-header">
+        <button className="orbit-text-button shell-menu-toggle" onClick={() => { drawer.current.showModal(); setDrawerOpen(true) }} aria-label="Open navigation" aria-haspopup="dialog" aria-controls="orbit-navigation" aria-expanded={drawerOpen}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+        </button>
         <button className="shell-brand" onClick={() => onNavigate('home')} aria-label="Orbit home"><img src={orbitLogo} width="528" height="176" alt="Orbit" /></button>
-        <button className="orbit-button" onClick={() => drawer.current.showModal()} aria-haspopup="dialog">Menu</button>
       </header>
-      <dialog className="shell-drawer" ref={drawer} aria-label="Orbit navigation" onClick={(event) => { if (event.target === event.currentTarget) event.currentTarget.close() }}>
+      <dialog id="orbit-navigation" className="shell-drawer" ref={drawer} aria-label="Orbit navigation" onClose={() => setDrawerOpen(false)} onClick={(event) => { if (event.target === event.currentTarget) event.currentTarget.close() }}>
         <div className="shell-drawer-content"><button className="orbit-text-button shell-close" onClick={() => drawer.current.close()} autoFocus>Close menu ×</button>{navigation()}</div>
       </dialog>
       <main id="orbit-content" className="shell-main" tabIndex={-1} ref={main}>{children}</main>

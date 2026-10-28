@@ -28,9 +28,9 @@ function model(t, value) {
   return t.mock.method(globalThis, 'fetch', async () => ({ ok: true, json: async () => ({ output: [{ type: 'message', content: [{ type: 'output_text', text: JSON.stringify(value) }] }] }) }))
 }
 
-test('late October chooses the current unit ahead of old orientation and weak older topics', () => {
+test('without learner evidence late October chooses the current unit ahead of generic orientation ordering', () => {
   const before = structuredClone(course)
-  const position = inferCoursePosition(course, '2026-10-27')
+  const position = inferCoursePosition({ ...course, mastery: {} }, '2026-10-27')
   assert.equal(position.currentTopic, 'React')
   assert.equal(position.currentUnit, 'Module 3')
   assert.deepEqual(position.timeline.map((item) => item.period), ['past', 'past', 'current', 'future'])
@@ -42,9 +42,9 @@ test('late October chooses the current unit ahead of old orientation and weak ol
 })
 
 test('course position changes at local month boundaries, including leap-year February', () => {
-  assert.equal(inferCoursePosition(course, '2026-09-30').currentTopic, 'JavaScript')
-  assert.equal(inferCoursePosition(course, '2026-10-01').currentTopic, 'React')
-  assert.equal(inferCoursePosition(course, '2026-11-01').currentTopic, 'Backend')
+  assert.equal(inferCoursePosition({ ...course, mastery: {} }, '2026-09-30').currentTopic, 'JavaScript')
+  assert.equal(inferCoursePosition({ ...course, mastery: {} }, '2026-10-01').currentTopic, 'React')
+  assert.equal(inferCoursePosition({ ...course, mastery: {} }, '2026-11-01').currentTopic, 'Backend')
   const leap = { syllabusItems: [{ topic: 'Cells', startDate: '2028-02' }] }
   assert.equal(inferCoursePosition(leap, '2028-02-29').timeline[0].period, 'current')
   assert.equal(inferCoursePosition(leap, '2028-03-01').timeline[0].period, 'past')
@@ -76,7 +76,7 @@ test('ambiguous, yearless, impossible, and reversed dates ask for a starting poi
 
 test('upcoming work and weak past material are useful fallbacks without discarding history', () => {
   const noCurrent = { ...course, syllabusItems: course.syllabusItems.filter((item) => item.topic !== 'React') }
-  assert.equal(inferCoursePosition(noCurrent, '2026-10-27').source, 'upcoming')
+  assert.equal(inferCoursePosition({ ...noCurrent, mastery: {} }, '2026-10-27').source, 'upcoming')
   const weak = inferCoursePosition({ ...noCurrent, upcomingWork: [] }, '2026-10-27')
   assert.equal(weak.source, 'mastery')
   assert.equal(weak.currentTopic, 'Orientation')
@@ -129,7 +129,7 @@ test('runtime date is local, optional request fields are bounded, and missing da
 })
 
 test('lesson generation rejects stale orientation, accepts the dated topic, and honors explicit correction', async (t) => {
-  const request = { ...course, courseName: course.name, ...coursePositionRequest(course, '2026-10-27'), topicMastery: course.mastery.topics }
+  const request = { ...course, courseName: course.name, ...coursePositionRequest(course, '2026-10-27'), topicMastery: {} }
   let mock = model(t, { topic: 'Orientation', concept: 'Welcome', content: 'Here is the course.' })
   assert.equal((await call(lessonHandler, request)).statusCode, 502)
   const prompt = JSON.parse(mock.mock.calls[0].arguments[1].body).input

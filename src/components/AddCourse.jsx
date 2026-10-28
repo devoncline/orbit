@@ -21,6 +21,7 @@ export default function AddCourse({ onAddCourse, intent = 'topic', courses = [] 
 
     const newCourse = {
       name,
+      type: intent,
       nextTask: goal.trim() || `Explore ${name}`,
       reason: '',
       ...(intent === 'class' ? { syllabus: { courseName: name, instructor: instructor.trim(), semester: '' } } : {}),

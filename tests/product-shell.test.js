@@ -5,12 +5,15 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { createServer } from 'vite'
 import { collectUpcomingWork, formatWorkDate, parseWorkDate } from '../src/services/upcomingWork.js'
 import { learningAction } from '../src/components/learningAction.js'
+import { LEARNER_MEMORY_KEY, saveLearnerMemory } from '../src/services/learnerMemory.js'
 
 let server
 let HomeScreen
 let AppShell
 let UpcomingWork
 let StudyThreads
+let App
+let StudySession
 
 before(async () => {
   server = await createServer({ server: { middlewareMode: true, watch: null }, appType: 'custom' })
@@ -18,6 +21,8 @@ before(async () => {
   AppShell = (await server.ssrLoadModule('/src/components/AppShell.jsx')).default
   UpcomingWork = (await server.ssrLoadModule('/src/components/UpcomingWork.jsx')).default
   StudyThreads = (await server.ssrLoadModule('/src/components/StudyThreads.jsx')).default
+  App = (await server.ssrLoadModule('/src/App.jsx')).default
+  StudySession = (await server.ssrLoadModule('/src/components/StudySession.jsx')).default
 })
 after(async () => { await server?.close() })
 
@@ -63,6 +68,59 @@ test('Study keeps the desktop sidebar, active Learn destination, and navigation 
   assert.match(html, /orbit-shell-focused/)
 })
 
+test('mobile navigation renders an accessible menu icon immediately before the Orbit brand', () => {
+  const html = renderToStaticMarkup(createElement(AppShell, { courses, destination: 'home' }))
+  const header = html.match(/<header class="shell-mobile-header">([^]*?)<\/header>/)[1]
+  assert.ok(header.indexOf('aria-label="Open navigation"') < header.indexOf('aria-label="Orbit home"'))
+  assert.match(header, /aria-controls="orbit-navigation" aria-expanded="false"/)
+  assert.match(header, /<svg[^]*?aria-hidden="true"[^]*?M4 6h16M4 12h16M4 18h16/)
+  assert.doesNotMatch(header, />Menu</)
+  assert.match(html, /<dialog id="orbit-navigation"/)
+})
+
+test('a fresh App render hydrates saved spaces, mastery, recommendation and thread context before Home', () => {
+  let saved = null
+  const storage = { getItem: (key) => key === LEARNER_MEMORY_KEY ? saved : null, setItem: (key, value) => { if (key === LEARNER_MEMORY_KEY) saved = value }, removeItem: () => { saved = null } }
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage')
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: storage })
+  try {
+    const first = renderToStaticMarkup(createElement(App))
+    assert.match(first, /What do you want/)
+    saveLearnerMemory({
+      courses: [{ name: 'React', mastery: { overall: 70, topics: { Props: 70 } }, learnerPosition: { currentTopic: 'Props', exclusions: [], statement: 'We are on Props' } }],
+      threads: [{ id: 'saved', courseName: 'React', title: 'Inputs', topic: 'Props', summary: 'Practiced passing inputs.', status: 'practiced',
+        positionKey: JSON.stringify({ currentTopic: 'Props', exclusions: [], statement: 'We are on Props' }), createdAt: '2026-10-27T12:00:00Z',
+        resume: { lesson: { topic: 'Props', concept: 'Inputs', content: 'A parent passes a name to a child.' } },
+      }], activeId: 'saved', recommendation: { courseName: 'React', recommendedAction: 'Explore Props', reason: 'Continue inputs.' },
+    }, storage)
+    const reloaded = renderToStaticMarkup(createElement(App))
+    assert.match(reloaded, /Explore Props/)
+    assert.match(reloaded, /Return to React/)
+    assert.match(reloaded, /Last time: Practiced passing inputs/)
+    assert.match(reloaded, /Mastery · 70%/)
+    assert.match(reloaded, /A parent passes a name to a child/)
+    assert.doesNotMatch(reloaded, /Orbit is preparing a short lesson|What do you want<br/)
+  } finally {
+    if (descriptor) Object.defineProperty(globalThis, 'localStorage', descriptor)
+    else delete globalThis.localStorage
+  }
+})
+
+test('restored Study starts from its saved lesson and summary without replaying quiz or mastery actions', () => {
+  const html = renderToStaticMarkup(createElement(StudySession, {
+    course: { name: 'React', learningAnchors: [] }, threadId: 'saved', mastery: 80,
+    initialThread: { summary: 'Practiced component inputs.', status: 'practiced', resume: {
+      lesson: { topic: 'Props', concept: 'Inputs', content: 'Parents supply props to children.' },
+      conversation: [{ message: 'Like arguments?', response: 'Yes, they supply inputs.' }],
+    } },
+    setMastery: () => assert.fail('Restoring must not award mastery'),
+    updateTopicMastery: () => assert.fail('Restoring must not award mastery'),
+  }))
+  assert.match(html, /Parents supply props to children/)
+  assert.match(html, /Last time: Practiced component inputs/)
+  assert.doesNotMatch(html, /Orbit is preparing a short lesson|Question 1|study-answer/)
+})
+
 test('Home keeps a real question as its hook and does not invent learner history', () => {
   const html = renderToStaticMarkup(createElement(HomeScreen, {
     courses, recommendedCourse: courses[0],
@@ -96,7 +154,7 @@ test('thread navigation starts collapsed and identifies the current objective wi
   assert.doesNotMatch(html, /<details open|<textarea/)
   assert.match(html, /aria-current="true"/)
   assert.ok(html.indexOf('Events') < html.indexOf('Props basics'))
-  assert.match(html, /Refresh clears these threads/)
+  assert.match(html, /This browser keeps up to 20 recent threads/)
 })
 
 test('learning actions use the task context and keep an active session distinct', () => {

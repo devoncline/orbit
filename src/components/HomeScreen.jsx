@@ -2,7 +2,7 @@ import OrbitStage from './OrbitStage'
 import { learningAction } from './learningAction'
 import UpcomingWork from './UpcomingWork'
 import CoursePosition from './CoursePosition'
-import { inferCoursePosition, positionAction } from '../services/coursePosition'
+import { continuationReason, inferCoursePosition, positionAction } from '../services/coursePosition'
 import './HomeScreen.css'
 
 export default function HomeScreen({
@@ -14,7 +14,7 @@ export default function HomeScreen({
   const position = recommendedCourse ? inferCoursePosition(recommendedCourse, today) : null
   const nextAction = position && (position.currentTopic || position.needsConfirmation || position.learner.exclusions.length)
     ? positionAction(recommendedCourse, position) : recommendation?.recommendedAction || recommendedCourse?.nextTask || 'Explore something new'
-  const reason = position?.reason || recommendation?.reason || recommendedCourse?.reason
+  const reason = (recommendedCourse && continuationReason(recommendedCourse, today)) || recommendation?.reason || recommendedCourse?.reason
   const otherSpaces = courses.filter((course) => course.name !== recommendedCourse?.name).slice(0, 2)
 
   return (

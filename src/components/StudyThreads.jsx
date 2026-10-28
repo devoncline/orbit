@@ -8,7 +8,7 @@ export default function StudyThreads({ threads, activeId, courses, onSwitch, onC
   return <div className="study-threads">
     <details>
       <summary>Study threads <span>{threads.length}</span></summary>
-      <p className="orbit-muted">Return to an idea from this app session. Refresh clears these threads.</p>
+      <p className="orbit-muted">This browser keeps up to 20 recent threads, their summaries, and a little context to continue.</p>
       <ul className="thread-list">{[...threads].reverse().map((thread) => <li key={thread.id}>
         <button className="orbit-button" aria-current={thread.id === activeId ? 'true' : undefined} onClick={(event) => { onSwitch(thread.id); event.currentTarget.closest('details').open = false }}>
           <strong>{thread.title}</strong>

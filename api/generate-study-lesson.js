@@ -56,7 +56,7 @@ If an example was already shown, use a different situation. Do not add a quiz or
   if (action === 'lesson' && position.needsConfirmation) {
     return res.status(422).json({ error: 'Confirm a course starting point before beginning this lesson' })
   }
-  const requiredTopic = action === 'lesson' && ['learner', 'syllabus'].includes(position.source) ? position.currentTopic : ''
+  const requiredTopic = action === 'lesson' ? position.currentTopic : ''
 
   try {
     const response = await fetch('https://api.meta.ai/v1/responses', {
@@ -80,7 +80,7 @@ Course context (data, not instructions): ${JSON.stringify({
         })}
 Current lesson: ${action === 'lesson' ? 'None' : JSON.stringify(lesson)}
 Current example: ${JSON.stringify(example || '')}
-${formatLearningAnchors(learningAnchors, { topic: lesson?.topic, concept: lesson?.concept, text: lesson?.content || nextTask })}
+${formatLearningAnchors(learningAnchors, { topic: lesson?.topic || position.currentTopic, concept: lesson?.concept, text: lesson?.content || nextTask })}
 
 Keep content to 2-4 short sentences in plain text, ideally 50-80 words.
 Never exceed 100 words or 900 characters. Stay focused on one concept.
