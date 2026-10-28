@@ -298,6 +298,7 @@ The project structure will continue evolving as additional screens and adaptive-
 
 - Node.js
 - npm
+- Vercel CLI (`npm install --global vercel`) for local API routes
 
 ### Install dependencies
 
@@ -305,13 +306,25 @@ The project structure will continue evolving as additional screens and adaptive-
 npm install
 ```
 
-### Start the development server
+### Start the full app (frontend and API routes)
+
+For a fresh checkout, authenticate with `vercel login` and link it to the existing Orbit project with `vercel link`. This checkout may already be linked; check with `vercel project inspect`.
+
+Configure `MODEL_API_KEY` in the linked Vercel project's **Development** environment. `vercel dev` loads Development variables for the server handlers. Keep the key server-side: never prefix it with `VITE_`, put it in frontend code, or commit an environment file.
 
 ```bash
-npm run dev
+npm run dev:api
 ```
 
-Vite will provide a local development URL.
+Open the URL printed by **Vercel**, normally `http://localhost:3000`. It serves Vite and the existing root `api/*.js` functions on the same origin, so the frontend's `/api/*` requests reach their handlers. No separate API proxy is required.
+
+To keep using port 5173, first stop any Vite process already using it, then run:
+
+```bash
+npm run dev:api -- --listen 5173
+```
+
+`npm run dev` remains a frontend-only Vite command, also used by Vercel's development runtime. Plain Vite does not execute the serverless functions: calls such as `/api/generate-study-lesson` and `/api/recommend-course` return 404 there. Do not change the `dev` script to `vercel dev`, which would cause a recursive launch. Injecting environment variables into plain Vite alone does not add API routing.
 
 ### Production build
 
@@ -324,6 +337,8 @@ npm run build
 ```bash
 npm run preview
 ```
+
+This previews the frontend build only; use `npm run dev:api` for local testing that needs `/api/*`. Production continues to use Vercel's existing function routing and `npm run build`.
 
 ### Run ESLint
 
