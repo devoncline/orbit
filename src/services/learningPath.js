@@ -136,7 +136,7 @@ export function normalizeLessonVisual(value) {
   const minimum = ['diagram', 'process', 'comparison'].includes(value.type) ? 2 : 1
   if (!text(value.purpose, 240) || !Array.isArray(value.data) || value.data.length < minimum || value.data.length > 6) return null
   if (!Array.from(value.data).every((item) => text(item?.label) && text(item?.detail, 240))) return null
-  const symbols = ['plant', 'sun', 'water', 'molecule', 'container', 'slots', 'planet', 'component']
+  const symbols = ['plant', 'leaf', 'sun', 'water', 'molecule', 'container', 'slots', 'planet', 'component', 'note']
   if (value.links !== undefined && (!Array.isArray(value.links) || value.links.length > 8 ||
     !Array.from(value.links).every((link) => Number.isInteger(link?.from) && Number.isInteger(link?.to) &&
       link.from >= 0 && link.to >= 0 && link.from < value.data.length && link.to < value.data.length &&
@@ -146,8 +146,9 @@ export function normalizeLessonVisual(value) {
     data: value.data.map((item) => ({ label: text(item.label), detail: text(item.detail, 240),
       ...(symbols.includes(item.symbol) ? { symbol: item.symbol } : {}) })),
     focus: text(value.focus),
-    ...(value.links?.length && ['diagram', 'concept_illustration'].includes(value.type)
-      ? { links: value.links.map((link) => ({ from: link.from, to: link.to, label: text(link.label, 120) })) } : {}),
+    ...(value.links?.length && ['diagram', 'concept_illustration', 'process'].includes(value.type)
+      ? { links: value.links.map((link) => ({ from: link.from, to: link.to, label: text(link.label, 120),
+        ...(link.kind === 'contains' && value.type !== 'process' ? { kind: 'contains' } : {}) })) } : {}),
   }
 }
 

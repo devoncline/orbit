@@ -7,6 +7,9 @@ import { Window } from 'happy-dom'
 import { acceptPathLesson, learningPathContextKey, nativeLessonVisual, normalizeLessonVisual, recommendStudyAction } from '../src/services/learningPath.js'
 import { compactThreadResume } from '../src/services/learnerMemory.js'
 import handler from '../api/generate-study-lesson.js'
+import { lessonVisualComposition, visualConnector } from '../src/services/lessonVisualComposition.js'
+import { lessonVisuals } from './fixtures/lessonVisuals.js'
+import { readFile } from 'node:fs/promises'
 
 let server, LessonVisual, StudySession, StudyPath, dom
 const data = [{ label: 'State', detail: 'A component remembers a value.' }, { label: 'Render', detail: 'React calculates the next view.' }]
@@ -34,7 +37,8 @@ const renderVisual = (value) => render(LessonVisual, { visual: value })
 
 test('diagram renders only explicit directed links with readable labels, details, and a named figure', () => {
   const body = renderVisual(visual)
-  assert.equal(body.querySelectorAll('.lesson-diagram-node').length, 2)
+  assert.equal(body.querySelectorAll('.lesson-visual-object').length, 2)
+  assert.equal(body.querySelector('.lesson-scene-number'), null)
   assert.equal(body.querySelectorAll('.lesson-visual-link').length, 1)
   assert.match(body.querySelector('.lesson-visual-relationships').textContent, /State.*Render.*An update requests a render/)
   for (const item of data) { assert.ok(body.textContent.includes(item.label)); assert.ok(body.textContent.includes(item.detail)) }
@@ -56,7 +60,7 @@ test('process preserves teaching order in an ordered list and uses no invented g
 test('comparison uses distinct concept areas with complete text rather than a table', () => {
   const body = renderVisual({ ...visual, type: 'comparison', links: undefined })
   assert.equal(body.querySelectorAll('.lesson-comparison-areas > li').length, 2)
-  assert.equal(body.querySelectorAll('.lesson-concept-mark').length, 2)
+  assert.equal(body.querySelectorAll('.lesson-symbol-anchor').length, 2)
   assert.equal(body.querySelector('table'), null)
   assert.equal(body.querySelector('.lesson-visual-link'), null)
 })
@@ -118,7 +122,10 @@ test('StudySession places context and path before the lesson, visuals before too
   assert.equal(body.querySelector('.study-path').open, false)
   assert.equal(body.querySelector('.study-tools').open, false)
   assert.ok(body.querySelector('.study-lesson-composition > .study-content'))
-  assert.ok(body.querySelector('.study-lesson-composition > figure'))
+  assert.ok(body.querySelector('.study-lesson-composition > .study-visual-presentation > figure'))
+  assert.ok(body.querySelector('.study-visual-presentation > .orbit-stage'))
+  assert.equal(body.querySelector('.study-session > .orbit-stage'), null)
+  assert.equal(body.querySelectorAll('.orbit-stage').length, 1)
   const html = body.innerHTML
   assert.ok(html.indexOf('study-subject') < html.indexOf('study-path'))
   assert.ok(html.indexOf('study-path') < html.indexOf('<h1>'))
@@ -148,4 +155,84 @@ test('optional symbols and relationships survive the existing API and resume pro
   assert.equal(res.code, 200)
   assert.deepEqual(res.body.visual, plant)
   assert.deepEqual(compactThreadResume({ lesson: res.body }).lesson.visual, plant)
+})
+
+test('process symbols and explicit interval labels replace numbered cards without inventing notes', () => {
+  const body = renderVisual(lessonVisuals.sequence)
+  assert.equal(body.querySelector('.lesson-process-node, .lesson-visual-number'), null)
+  assert.deepEqual([...body.querySelectorAll('.lesson-process-object strong')].map((node) => node.textContent), ['C', 'D', 'E', 'F', 'G', 'A'])
+  assert.deepEqual([...body.querySelectorAll('.lesson-process-transition')].map((node) => node.textContent), ['Whole step', 'Whole step', 'Half step', 'Whole step', 'Whole step'])
+  assert.equal(body.querySelectorAll('.lesson-flow-line').length, 5)
+  assert.equal(body.querySelectorAll('svg').length, 6)
+  assert.deepEqual(normalizeLessonVisual(lessonVisuals.sequence), lessonVisuals.sequence)
+})
+
+test('explicit topology chooses branching, merging, and input-system-output without consulting subject words', () => {
+  const branch = lessonVisuals.reuse
+  assert.equal(lessonVisualComposition(branch).kind, 'branch')
+  assert.equal(renderVisual(branch).querySelectorAll('.lesson-map-branch .lesson-visual-object').length, 4)
+  const merge = { ...branch, links: branch.links.map(({ from, to, label }) => ({ from: to, to: from, label })) }
+  assert.equal(lessonVisualComposition(merge).kind, 'merge')
+  assert.equal(renderVisual(merge).querySelectorAll('.lesson-map-merge .lesson-visual-link').length, 3)
+  const flow = { ...branch, data: branch.data.slice(0, 3), links: [{ from: 0, to: 1, label: 'enters' }, { from: 1, to: 2, label: 'leaves' }] }
+  assert.deepEqual(lessonVisualComposition(flow).order, [0, 1, 2])
+  assert.equal(lessonVisualComposition(flow).kind, 'flow')
+  const hub = { ...lessonVisuals.mechanism, type: 'diagram' }
+  assert.equal(lessonVisualComposition(hub).kind, 'hub')
+  assert.equal(renderVisual(hub).querySelectorAll('.lesson-map-hub .lesson-visual-link').length, 5)
+  const renamed = { ...branch, data: branch.data.map((item, index) => ({ ...item, label: `Unrelated ${index}` })), focus: '' }
+  assert.deepEqual(lessonVisualComposition(renamed), lessonVisualComposition({ ...branch, focus: '' }))
+})
+
+test('a mechanism scene gives the focus its own place and groups only explicit inputs and outputs', () => {
+  const scene = lessonVisuals.mechanism
+  const composition = lessonVisualComposition(scene)
+  assert.equal(composition.kind, 'mechanism')
+  assert.equal(composition.center, 1)
+  assert.deepEqual(composition.order, [0, 3, 2, 1, 4, 5])
+  const body = renderVisual(scene)
+  assert.match(body.querySelector('.lesson-object-focus').textContent, /^Leaf/)
+  assert.equal(body.querySelectorAll('.lesson-visual-object').length, 6)
+  assert.equal(body.querySelectorAll('.lesson-visual-link').length, 5)
+  assert.equal(body.querySelector('.lesson-visual-legend'), null)
+  assert.equal(lessonVisualComposition({ ...scene, links: undefined }).kind, 'collection')
+  assert.equal(renderVisual({ ...scene, links: undefined }).querySelector('.lesson-connectors'), null)
+})
+
+test('containment is explicit, backward compatible, and cycles or malformed hints fall back safely', () => {
+  const nested = { ...lessonVisuals.reuse, links: [{ from: 0, to: 1, label: 'contains', kind: 'contains' }, { from: 1, to: 2, label: 'contains', kind: 'contains' }, { from: 0, to: 3, label: 'contains', kind: 'contains' }] }
+  assert.equal(lessonVisualComposition(nested).kind, 'nested')
+  const body = renderVisual(nested)
+  assert.equal(body.querySelectorAll('.lesson-nested-container').length, 4)
+  assert.ok(body.querySelector('[data-visual-item="0"] [data-visual-item="1"] [data-visual-item="2"]'))
+  assert.equal(body.querySelector('.lesson-connectors'), null)
+  assert.deepEqual(compactThreadResume({ lesson: { ...lesson, visual: nested } }).lesson.visual, nested)
+  const cycle = { ...nested, links: [...nested.links, { from: 2, to: 0, label: 'contains', kind: 'contains' }] }
+  assert.equal(lessonVisualComposition(cycle).kind, 'relationships')
+  assert.equal(renderVisual(cycle).querySelector('.lesson-nested-container'), null)
+  for (const kind of [null, {}, ['contains'], 'javascript:alert(1)', 'nested']) {
+    const normalized = normalizeLessonVisual({ ...visual, layout: { script: 'bad' }, links: [{ ...visual.links[0], kind }] })
+    assert.deepEqual(normalized, visual)
+  }
+})
+
+test('connectors attach outside symbols and use gutters instead of arbitrary curves or labels', () => {
+  const source = { left: 30, top: 0, width: 60, height: 60, bodyBottom: 120 }
+  const target = { left: 200, top: 180, width: 60, height: 60, bodyBottom: 290 }
+  assert.equal(visualConnector(source, target, { vertical: false }), 'M94,30 H143 V210 H192')
+  assert.equal(visualConnector(source, target, { vertical: true }), 'M26,30 H12 V210 H192')
+  assert.equal(visualConnector(source, target, { vertical: true, flow: true }), 'M60,128 V150 H230 V172')
+})
+
+test('visual columns recompose at narrow widths and the presenter stays with the visual on desktop', async () => {
+  const css = await readFile(new URL('../src/components/LessonVisual.css', import.meta.url), 'utf8')
+  const studyCss = await readFile(new URL('../src/components/StudySession.css', import.meta.url), 'utf8')
+  assert.match(css, /container-type: inline-size/)
+  assert.match(css, /@container \(max-width: 460px\)/)
+  assert.match(css, /--visual-direction: vertical/)
+  assert.match(css, /grid-row: auto !important/)
+  assert.match(css, /lesson-comparison-areas \{ grid-template-columns: minmax\(0, 1fr\)/)
+  assert.doesNotMatch(css, /scale\(/)
+  assert.match(studyCss, /study-visual-presentation > \.orbit-stage[^}]+210px/)
+  assert.match(studyCss, /@media \(max-width: 760px\)[\s\S]*study-session-illustrated \.orbit-stage-companion \{ display: none/)
 })

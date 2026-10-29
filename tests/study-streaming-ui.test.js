@@ -133,6 +133,25 @@ test('native visuals follow the active lesson across tool switches and continuat
   assert.equal(container.querySelector('.study-recommendation button').textContent, 'Give me an example')
 })
 
+test('an illustrated lesson keeps one thinking presenter during replacement and restores it beside the visual', async (t) => {
+  let complete
+  t.mock.method(globalThis, 'fetch', (_url, options) => {
+    assert.equal(JSON.parse(options.body).action, 'simplify')
+    return new Promise((resolve) => { complete = resolve })
+  })
+  await act(async () => root.render(createElement(StudySession, { ...props, initialThread: { resume: { lesson: { ...lesson, visual: nativeVisual } } } })))
+  assert.ok(container.querySelector('.study-visual-presentation > .orbit-stage'))
+  await click('I lost you')
+  assert.equal(container.querySelectorAll('.orbit-stage').length, 1)
+  assert.ok(container.querySelector('.study-session > .orbit-stage'))
+  assert.equal(thinking(), true)
+  assert.equal(container.querySelectorAll('[role="status"]').length, 1)
+  await act(async () => { complete(new Response(JSON.stringify({ ...lesson, visual: nativeVisual }), { headers: { 'Content-Type': 'application/json' } })); await setImmediate() })
+  assert.equal(thinking(), false)
+  assert.equal(container.querySelectorAll('.orbit-stage').length, 1)
+  assert.ok(container.querySelector('.study-visual-presentation > .orbit-stage'))
+})
+
 test('conversation installs one visual only after completion, reuses current context, and keeps it out of resume', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] })
   const requests = mockRequests(t)

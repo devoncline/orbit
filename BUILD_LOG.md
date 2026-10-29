@@ -687,6 +687,19 @@ The goal is for Orbit to move with the learner instead of waiting passively for 
 
 ---
 
+## October 28, 2026 — Native Composition & Lesson Presenter
+
+- Replaced numbered rectangle scenes and detached numbered legends with labelled native objects. A small topology-based selector supports one-to-many branches, many-to-one merges, connected flows, focused input/system/output hubs and mechanism scenes, explicit nested containment, and conservative collections/relationship keys. No subject-name or keyword routing is used, and no scientific relationship is invented.
+- Processes use ordered symbols and optional supplied transition labels; long/narrow sequences recompose vertically. Comparisons retain separate illustrated regions without flow arrows. Concept illustrations emphasize their focal object and arrange actual inputs/outputs around it, including schematic light/water placement. Added only leaf and note to the existing primitive vocabulary. Shared guidance now encourages meaningful objects and actual relationship structure rather than sequential boxes for unrelated inputs.
+- Kept the existing metadata/routing architecture. Backward-compatible additions are allowlisted leaf/note symbols, process links for labelled transitions, and optional contains link kind for explicit containment trees. Invalid optional hints are stripped; malformed graph data still follows existing safe fallback rules. The normalizer remains shared by API, conversation, renderer, and existing resume projection.
+- Replaced distance-based curved arrows with measured symbol endpoints and gutter paths that update on resize. Container queries recompose visuals within their available column, including conversation visuals. Labels remain readable HTML; SVG is decorative. Replaced the large automatic focus outline with a small visible marker. No new visual animation was introduced.
+- Moved the existing companion beside the lesson illustration (210px desktop, 150px tablet), preserving the hidden phone treatment, current artwork, request-driven thinking pose, and single loading status. Pending replacement keeps a separate reserved presenter area so it cannot cover the response. Other Study interactions, mastery, adaptive recommendations, and conversation visual state are unchanged.
+- Validation: all 206 tests, full lint, production build, syntax checks, and diff check pass. Coverage includes updated renderer assertions and new topology, intervals, containment/cycle fallback, optional metadata, connector geometry, responsive structure, and thinking-presenter behavior. Initial assertions for old node/legend/direct-figure markup were updated to the new structure. Vite emitted a non-failing HMR port 24678 already-in-use warning during the parallel test suites; no test failures remain.
+- Manually inspected isolated mocked process, branching/reuse, physical mechanism, comparison, and longer sequence examples in the existing Chrome/Vite session at 320px, 768px, and 1440px. The previews had no horizontal document overflow; directional paths, label placement, mascot sizing/hiding, and phone recomposition were checked. Fixed a narrow long-sequence connector offset found during review. Closed the preview, restored the browser window, and removed temporary review files. No new dev server or live AI call was made, and saved learner data was not changed by the isolated preview. Live Muse output, physical devices, and screen-reader verification remain manual.
+- Updated README and Unreleased product notes/manual checks. No dependencies, image-generation APIs, Muse Image, database changes, migrations, historical migration edits, manual SQL, account changes, or new persistence mechanism. Generated imagery, elaborate scene languages, and additional motion remain deferred.
+
+---
+
 # Next
 
 The next major development steps are:

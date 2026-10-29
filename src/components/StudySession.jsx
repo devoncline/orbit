@@ -110,6 +110,7 @@ export default function StudySession({
     const recommendation = recommendStudyAction({ lesson, activeInteraction, learningPath, example, lessonError, conversation,
         activity, activityError, activityFeedback, activityResponse, answerResult, followUpResult, evaluation, evaluationError, questionError })
     const lastPublished = useRef('')
+    const companion = <OrbitStage thinking={busy} thinkingContext={studyThinkingContext({ loadingLesson, loadingConversation, loadingActivity, loadingQuestion, loadingEvaluation })} />
 
     useEffect(() => {
         if (!import.meta.env.DEV || !active || !lesson || !['lesson', 'conversation'].includes(activeInteraction)) return
@@ -536,7 +537,7 @@ export default function StudySession({
                 {lesson && lesson.topic !== lesson.concept && <p className="study-topic">{lesson.topic}</p>}
                 <h1>{lesson?.concept || course.nextTask || course.name}</h1>
             </header>
-            <OrbitStage thinking={busy} thinkingContext={studyThinkingContext({ loadingLesson, loadingConversation, loadingActivity, loadingQuestion, loadingEvaluation })} />
+            {(!illustratedLesson || busy) && companion}
             <div className="study-body">
             <section className="study-active-panel" data-study-interaction={activeInteraction} ref={panel} tabIndex={-1} aria-label="Current study interaction">
             {resumeSummary && <p className="orbit-muted">Last time: {resumeSummary} Your lesson is ready to revisit; activities and quizzes start fresh.</p>}
@@ -557,7 +558,10 @@ export default function StudySession({
                             {lesson && <>
                             <div className={`study-lesson-composition${lessonVisual ? ' study-lesson-composition-visual' : ''}`}>
                                 <StudyContent content={lesson.content} />
-                                <LessonVisual visual={lessonVisual} />
+                                {lessonVisual && <div className="study-visual-presentation">
+                                    {!busy && companion}
+                                    <LessonVisual visual={lessonVisual} />
+                                </div>}
                             </div>
                             <div className="study-lesson-support">
                             <button disabled={busy} onClick={() => changeLesson('simplify')}>I lost you</button>
