@@ -10,7 +10,7 @@ import {
     generateStudyQuestion,
     evaluateStudyAnswer,
 } from '../services/meta'
-import { MAX_STUDY_MESSAGE_LENGTH, retainStudyExchanges } from '../services/studyConversation'
+import { MAX_STUDY_MESSAGE_LENGTH, MAX_STUDY_EXCHANGES, retainStudyExchanges } from '../services/studyConversation'
 import { rememberLearningAnchor, anchorAfterFollowUp, retainLearningAnchors } from '../services/studyLearningContext'
 import { compactThreadResume } from '../services/learnerMemory'
 import { applyPositionOverride, readPositionStatement } from '../services/coursePosition'
@@ -18,7 +18,10 @@ import { selectStudyInteraction, studyThreadMetadata } from '../services/studyTh
 import { acceptPathLesson, learningPathContextKey, normalizeLearningPath, recommendStudyAction, studyPathView } from '../services/learningPath'
 import CoursePosition from './CoursePosition'
 import OrbitStage from './OrbitStage'
+import { OrbitResponse } from './OrbitSignal'
 import { studyThinkingContext } from './orbitThinking'
+import { createStreamDisplay } from '../services/streamDisplay'
+import useResultReveal from './useResultReveal'
 import StudyContent from './StudyContent'
 import StudyPath from './StudyPath'
 import './StudySession.css'
@@ -48,7 +51,6 @@ export default function StudySession({
     const [showAdaptedLesson, setShowAdaptedLesson] = useState(false)
     const [followUpResult, setFollowUpResult] = useState('')
     const [history, setHistory] = useState([])
-    const [selectedHistory, setSelectedHistory] = useState(null)
     const [positionChanged, setPositionChanged] = useState(false)
     const [evaluationError, setEvaluationError] = useState('')
     const [selectedAnswer, setSelectedAnswer] = useState(null)
@@ -67,11 +69,14 @@ export default function StudySession({
     const [lessonError, setLessonError] = useState('')
     const [lessonAttempt, setLessonAttempt] = useState(0)
     const [conversation, setConversation] = useState(resume.conversation)
+    const [turnOffset, setTurnOffset] = useState(0)
     const [learningAnchors, setLearningAnchors] = useState(() => retainLearningAnchors([...(course.learningAnchors || []), ...resume.learningAnchors]))
     const [learnerMessage, setLearnerMessage] = useState('')
     const [loadingConversation, setLoadingConversation] = useState(false)
     // Only completed exchanges enter conversation/history and thread persistence.
     const [streamedResponse, setStreamedResponse] = useState('')
+    const [pendingTurn, setPendingTurn] = useState(null)
+    const currentTurn = useRef(null)
     const [conversationError, setConversationError] = useState('')
     const conversationRequest = useRef(null)
     const [activity, setActivity] = useState(null)
@@ -89,6 +94,7 @@ export default function StudySession({
     const [evaluation, setEvaluation] = useState(null)
     const [loadingEvaluation, setLoadingEvaluation] = useState(false)
     const [questionNumber, setQuestionNumber] = useState(0)
+    const { resultReveal, showResult } = useResultReveal()
     const activityContext = activity ? {
         activity,
         learnerResponse: activityFeedback?.learnerResponse || '',
@@ -119,18 +125,29 @@ export default function StudySession({
         if (active) panel.current?.focus({ preventScroll: false })
     }, [active, activeInteraction, lesson?.concept])
 
+    useEffect(() => {
+        if (!pendingTurn || !currentTurn.current) return
+        const bounds = currentTurn.current.getBoundingClientRect()
+        const visibleTop = window.visualViewport?.offsetTop || 0
+        const visibleBottom = visibleTop + (window.visualViewport?.height || window.innerHeight)
+        if (bounds.top < visibleTop || bounds.bottom > visibleBottom) {
+            currentTurn.current.scrollIntoView({ block: 'nearest', behavior: 'auto' })
+        }
+    }, [pendingTurn])
+
     function openInteraction(next) {
-        if (next !== 'conversation' && conversationRequest.current) {
-            conversationRequest.current.abort()
+        if (next !== 'conversation') {
+            if (conversationRequest.current && pendingTurn) setLearnerMessage(pendingTurn.message)
+            conversationRequest.current?.abort()
             conversationRequest.current = null
             setLoadingConversation(false)
             setStreamedResponse('')
+            setPendingTurn(null)
             setConversationError('')
         }
         if (studyTools.current) studyTools.current.open = false
         if (next === activeInteraction) panel.current?.focus()
         setResumeSummary('')
-        setSelectedHistory(null)
         setActiveInteraction((current) => selectStudyInteraction(current, next))
     }
 
@@ -157,7 +174,8 @@ export default function StudySession({
         }
 
         initialLessonRequest.current
-            .then((result) => {
+            .then(async (result) => {
+                if (current) await showResult('lesson', result.content)
                 if (current) {
                     initialLessonLoaded.current = true
                     setLesson(result)
@@ -172,7 +190,7 @@ export default function StudySession({
             })
 
         return () => { current = false }
-    }, [initialContext, lessonAttempt, active, resume])
+    }, [initialContext, lessonAttempt, active, resume, showResult])
 
     useEffect(() => {
         return () => {
@@ -196,10 +214,22 @@ export default function StudySession({
         conversationRequest.current = controller
         setLoadingConversation(true)
         setStreamedResponse('')
+        setPendingTurn({ message })
+        setLearnerMessage('')
         setConversationError('')
         setLessonError('')
         setQuestionError('')
 
+        const preference = window.matchMedia('(prefers-reduced-motion: reduce)')
+        const display = createStreamDisplay({
+            signal: controller.signal,
+            reducedMotion: preference.matches,
+            onUpdate: (text) => {
+                if (!controller.signal.aborted && conversationRequest.current === controller) setStreamedResponse(text)
+            },
+        })
+        const changeMotion = () => display.setReducedMotion(preference.matches)
+        preference.addEventListener('change', changeMotion)
         try {
             const update = readPositionStatement(message, lesson.topic)
             if (update) changePosition(update)
@@ -211,27 +241,31 @@ export default function StudySession({
                 activityContext,
                 anchors: learningAnchors,
                 signal: controller.signal,
-                onDelta: (text) => {
-                    if (!controller.signal.aborted && conversationRequest.current === controller) {
-                        setStreamedResponse((current) => current + text)
-                    }
-                },
+                onDelta: display.append,
             })
+            await display.finish()
             if (controller.signal.aborted || conversationRequest.current !== controller) return
 
             rememberAnchor(result.anchor)
+            if (conversation.length === MAX_STUDY_EXCHANGES) {
+                const oldest = conversation[0]
+                rememberInteraction('conversation', oldest.message, oldest.message, oldest.response)
+                setTurnOffset((current) => current + 1)
+            }
             // Keep raw exchanges bounded in memory as well as in persistent storage.
             setConversation((current) => retainStudyExchanges([
                 ...current,
                 { message, response: result.response, signal: result.signal },
             ]))
-            rememberInteraction('conversation', message, message, result.response)
-            setLearnerMessage('')
+            setPendingTurn(null)
         } catch {
             if (!controller.signal.aborted) {
+                setLearnerMessage(message)
                 setConversationError('Orbit’s reply was interrupted. Your message is still here; try sending it again.')
             }
         } finally {
+            preference.removeEventListener('change', changeMotion)
+            display.cancel()
             if (conversationRequest.current === controller) {
                 conversationRequest.current = null
                 setStreamedResponse('')
@@ -259,6 +293,8 @@ export default function StudySession({
             const result = action === 'generate'
                 ? await generateStudyActivity(course, lesson, { ...options, activityContext })
                 : await evaluateStudyActivity(course, lesson, activity, response, options)
+            await showResult(action === 'generate' ? 'activity' : 'response',
+                action === 'generate' ? `## ${result.title}\n${result.instruction}` : result.feedback, controller.signal)
             if (controller.signal.aborted) return
 
             if (action === 'generate') {
@@ -310,6 +346,7 @@ export default function StudySession({
             const result = action === 'simplify'
                 ? await explainStudyLessonDifferently(course, lesson, example, { anchors: learningAnchors })
                 : await generateStudyExample(course, lesson, example, { anchors: learningAnchors })
+            await showResult(action, result.content)
 
             if (action === 'simplify') {
                 rememberInteraction('lesson', lesson.concept, lesson.content)
@@ -336,6 +373,9 @@ export default function StudySession({
             const result = await generateNextStudyLesson(course, mastery, lesson, {
                 path: learningPath, anchors: learningAnchors, signal: controller.signal,
             })
+            if (!controller.signal.aborted && latestContextKey.current === requestedContextKey) {
+                await showResult('next', result.content, controller.signal)
+            }
             if (controller.signal.aborted) return
             // A correction or material upload during generation must not install a stale lesson.
             if (latestContextKey.current !== requestedContextKey) {
@@ -343,10 +383,7 @@ export default function StudySession({
                 return
             }
             rememberInteraction('lesson', lesson.concept, lesson.content)
-            if (conversation.length) {
-                const last = conversation.at(-1)
-                rememberInteraction('conversation', last.message, last.message, last.response)
-            }
+            for (const exchange of conversation) rememberInteraction('conversation', exchange.message, exchange.message, exchange.response)
             if (activity) rememberInteraction('activity', activity.title, activity.instruction, activityFeedback?.feedback || activityResponse)
             if (studyQuestion) rememberInteraction('quiz', studyQuestion.topic || 'Practice', studyQuestion.question, evaluation?.feedback || studyQuestion.explanation || '')
             const positionKey = coursePositionKey ?? JSON.stringify(course.learnerPosition || null)
@@ -357,6 +394,8 @@ export default function StudySession({
             // Learning anchors, thread history, and course mastery continue independently.
             setExample('')
             setConversation([])
+            setTurnOffset(0)
+            setPendingTurn(null)
             setLearnerMessage('')
             setConversationError('')
             setActivity(null)
@@ -404,17 +443,17 @@ export default function StudySession({
         setLoadingQuestion(true)
         setQuestionError('')
         setLessonError('')
-        setStudyQuestion(null)
-        setAnswerResult('')
-        setFollowUpResult('')
-        setShowAdaptedLesson(false)
-        setEvaluation(null)
         setEvaluationError('')
-        setSelectedAnswer(null)
 
         try {
             const question = await generateStudyQuestion(course, mastery, lessonContext, { anchors: learningAnchors })
+            await showResult('quiz', question.question)
             setStudyQuestion(question)
+            setAnswerResult('')
+            setFollowUpResult('')
+            setShowAdaptedLesson(false)
+            setEvaluation(null)
+            setSelectedAnswer(null)
             setQuestionNumber((number) => number + 1)
         } catch {
             setQuestionError('Orbit could not load your question. Please try again.')
@@ -459,6 +498,7 @@ export default function StudySession({
         setLoadingEvaluation(true)
         try {
             const result = await evaluateStudyAnswer(course, studyQuestion, answer, mastery, { anchors: learningAnchors })
+            await showResult('evaluation', `${result.feedback}\n\n${result.adaptedExplanation}\n\n${result.followUpQuestion}`)
             setEvaluation(result)
             rememberAnchor(result.anchor)
         } catch {
@@ -488,33 +528,29 @@ export default function StudySession({
                 <button disabled={Boolean(loadingLesson || loadingQuestion || loadingEvaluation)} aria-pressed={activeInteraction === 'quiz'} onClick={() => studyQuestion ? openInteraction('quiz') : loadQuestion(lesson)}>Quiz me</button>
                 </div>
             </details>}
-            {history.length > 0 && <details className="study-history">
-                <summary>Earlier in this thread <span>{history.length}</span></summary>
-                <ol>{history.map((entry, index) => <li key={index}>
-                    <button disabled={busy} onClick={(event) => { setSelectedHistory(entry); setActiveInteraction('history'); event.currentTarget.closest('details').open = false }}>
-                        <small>{index + 1} · {entry.type}</small><span>{entry.title}</span>
-                    </button>
-                </li>)}</ol>
-            </details>}
             <section className="study-active-panel" data-study-interaction={activeInteraction} ref={panel} tabIndex={-1} aria-label="Current study interaction">
             {resumeSummary && <p className="orbit-muted">Last time: {resumeSummary} Your lesson is ready to revisit; activities and quizzes start fresh.</p>}
             {positionChanged && <div className="study-position-notice" role="status">Your course starting point is updated. Continue when you are ready to use it.
                 <button onClick={onNewThread}>Start a thread there</button>
             </div>}
-            {selectedHistory && activeInteraction === 'history' && <div className="study-history-entry">
-                <h3>{selectedHistory.title}</h3><StudyContent content={selectedHistory.content} />
-                {selectedHistory.response && <StudyContent content={selectedHistory.response} />}
-                <button onClick={() => openInteraction('lesson')}>Return to current lesson</button>
+            <OrbitResponse pending={loadingLesson === 'next'} context="next" reveal={resultReveal}>
+            {activeInteraction === 'example' && <div className="study-example">
+                <OrbitResponse pending={loadingLesson === 'example'} context="example" reveal={resultReveal}>
+                    {example && <><StudyContent content={example} /><button disabled={busy} onClick={() => changeLesson('example')}>Another example</button></>}
+                </OrbitResponse>
             </div>}
-            {activeInteraction === 'example' && example && <div className="study-example"><StudyContent content={example} /><button disabled={busy} onClick={() => changeLesson('example')}>Another example</button></div>}
             {stage === 'learn' && (
                 <div className="study-lesson">
-                    {lesson && activeInteraction === 'lesson' && (
-                        <div aria-live="polite">
+                    {activeInteraction === 'lesson' && (
+                        <OrbitResponse pending={loadingLesson === 'lesson' || loadingLesson === 'simplify'} context={loadingLesson === 'simplify' ? 'simplify' : 'lesson'} reveal={resultReveal}>
+                        <div>
+                            {lesson && <>
                             <StudyContent content={lesson.content} />
                             <button disabled={busy} onClick={() => changeLesson('simplify')}>I lost you</button>
                             <CoursePosition course={course} today={today} showSummary={false} onChange={onPositionChange ? changePosition : undefined} />
+                            </>}
                         </div>
+                        </OrbitResponse>
                     )}
 
                     {lessonError && <p role="alert">{lessonError}</p>}
@@ -524,6 +560,7 @@ export default function StudySession({
 
                     {activeInteraction === 'activity' && (activity || loadingActivity || activityError) && (
                         <div className="study-activity" aria-busy={Boolean(loadingActivity)}>
+                            <OrbitResponse pending={loadingActivity === 'generate'} context="activity" reveal={resultReveal}>
                             {activity && (
                                 <>
                                     <div className="study-panel-heading"><h4>{activity.title}</h4><button disabled={busy} onClick={() => runActivity('generate')}>Another activity</button></div>
@@ -552,13 +589,16 @@ export default function StudySession({
                                             {activityError?.action === 'evaluate' ? 'Try again' : 'Share response'}
                                         </button>
                                     </form>
-                                    <div aria-live="polite">
+                                    {(loadingActivity === 'evaluate' || activityFeedback?.learnerResponse === activityResponse.trim()) && <OrbitResponse pending={loadingActivity === 'evaluate'} context="response" reveal={resultReveal}>
+                                    <div>
                                         {activityFeedback?.learnerResponse === activityResponse.trim() && (
                                             <p><strong>Orbit:</strong> {activityFeedback.feedback}</p>
                                         )}
                                     </div>
+                                    </OrbitResponse>}
                                 </>
                             )}
+                            </OrbitResponse>
                             {activityError && <p role="alert">{activityError.message}</p>}
                             {activityError?.action === 'generate' && (
                                 <button
@@ -573,21 +613,23 @@ export default function StudySession({
 
                     {lesson && activeInteraction === 'conversation' && (
                         <div className="study-conversation">
-                            <div aria-live="polite">
-                                {conversation.slice(-1).map((exchange, index) => (
-                                    <div key={index}>
-                                        <details className="study-thought"><summary>Your thought: {exchange.message.slice(0, 80)}{exchange.message.length > 80 ? '…' : ''}</summary><p>{exchange.message}</p></details>
-                                        <StudyContent content={exchange.response} />
-                                    </div>
+                            <div className="study-transcript" aria-label="Lesson discussion">
+                                {[...conversation, ...(pendingTurn ? [{ ...pendingTurn, pending: true }] : [])].map((exchange, index) => (
+                                    <article className={`study-exchange${exchange.pending ? ' study-current-turn' : ''}`} key={turnOffset + index} ref={exchange.pending ? currentTurn : undefined}>
+                                        <div className="study-message study-message-learner" aria-label="Your message"><p>{exchange.message}</p></div>
+                                        <div className="study-message study-message-orbit" aria-label="Orbit reply">
+                                            <OrbitResponse pending={exchange.pending && loadingConversation && !streamedResponse} busy={Boolean(exchange.pending && loadingConversation)} context="conversation">
+                                                {exchange.pending ? streamedResponse && <div className="study-streaming-response" aria-hidden="true"><p>{streamedResponse}</p></div>
+                                                    : <StudyContent content={exchange.response} />}
+                                            </OrbitResponse>
+                                            {exchange.pending && conversationError && <p role="alert">{conversationError}</p>}
+                                        </div>
+                                    </article>
                                 ))}
                             </div>
 
-                            {streamedResponse && <div className="study-streaming-response" aria-live="off" aria-busy="true">
-                                <p>{streamedResponse}</p>
-                            </div>}
-
-                            <form onSubmit={sendMessage} aria-busy={loadingConversation}>
-                                <label htmlFor={`study-message-${id}`}>What are you thinking?</label>
+                            <form className="study-composer" onSubmit={sendMessage} aria-busy={loadingConversation}>
+                                <label className="study-composer-label" htmlFor={`study-message-${id}`}>Ask about this idea or share a connection</label>
                                 <textarea
                                     id={`study-message-${id}`}
                                     rows={2}
@@ -596,7 +638,6 @@ export default function StudySession({
                                     value={learnerMessage}
                                     onChange={(event) => {
                                         setLearnerMessage(event.target.value)
-                                        setConversationError('')
                                     }}
                                     readOnly={loadingConversation}
                                     disabled={Boolean(loadingLesson || loadingActivity) || loadingQuestion}
@@ -611,7 +652,6 @@ export default function StudySession({
                                     {conversationError ? 'Try again' : 'Send'}
                                 </button>
                             </form>
-                            {conversationError && <p role="alert">{conversationError}</p>}
                         </div>
                     )}
                 </div>
@@ -630,6 +670,7 @@ export default function StudySession({
 
             {stage === 'quiz' && (
                 <div className="study-quiz">
+                    <OrbitResponse pending={loadingQuestion || loadingEvaluation} context={loadingEvaluation ? 'evaluation' : 'quiz'} reveal={resultReveal}>
                     {studyQuestion && !(showAdaptedLesson && evaluation) && (
                         <p>{studyQuestion.question}</p>
                     )}
@@ -717,10 +758,12 @@ export default function StudySession({
                             )}
                         </div>
                     )}
+                    </OrbitResponse>
                 </div>
             )}
+            </OrbitResponse>
             </section>
-            {lesson && <nav className="study-continuation" aria-label="Lesson progression" aria-busy={loadingLesson === 'next'}>
+            {lesson && <nav className="study-continuation" aria-label="Lesson progression" aria-busy={busy}>
                 <div className="study-recommendation">
                     <p><strong>Suggested next</strong><span>{recommendation.hint}</span></p>
                     {recommendation.action && <button className="study-primary-action" disabled={busy} onClick={takeRecommendedStep}>
@@ -739,6 +782,18 @@ export default function StudySession({
                 </div>
                 {progressionError && <p role="alert">{progressionError}</p>}
             </nav>}
+            {history.length > 0 && <details className="study-history">
+                <summary>Earlier in this thread <span>· {history.length}</span></summary>
+                <ol>{history.map((entry, index) => <li key={index}>
+                    <details className="study-history-entry">
+                        <summary><small>{entry.type === 'conversation' ? 'Discussion' : entry.type}</small><span>{entry.title}</span></summary>
+                        {entry.type === 'conversation' ? <div className="study-exchange">
+                            <div className="study-message study-message-learner" aria-label="Your message"><p>{entry.content}</p></div>
+                            <div className="study-message study-message-orbit" aria-label="Orbit reply"><StudyContent content={entry.response} /></div>
+                        </div> : <><StudyContent content={entry.content} />{entry.response && <StudyContent content={entry.response} />}</>}
+                    </details>
+                </li>)}</ol>
+            </details>}
             </div>
             <footer className="study-progress">
                 <ol className="study-stages" aria-label="Session progress">

@@ -140,7 +140,9 @@ Learners can ask questions or share connections during a lesson without leaving 
 
 Orbit can respond using the context of the lesson and recent conversation.
 
-Talk It Through replies appear progressively as they are generated. Orbit keeps thinking until the reply is complete; interrupted replies leave the learner's message ready to retry. Only completed exchanges and validated learning context are kept for resume.
+Talk It Through keeps the four most recent completed exchanges in a learning transcript. Simple learner bubbles sit on the right; Orbit replies use a subtle navy/lavender surface on the left, without visible speaker labels. The composer clears on send, and a compact Orbit Signal appears in the pending reply bubble. Real streamed text arrives in adaptive word groups with light punctuation pauses; final formatting and saving wait until the visible text catches up. Older exchanges collapse below Suggested next. Interrupted replies restore the message for retry, and only completed exchanges and validated learning context are kept for resume. The existing saved resume still retains two recent exchanges.
+
+The same compact Orbit Signal marks the result location for lessons, examples, activities, activity feedback, quizzes, and adapted explanations while their complete responses load. These structured results use a brief display reveal after arrival, not network streaming; short results appear promptly and longer transitions stay under a second. The line shortens on phones, reduced motion skips progressive reveals, and the companion keeps its existing thinking state and single loading announcement.
 
 ### Adaptive explanations
 
