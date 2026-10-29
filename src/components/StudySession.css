@@ -19,6 +19,7 @@
 .study-activity, .study-adapted { margin-top: 16px; padding: 2px 0 0 22px; border-left: 2px solid #665e8d; }
 .study-activity h4 { margin-top: 0; }
 .study-conversation { margin-top: 0; }
+.study-streaming-response p { white-space: pre-wrap; overflow-wrap: anywhere; }
 .study-active-panel { outline: none; min-width: 0; overflow-wrap: anywhere; }
 .study-active-panel:focus-visible { outline: 2px solid var(--orbit-accent); outline-offset: 8px; border-radius: 8px; }
 .study-panel-heading { display: flex; justify-content: space-between; gap: 12px; align-items: start; margin-bottom: 16px; }

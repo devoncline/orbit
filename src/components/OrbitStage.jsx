@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import orbitHero from '../assets/mascot/orbit-hero-asset-transparent.png'
 import orbitTeaching from '../assets/mascot/orbit-teaching-tilt-transparent.png'
-import { getThinkingCopy, startThinkingMotion } from './orbitThinking'
+import { getThinkingCopy, nextThinkingRequest, startThinkingMotion } from './orbitThinking'
 import './OrbitStage.css'
 
 // Visuals and annotations can enter independently without changing the learning controls.
@@ -9,7 +9,12 @@ import './OrbitStage.css'
 export default function OrbitStage({ variant = 'study', thinking = false, thinkingContext = 'thinking', children, annotations }) {
   const hasVisual = Boolean(children || annotations)
   const motion = useRef(null)
-  const copy = getThinkingCopy(thinkingContext)
+  const [request, setRequest] = useState(() => nextThinkingRequest(null, thinking, thinkingContext))
+  const nextRequest = nextThinkingRequest(request, thinking, thinkingContext)
+  // Adjust only when a request starts/ends or is superseded. Streaming rerenders
+  // keep the same pair, and no global counter is shared across study threads.
+  if (nextRequest !== request) setRequest(nextRequest)
+  const copy = getThinkingCopy(thinkingContext, nextRequest.sequence)
 
   useEffect(() => startThinkingMotion(motion.current, thinking), [thinking])
 
@@ -26,7 +31,6 @@ export default function OrbitStage({ variant = 'study', thinking = false, thinki
       </div>
       {thinking && <div className="orbit-thoughts" aria-hidden="true">
         {copy.fragments.map((fragment) => <span className="orbit-thought-fragment" key={fragment}>{fragment}</span>)}
-        <span className="orbit-thought-trail"><i /><i /><i /></span>
       </div>}
       <span className="orbit-thinking-status" role="status" aria-live="polite" aria-atomic="true">{thinking ? copy.status : ''}</span>
       {children && <div className="orbit-stage-object">{children}</div>}

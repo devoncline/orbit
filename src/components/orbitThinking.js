@@ -1,19 +1,27 @@
 const thinkingCopy = {
-  thinking: { status: 'Orbit is thinking...', fragments: ['making connections', 'thinking it through'] },
-  lesson: { status: 'Orbit is preparing a short lesson...', fragments: ['finding the next idea', 'connecting the lesson'] },
-  next: { status: 'Orbit is choosing the next useful lesson...', fragments: ['checking your progress', 'finding the next idea'] },
-  simplify: { status: 'Orbit is trying a different approach...', fragments: ['finding a clearer angle', 'connecting the idea'] },
-  example: { status: 'Orbit is finding an example...', fragments: ['finding a clearer angle', 'matching an example'] },
-  activity: { status: 'Orbit is preparing something to try...', fragments: ['choosing something to try', 'keeping it focused'] },
-  response: { status: 'Orbit is looking at your response...', fragments: ['reading your response', 'connecting the ideas'] },
-  conversation: { status: 'Orbit is thinking about that...', fragments: ['thinking it through', 'connecting the ideas'] },
-  quiz: { status: 'Orbit is building your question...', fragments: ['checking what matters', 'building a question'] },
-  evaluation: { status: 'Orbit is changing the approach...', fragments: ['reading your response', 'finding a clearer angle'] },
-  recommendation: { status: 'Orbit is updating your recommendation...', fragments: ['checking your progress', 'finding a starting point'] },
+  thinking: { status: 'Orbit is thinking...', fragments: ['making connections', 'thinking it through', 'following the idea', 'narrowing the focus', 'finding a useful angle', 'bringing it together'] },
+  lesson: { status: 'Orbit is preparing a short lesson...', fragments: ['finding the next idea', 'connecting the lesson', 'checking where to begin', 'narrowing the focus', 'choosing one useful idea', 'keeping this manageable'] },
+  next: { status: 'Orbit is choosing the next useful lesson...', fragments: ['checking your progress', 'finding the next idea', 'building on this lesson', 'choosing a useful step', 'connecting what you know', 'keeping a steady pace'] },
+  simplify: { status: 'Orbit is trying a different approach...', fragments: ['finding a clearer angle', 'connecting the idea', 'trying another route', 'simplifying the idea', 'breaking it into steps', 'starting with the basics'] },
+  example: { status: 'Orbit is finding an example...', fragments: ['finding a clearer angle', 'matching an example', 'making it concrete', 'connecting to real life', 'trying another way in', 'making the idea familiar'] },
+  activity: { status: 'Orbit is preparing something to try...', fragments: ['choosing something to try', 'keeping it focused', 'turning this into practice', 'finding a quick challenge', 'making it hands-on', 'choosing one useful step'] },
+  response: { status: 'Orbit is looking at your response...', fragments: ['reading your response', 'connecting the ideas', 'following your approach', 'checking the reasoning', 'noticing what worked', 'finding a useful next step'] },
+  conversation: { status: 'Orbit is thinking about that...', fragments: ['thinking it through', 'connecting the ideas', 'following your question', 'checking the lesson', 'working through that idea', 'tracing the connection'] },
+  quiz: { status: 'Orbit is building your question...', fragments: ['checking what matters', 'building a question', 'narrowing the focus', 'choosing what to test', 'finding a fair challenge', 'checking this concept'] },
+  evaluation: { status: 'Orbit is changing the approach...', fragments: ['reading your response', 'finding a clearer angle', 'changing the approach', 'checking the tricky part', 'trying another route', 'simplifying the idea'] },
+  recommendation: { status: 'Orbit is updating your recommendation...', fragments: ['checking your progress', 'finding a starting point', 'looking at what is next', 'connecting your course', 'choosing a useful focus', 'finding a manageable step'] },
 }
 
-export function getThinkingCopy(context) {
-  return Object.hasOwn(thinkingCopy, context) ? thinkingCopy[context] : thinkingCopy.thinking
+export function getThinkingCopy(context, sequence = 0) {
+  const { status, fragments } = Object.hasOwn(thinkingCopy, context) ? thinkingCopy[context] : thinkingCopy.thinking
+  const index = Math.abs(Math.trunc(sequence)) % fragments.length
+  return { status, fragments: [fragments[index], fragments[(index + 1) % fragments.length]] }
+}
+
+export function nextThinkingRequest(previous, thinking, context) {
+  const key = thinking ? context : ''
+  if (previous?.key === key) return previous
+  return { key, sequence: previous ? previous.sequence + (thinking ? 1 : 0) : 0 }
 }
 
 // Request state, rather than visible content, owns the thinking lifetime. A quiz
@@ -53,6 +61,8 @@ export function startThinkingMotion(element, thinking) {
     animation = element.animate(frames, thinking
       ? { duration: 8400, iterations: Infinity }
       : { duration: 900, easing: 'ease-out' })
+    // Cancellation on request changes/unmount is an expected animation outcome.
+    animation.finished?.catch(() => {})
   }
 
   updateMotion()

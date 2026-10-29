@@ -1,4 +1,5 @@
 import { retainStudyExchanges } from './studyConversation.js'
+import { readStudyConversationStream } from './studyConversationStream.js'
 import { learningAnchorRequest } from './studyLearningContext.js'
 import { coursePositionRequest, inferCoursePosition, localDate } from './coursePosition.js'
 import { learningPathContextKey, normalizeLearningPath } from './learningPath.js'
@@ -77,18 +78,31 @@ async function requestStudyLesson(course, mastery, action, lesson, example, anch
     return response.json()
 }
 
-export async function respondToStudyMessage(
+export async function respondToStudyMessage(course, lesson, options) {
+    const response = await requestStudyConversation(course, lesson, options)
+    return response.json()
+}
+
+export async function respondToStudyMessageStream(course, lesson, options) {
+    const response = await requestStudyConversation(course, lesson, options, true)
+    return readStudyConversationStream(response, { signal: options.signal, onDelta: options.onDelta, topic: lesson.topic })
+}
+
+async function requestStudyConversation(
     course,
     lesson,
-    { message, history = [], example = '', activityContext, signal, anchors = [] }
+    { message, history = [], example = '', activityContext, signal, anchors = [] },
+    streaming = false,
 ) {
     const response = await fetch('/api/respond-to-study-message', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            ...(streaming ? { Accept: 'application/x-ndjson' } : {}),
         },
         signal,
         body: JSON.stringify({
+            ...(streaming ? { stream: true } : {}),
             courseName: course.name,
             nextTask: course.nextTask,
             importantTopics: course.importantTopics,
@@ -112,7 +126,7 @@ export async function respondToStudyMessage(
         throw new Error('Failed to respond to study message')
     }
 
-    return response.json()
+    return response
 }
 
 export function generateStudyActivity(course, lesson, options = {}) {

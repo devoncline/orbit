@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { readFile } from 'node:fs/promises'
-import { getThinkingCopy, startThinkingMotion, studyThinkingContext } from '../src/components/orbitThinking.js'
+import { getThinkingCopy, nextThinkingRequest, startThinkingMotion, studyThinkingContext } from '../src/components/orbitThinking.js'
 
 test('each study request selects contextual copy independently of lesson or response content', () => {
   const cases = [
@@ -28,6 +28,26 @@ test('each study request selects contextual copy independently of lesson or resp
   assert.match(getThinkingCopy('recommendation').status, /recommendation/)
   assert.deepEqual(getThinkingCopy('unknown'), getThinkingCopy())
   assert.deepEqual(getThinkingCopy('toString'), getThinkingCopy())
+})
+
+test('each context rotates through six short choices, stable until the next request', () => {
+  for (const context of ['thinking', 'lesson', 'next', 'simplify', 'example', 'activity', 'response', 'conversation', 'quiz', 'evaluation', 'recommendation']) {
+    let state = nextThinkingRequest(null, true, context)
+    const phrases = new Set()
+    let previousPair
+    for (let request = 0; request < 8; request += 1) {
+      const copy = getThinkingCopy(context, state.sequence)
+      assert.equal(nextThinkingRequest(state, true, context), state)
+      assert.deepEqual(getThinkingCopy(context, state.sequence), copy)
+      assert.notDeepEqual(copy.fragments, previousPair)
+      assert.equal(copy.fragments.length, 2)
+      for (const phrase of copy.fragments) { assert.ok(phrase.length <= 26); phrases.add(phrase) }
+      previousPair = copy.fragments
+      state = nextThinkingRequest(state, false, context)
+      state = nextThinkingRequest(state, true, context)
+    }
+    assert.equal(phrases.size, 6)
+  }
 })
 
 function motionHarness(t, reduced = false) {
@@ -113,7 +133,7 @@ test('decorative motion is opt-in and mobile reduces fragments without growing t
   assert.doesNotMatch(staticStyles, /animation:/)
   assert.match(motionStyles, /orbit-stage-artwork \{ animation:/)
   assert.match(motionStyles, /orbit-thought-fragment \{ animation:/)
-  assert.match(motionStyles, /orbit-thought-trail i \{ animation:/)
+  assert.doesNotMatch(css, /orbit-thought-trail|orbit-thought-travel/)
   assert.match(css, /orbit-thoughts \{ position: absolute; inset: 0; overflow: hidden;/)
   const mobile = css.split('@media (max-width: 760px)')[1]
   assert.match(mobile, /orbit-thought-fragment:nth-child\(2\) \{ display: none;/)

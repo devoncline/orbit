@@ -4,7 +4,7 @@ import {
     generateNextStudyLesson,
     explainStudyLessonDifferently,
     generateStudyExample,
-    respondToStudyMessage,
+    respondToStudyMessageStream,
     generateStudyActivity,
     evaluateStudyActivity,
     generateStudyQuestion,
@@ -70,6 +70,8 @@ export default function StudySession({
     const [learningAnchors, setLearningAnchors] = useState(() => retainLearningAnchors([...(course.learningAnchors || []), ...resume.learningAnchors]))
     const [learnerMessage, setLearnerMessage] = useState('')
     const [loadingConversation, setLoadingConversation] = useState(false)
+    // Only completed exchanges enter conversation/history and thread persistence.
+    const [streamedResponse, setStreamedResponse] = useState('')
     const [conversationError, setConversationError] = useState('')
     const conversationRequest = useRef(null)
     const [activity, setActivity] = useState(null)
@@ -118,6 +120,13 @@ export default function StudySession({
     }, [active, activeInteraction, lesson?.concept])
 
     function openInteraction(next) {
+        if (next !== 'conversation' && conversationRequest.current) {
+            conversationRequest.current.abort()
+            conversationRequest.current = null
+            setLoadingConversation(false)
+            setStreamedResponse('')
+            setConversationError('')
+        }
         if (studyTools.current) studyTools.current.open = false
         if (next === activeInteraction) panel.current?.focus()
         setResumeSummary('')
@@ -186,6 +195,7 @@ export default function StudySession({
         const controller = new AbortController()
         conversationRequest.current = controller
         setLoadingConversation(true)
+        setStreamedResponse('')
         setConversationError('')
         setLessonError('')
         setQuestionError('')
@@ -194,15 +204,20 @@ export default function StudySession({
             const update = readPositionStatement(message, lesson.topic)
             if (update) changePosition(update)
             const requestCourse = update ? { ...course, learnerPosition: applyPositionOverride(course.learnerPosition, update) } : course
-            const result = await respondToStudyMessage(requestCourse, lesson, {
+            const result = await respondToStudyMessageStream(requestCourse, lesson, {
                 message,
                 history: conversation,
                 example,
                 activityContext,
                 anchors: learningAnchors,
                 signal: controller.signal,
+                onDelta: (text) => {
+                    if (!controller.signal.aborted && conversationRequest.current === controller) {
+                        setStreamedResponse((current) => current + text)
+                    }
+                },
             })
-            if (controller.signal.aborted) return
+            if (controller.signal.aborted || conversationRequest.current !== controller) return
 
             rememberAnchor(result.anchor)
             // Keep raw exchanges bounded in memory as well as in persistent storage.
@@ -214,11 +229,12 @@ export default function StudySession({
             setLearnerMessage('')
         } catch {
             if (!controller.signal.aborted) {
-                setConversationError('Orbit could not reply. Your message is still here; try sending it again.')
+                setConversationError('Orbit’s reply was interrupted. Your message is still here; try sending it again.')
             }
         } finally {
             if (conversationRequest.current === controller) {
                 conversationRequest.current = null
+                setStreamedResponse('')
                 setLoadingConversation(false)
             }
         }
@@ -380,9 +396,6 @@ export default function StudySession({
         if (loadingQuestion || loadingLesson || loadingEvaluation) return
         if (studyQuestion) rememberInteraction('quiz', studyQuestion.topic || 'Practice', studyQuestion.question, `${answerResult || 'Not answered'}${evaluation ? `\n${evaluation.feedback}\n${evaluation.adaptedExplanation}\nFollow-up: ${followUpResult || 'Not answered'}` : studyQuestion.explanation ? `\n${studyQuestion.explanation}` : ''}`)
         openInteraction('quiz')
-        conversationRequest.current?.abort()
-        conversationRequest.current = null
-        setLoadingConversation(false)
         setConversationError('')
         activityRequest.current?.abort()
         activityRequest.current = null
@@ -568,6 +581,10 @@ export default function StudySession({
                                     </div>
                                 ))}
                             </div>
+
+                            {streamedResponse && <div className="study-streaming-response" aria-live="off" aria-busy="true">
+                                <p>{streamedResponse}</p>
+                            </div>}
 
                             <form onSubmit={sendMessage} aria-busy={loadingConversation}>
                                 <label htmlFor={`study-message-${id}`}>What are you thinking?</label>

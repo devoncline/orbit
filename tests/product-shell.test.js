@@ -48,7 +48,7 @@ test('thinking retains the existing asset, bounds decorative fragments, and expo
   assert.equal((html.match(/class="orbit-thought-fragment"/g) || []).length, 2)
   assert.match(html, /finding a clearer angle/)
   assert.match(html, /matching an example/)
-  assert.match(html, /class="orbit-thought-trail"><i><\/i><i><\/i><i><\/i>/)
+  assert.doesNotMatch(html, /orbit-thought-trail|<i>/)
   assert.equal((html.match(/role="status"/g) || []).length, 1)
   assert.match(html, /class="orbit-thinking-status" role="status" aria-live="polite" aria-atomic="true">Orbit is finding an example/)
   assert.doesNotMatch(html, /class="orbit-stage orbit-stage-study" aria-hidden/)

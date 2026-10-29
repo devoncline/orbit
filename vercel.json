@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/respond-to-study-message.js": {
+      "supportsCancellation": true
+    }
+  }
+}

@@ -140,6 +140,8 @@ Learners can ask questions or share connections during a lesson without leaving 
 
 Orbit can respond using the context of the lesson and recent conversation.
 
+Talk It Through replies appear progressively as they are generated. Orbit keeps thinking until the reply is complete; interrupted replies leave the learner's message ready to retry. Only completed exchanges and validated learning context are kept for resume.
+
 ### Adaptive explanations
 
 If something is not clicking, the learner can ask Orbit to explain it differently or provide a concrete example.
@@ -254,7 +256,7 @@ The current visual direction is a floating planetary creature made from:
 
 The goal is for Orbit to feel less like a generic AI robot and more like a strange creature that gradually becomes familiar through its personality.
 
-Orbit currently uses gentle floating motion and can shift into a thinking state while preparing a response.
+Orbit uses gentle floating motion and shifts into a thinking state while preparing a response. Short contextual phrases rotate between requests and stay steady during each one, with one phrase on phones and static visuals for reduced motion.
 
 Future character behavior may include:
 

@@ -630,6 +630,17 @@ The goal is for Orbit to move with the learner instead of waiting passively for 
 
 ---
 
+## October 28, 2026 — Varied Thoughts & Streamed Conversation
+
+- Expanded each thinking context to six short phrases. A component-local request sequence selects two phrases, stays stable through chunk/content rerenders (including StrictMode), and rotates on the next request. Mobile still shows one. Removed the decorative trail markup and animation while preserving the existing assets, sway, settling, status announcements, and reduced motion. Handled the expected animation-finished rejection when a request change cancels motion.
+- Added opt-in streaming only to Talk It Through using Meta's documented `muse-spark-1.3` Responses SSE events. The same prompt/context and bounded history are retained. A small server parser decodes the first response JSON string as text arrives; only visible deltas reach the client. Full JSON, response length/word limits, signals, and anchors are validated before a distinct completion event. Existing non-streaming helpers and other structured actions retain their contracts.
+- The frontend reads bounded NDJSON delta/complete/error events and updates temporary text per incoming chunk. Partial Markdown is escaped plain text until completion, then uses StudyContent. The thinking flag stays active through final metadata. Failed/incomplete output is discarded, the learner draft remains, and retries cannot commit duplicate exchanges. Quiz switches and unmounts cancel the stream. Existing four-exchange history and two-exchange local resume projection are unchanged; only complete replies and validated anchors enter persistence.
+- Enabled Vercel cancellation for this route only; client disconnects abort the upstream request and release the reader. Streaming requests disable provider storage and do not expose raw Meta events or credentials. No databases, migrations, historical migration edits, manual SQL, auth changes, image generation, visual lesson rendering, or other feature streaming.
+- Added happy-dom as a development-only dependency for real React interaction tests; production dependencies are unchanged. Validation: all 153 tests, full lint, production build, backend syntax checks, and diff checks pass. Tests cover early deltas, UTF-8/JSON escape and frame boundaries, withheld metadata, malformed/failed/truncated streams, abort during stalled reads, stable/rotating phrases, no trail, partial rendering, request lifetime, retry, quiz switch, unmount, save-once behavior, and final anchor/resume round trips. Initial test-environment cancellation rejection, metadata-count assumptions, and a test lint issue were resolved before these passing runs.
+- Meta streaming support was verified against official documentation, not a live credentialed request. Browser/device layout, real screen-reader behavior, and deployed/live Meta streaming remain manual. No interactive dev server or browser automation was started. Updated README, Unreleased notes, and manual checks.
+
+---
+
 # Next
 
 The next major development steps are:

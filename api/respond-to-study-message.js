@@ -1,4 +1,5 @@
 import process from 'node:process'
+import { streamMetaConversation } from './_lib/studyConversationStream.js'
 import { formatCoursePosition } from '../src/services/coursePosition.js'
 import { isStudyActivityContext } from '../src/services/studyActivity.js'
 import {
@@ -56,15 +57,34 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid study conversation request' })
   }
 
+  const streaming = req.body.stream === true
+  const controller = new AbortController()
+  const abort = () => controller.abort()
+  // IncomingMessage.close also fires after an ordinary request body is read;
+  // only an aborted request or closed response should stop upstream generation.
+  req.on?.('aborted', abort)
+  res.on?.('close', abort)
+  req.signal?.addEventListener('abort', abort, { once: true })
+  if (req.aborted || req.signal?.aborted) abort()
+  let streamStarted = false
+  const send = (event) => {
+    controller.signal.throwIfAborted()
+    res.write(`${JSON.stringify(event)}\n`)
+  }
+
   try {
+    controller.signal.throwIfAborted()
     const response = await fetch('https://api.meta.ai/v1/responses', {
       method: 'POST',
+      signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${process.env.MODEL_API_KEY}`,
+        ...(streaming ? { Accept: 'text/event-stream' } : {}),
       },
       body: JSON.stringify({
         model: 'muse-spark-1.3',
+        ...(streaming ? { stream: true, store: false } : {}),
         input: `
 You are Orbit, a thoughtful learning partner in a focused lesson conversation.
 
@@ -112,6 +132,7 @@ Do not mention the signal labels in the learner-facing response.
 Return ONLY valid JSON in this exact shape:
 {"response": "", "signal": "neutral"}
 ${anchorSuggestionPrompt}
+${streaming ? 'Write the "response" property FIRST, followed by "signal" and the optional "anchor". Keep all metadata outside the response string.' : ''}
         `,
       }),
     })
@@ -120,22 +141,51 @@ ${anchorSuggestionPrompt}
       return res.status(response.status).json({ error: 'Failed to respond to study message' })
     }
 
-    const data = await response.json()
-    const text = data.output?.find((item) => item.type === 'message')
-      ?.content?.find((item) => item.type === 'output_text')?.text
-    const result = JSON.parse(text)
+    let result
+    if (streaming) {
+      if (!response.headers?.get('content-type')?.includes('text/event-stream') || !response.body) {
+        throw new Error('Expected a Meta stream')
+      }
+      res.status(200)
+      res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8')
+      res.setHeader('Cache-Control', 'no-store, no-transform')
+      res.flushHeaders?.()
+      streamStarted = true
+      result = await streamMetaConversation(response.body, { signal: controller.signal, onDelta: (text) => send({ type: 'delta', text }) })
+    } else {
+      const data = await response.json()
+      const text = data.output?.find((item) => item.type === 'message')
+        ?.content?.find((item) => item.type === 'output_text')?.text
+      result = JSON.parse(text)
+    }
 
     if (!isShortText(result?.response, MAX_STUDY_RESPONSE_LENGTH) ||
       result.response.trim().split(/\s+/).length > 100) {
+      if (streamStarted) throw new Error('Invalid study conversation response')
       return res.status(502).json({ error: 'Invalid study conversation response' })
     }
 
-    return res.status(200).json({
+    const reply = {
       response: result.response.trim(),
       signal: signals.includes(result.signal) ? result.signal : 'neutral',
       ...suggestedLearningAnchor(result.anchor, lesson.topic, signals.includes(result.signal) ? result.signal : 'neutral'),
-    })
+    }
+    if (streaming) {
+      send({ type: 'complete', ...reply })
+      return res.end()
+    }
+    return res.status(200).json(reply)
   } catch {
+    if (controller.signal.aborted) return
+    if (streamStarted) {
+      send({ type: 'error', error: 'The reply was interrupted. Please try again.' })
+      return res.end()
+    }
     return res.status(502).json({ error: 'Failed to respond to study message' })
+  } finally {
+    req.off?.('aborted', abort)
+    res.off?.('close', abort)
+    req.signal?.removeEventListener('abort', abort)
+    controller.abort()
   }
 }
