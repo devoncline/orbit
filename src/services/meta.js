@@ -2,7 +2,7 @@ import { retainStudyExchanges } from './studyConversation.js'
 import { readStudyConversationStream } from './studyConversationStream.js'
 import { learningAnchorRequest } from './studyLearningContext.js'
 import { coursePositionRequest, inferCoursePosition, localDate } from './coursePosition.js'
-import { learningPathContextKey, normalizeLearningPath } from './learningPath.js'
+import { learningPathContextKey, nativeLessonVisual, normalizeLearningPath } from './learningPath.js'
 
 export async function analyzeCourseFile(file) {
     const base64File = await fileToBase64(file)
@@ -80,7 +80,9 @@ async function requestStudyLesson(course, mastery, action, lesson, example, anch
 
 export async function respondToStudyMessage(course, lesson, options) {
     const response = await requestStudyConversation(course, lesson, options)
-    return response.json()
+    const { visual: value, ...reply } = await response.json()
+    const visual = nativeLessonVisual(value)
+    return { ...reply, ...(visual ? { visual } : {}) }
 }
 
 export async function respondToStudyMessageStream(course, lesson, options) {
@@ -91,9 +93,10 @@ export async function respondToStudyMessageStream(course, lesson, options) {
 async function requestStudyConversation(
     course,
     lesson,
-    { message, history = [], example = '', activityContext, signal, anchors = [] },
+    { message, history = [], example = '', activityContext, signal, anchors = [], currentVisual },
     streaming = false,
 ) {
+    const visual = nativeLessonVisual(currentVisual)
     const response = await fetch('/api/respond-to-study-message', {
         method: 'POST',
         headers: {
@@ -117,6 +120,7 @@ async function requestStudyConversation(
                 response: exchange.response,
             })),
             message,
+            ...(visual ? { currentVisual: visual } : {}),
             ...(activityContext ? { activityContext } : {}),
             ...learningAnchorRequest(anchors, { topic: lesson.topic, concept: lesson.concept, text: message }),
         }),

@@ -1,4 +1,6 @@
 import process from 'node:process'
+import { lessonVisualPrompt } from './_lib/lessonVisualPrompt.js'
+import { logVisualRouting } from '../src/services/visualDiagnostics.js'
 import { formatCoursePosition, inferCoursePosition, isPositionTopicAllowed } from '../src/services/coursePosition.js'
 import { formatLearningAnchors } from '../src/services/studyLearningContext.js'
 import { isPathTopicAllowed, learningPathPosition, lessonKey, lessonOutline, normalizeLearningPath, normalizeLessonVisual } from '../src/services/learningPath.js'
@@ -111,15 +113,13 @@ Use one or two meaningful Markdown section headings (##), short paragraphs, occa
 Do not use HTML, links, images, tables, or code fences. No long lists or quiz questions.
 Do not repeat the course/topic/concept title, mastery, path, or navigation instructions in content; the UI shows them.
 Keep topic and concept labels under 120 characters.
-Optionally specify a visual only when it would aid understanding. Native visuals enhance the complete text explanation; never depend on a visual being displayed.
-Visual types: none, diagram, process, comparison, concept_illustration, generated_image.
-Prefer the native types; generated_image is deferred. For a visual, provide purpose (under 240 characters), data (1-6 objects with a short label under 120 and concise detail under 240 characters), and focus (under 120 characters).
-Diagram, process, and comparison need at least 2 items. Process data must be in teaching order; comparison items describe contrasting concepts.
-For diagram or concept_illustration, optionally include links: [{"from": 0, "to": 1, "label": "supplies energy to"}]. Indices refer to data; include only explicit, accurate directed relationships, at most 8. Without links, objects are shown without connections.
-For concept_illustration, each data item may include one symbol: plant, sun, water, molecule, container, slots, planet, or component. Choose only a fitting simplified metaphor; omit the symbol when none fits. These are schematic objects, not exact structures or quantities. Set focus to the main object's exact label when there is one.
-Never supply HTML, SVG, URLs, image bytes, or scripts. Do not tell the learner a visual is visible.
-Return ONLY valid JSON in this exact shape:
-{"topic": "", "concept": "", "content": ""${advances ? ', "nextLessons": [{"topic": "", "concept": ""}]' : ''}, "visual": {"type": "none"}}
+Actively evaluate whether a native visual would materially improve understanding of this specific concept before selecting visual.type. Do not force visuals for every lesson.
+Prefer a native visual for processes, flows, sequences, cause and effect, spatial relationships, system components, inputs/outputs, transformations, comparisons, physical structure, scientific mechanisms, programming data flow, nested structure, and mathematical structure that benefits from organization.
+Photosynthesis, cellular respiration, gravity/orbits, React state flow, API request/response flow, arrays, scope, props vs state, SQL vs NoSQL, mitosis, and the water cycle should usually receive a native visual when teaching those mechanisms or relationships.
+Short factual recall, pure vocabulary, simple definitions, or concepts where a visual adds no meaningful value may use none.
+${lessonVisualPrompt}
+Do not tell the learner a visual is visible; the complete lesson text must stand alone.
+Return ONLY valid JSON with topic, concept, content${advances ? ', nextLessons (one or two objects with topic and concept)' : ''}, and visual. Select visual using the teaching rules above, including a full native specification when useful or {"type":"none"} otherwise.
         `,
       }),
     })
@@ -147,6 +147,8 @@ Return ONLY valid JSON in this exact shape:
       return res.status(502).json({ error: 'Invalid study lesson response' })
     }
     const visual = normalizeLessonVisual(result.visual)
+    logVisualRouting(process.env.NODE_ENV === 'development', { source: 'lesson', phase: 'response',
+      concept: result.concept, requested: result.visual, normalized: visual, rendered: false })
     const nextSeen = new Set([...seen, lessonKey(result)])
     const nextLessons = (result.nextLessons || []).filter((item) => {
       if (nextSeen.has(lessonKey(item)) || !isPathTopicAllowed(item.topic, position) || (courseScope && item.topic.trim() !== courseScope)) return false

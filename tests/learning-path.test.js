@@ -120,6 +120,29 @@ test('guided course start returns readable lesson, bounded suggestions and a vis
   assert.match(prompt, /Real course evidence overrides AI assumptions/)
 })
 
+test('lesson prompt evaluates visual teaching value, selects native types, and still accepts none', async (t) => {
+  const biology = { topic: 'Photosynthesis', concept: 'Light becomes stored energy', content: 'Plants use light energy to make sugars.' }
+  for (const specification of [{ ...visual, type: 'concept_illustration' }, { type: 'none' }]) {
+    const mock = mockModel(t, { ...biology, visual: specification })
+    const res = await call({ courseName: 'Biology', importantTopics: ['Photosynthesis'], mastery: 40 })
+    assert.equal(res.statusCode, 200)
+    assert.deepEqual(res.body.visual, specification)
+    assert.equal(mock.mock.callCount(), 1)
+    const { input } = JSON.parse(mock.mock.calls[0].arguments[1].body)
+    assert.match(input, /Actively evaluate whether a native visual would materially improve understanding/)
+    assert.match(input, /Do not force visuals for every lesson/)
+    assert.match(input, /Photosynthesis, cellular respiration, gravity\/orbits, React state flow/)
+    assert.match(input, /Short factual recall, pure vocabulary, simple definitions/)
+    assert.match(input, /process: ordered steps/)
+    assert.match(input, /diagram: relationships between parts/)
+    assert.match(input, /comparison: contrasting two or more concepts/)
+    assert.match(input, /concept_illustration: physical\/scientific concepts/)
+    assert.match(input, /generated_image is deferred and cannot render/)
+    assert.doesNotMatch(input, /"visual"\s*:\s*\{\s*"type"\s*:\s*"none"/)
+    mock.mock.restore()
+  }
+})
+
 test('continuation advances a concept without changing mastery or mutating prior path and keeps only a small window', () => {
   const before = structuredClone(course)
   let current = lesson

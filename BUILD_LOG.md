@@ -676,6 +676,17 @@ The goal is for Orbit to move with the learner instead of waiting passively for 
 
 ---
 
+## October 28, 2026 — Native Visual Routing
+
+- Strengthened lesson selection to actively consider whether visuals improve understanding, with mechanisms, processes, systems, spatial relationships, and comparisons favored while recall/vocabulary may remain text-only. Extracted shared native type/schema guidance for both teaching routes and removed the response example that defaulted to none. LessonVisual and its styles are unchanged.
+- Talk It Through now knows native visuals are available, rules out false inability/imaginary-picture language, and defaults to text unless a visual is requested or useful. A validated current visual can be reused; a different explanation can supply a new specification. Optional visual metadata returns alongside the existing response/signal/anchor in one request and uses the existing normalizer. Streaming releases visuals only at validated completion; the bounded completion frame accommodates JSON escapes and reused context without changing field limits.
+- StudySession displays one supplemental visual beneath the discussion using the existing renderer/mobile rules, only after the reply finishes. Invalid metadata preserves text and any previous valid visual; interrupted replies cannot install a new visual. Tool switches retain it, successful simplification/continuation clears it, and refresh does not restore it. Existing lesson resume, discussion persistence, mastery, quiz/activity behavior, and Adaptive Study Path remain unchanged.
+- Added explicitly development-only routing diagnostics for source, response/display phase, concept presence, requested/normalized type, and display status. No concept text, learner payloads, prompts, labels, or credentials are logged.
+- Validation: all 199 tests, full lint, production build, API/service syntax checks, and diff check pass. Added prompt selection/capability coverage, native reuse and alternatives, invalid/none/deferred fallbacks, streaming metadata/framing, completion/cancellation timing, tool/lesson transitions, and refresh boundaries. No validation failures remain. Browser/live Muse, real 320px layout, and physical-device checks were not performed for this routing change; the photosynthesis/request/reuse/alternate/refresh scenario is in the manual checklist.
+- Updated README and Unreleased product notes/manual checks. No dependencies, extra AI/image requests, renderer redesign, database, migrations, historical migration edits, manual SQL, accounts, or new persistent state. Muse Image/image generation and persisted conversation visuals remain deferred.
+
+---
+
 # Next
 
 The next major development steps are:

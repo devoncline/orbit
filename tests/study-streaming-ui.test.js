@@ -15,6 +15,9 @@ const course = { name: 'React', mastery: { overall: 40, topics: { Props: 20 } } 
 const lesson = { topic: 'Props', concept: 'Inputs', content: 'Props supply inputs to components.' }
 const anchor = { type: 'analogy', topic: 'Props', summary: 'Connects props to function arguments.', confidence: 'high' }
 const reply = { response: '## Inputs\n**Props** supply inputs to a component.', signal: 'connection', anchor }
+const nativeVisual = { type: 'diagram', purpose: 'Follow a value from parent to child.', focus: '', data: [
+  { label: 'Parent', detail: 'Supplies an input.' }, { label: 'Child', detail: 'Receives the input as a prop.' },
+], links: [{ from: 0, to: 1, label: 'Passes a prop' }] }
 const props = { course, threadId: 'one', mastery: 40, initialThread: { resume: { lesson } },
   setMastery: () => assert.fail('Conversation must not change mastery'), updateTopicMastery: () => assert.fail('Conversation must not change mastery') }
 
@@ -75,9 +78,10 @@ async function enterMessage(message = 'Are props like function arguments?') {
   })
 }
 
-function mockRequests(t) {
+function mockRequests(t, nextLesson) {
   const requests = []
   t.mock.method(globalThis, 'fetch', async (url, options) => {
+    if (nextLesson && url === '/api/generate-study-lesson') return new Response(JSON.stringify(nextLesson), { headers: { 'Content-Type': 'application/json' } })
     if (url === '/api/generate-study-question') return new Response(JSON.stringify({ topic: 'Props', question: 'What supplies inputs?', answers: [{ text: 'Props', correct: true }], explanation: 'Props supply inputs.' }), { headers: { 'Content-Type': 'application/json' } })
     assert.equal(url, '/api/respond-to-study-message')
     let writer
@@ -127,6 +131,115 @@ test('native visuals follow the active lesson across tool switches and continuat
   assert.match(container.querySelector('.study-subject').textContent, /Lesson 2/)
   assert.match(container.querySelector('.study-path-previous').textContent, /Inputs/)
   assert.equal(container.querySelector('.study-recommendation button').textContent, 'Give me an example')
+})
+
+test('conversation installs one visual only after completion, reuses current context, and keeps it out of resume', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const requests = mockRequests(t)
+  const updates = []
+  const visualLesson = { ...lesson, visual: nativeVisual }
+  await act(async () => root.render(createElement(StudySession, { ...props, initialThread: { resume: { lesson: visualLesson } }, onThreadUpdate: (_id, update) => updates.push(update) })))
+  const pathBefore = container.querySelector('.study-path').textContent
+  await click('Talk it through')
+  assert.equal(container.querySelector('.lesson-visual'), null, 'Text is the default; no automatic duplicate of the lesson visual')
+  await enterMessage('Show me a visual')
+  await click('Send')
+  assert.deepEqual(requests[0].body.currentVisual, nativeVisual)
+  await act(async () => { requests[0].send({ type: 'delta', text: reply.response }); await setImmediate() })
+  await advance(t, 5)
+  assert.equal(container.querySelector('.lesson-visual'), null, 'Text deltas cannot install metadata')
+  await act(async () => { requests[0].send({ type: 'complete', ...reply, visual: nativeVisual }); await setImmediate() })
+  await advance(t, 5)
+  assert.equal(container.querySelectorAll('.lesson-visual').length, 1)
+  const figure = container.querySelector('.study-conversation > .lesson-visual')
+  assert.ok(figure)
+  assert.equal(figure.previousElementSibling.className, 'study-transcript')
+  assert.ok(figure.nextElementSibling.classList.contains('study-composer'))
+  assert.equal(container.querySelector('.study-path').textContent, pathBefore)
+  assert.equal(container.querySelector('.study-mastery').textContent, 'Mastery · 40%')
+  assert.deepEqual(updates.at(-1).resume.lesson, visualLesson)
+  assert.equal(updates.at(-1).resume.conversationVisual, undefined)
+  assert.ok(updates.every((update) => update.resume.conversation.every((exchange) => !exchange.visual)))
+
+  const alternate = { ...nativeVisual, type: 'comparison', purpose: 'Compare who supplies and receives.', links: undefined }
+  await enterMessage('Show me a different visual')
+  await click('Send')
+  await act(async () => { requests[1].send({ type: 'delta', text: reply.response }, { type: 'complete', ...reply, visual: alternate }); await setImmediate() })
+  await advance(t, 5)
+  assert.equal(container.querySelectorAll('.lesson-visual').length, 1)
+  assert.ok(container.querySelector('.lesson-visual-comparison'))
+  await enterMessage('Show me that again')
+  await click('Send')
+  assert.equal(requests[2].body.currentVisual.type, 'comparison')
+  await act(async () => { requests[2].send({ type: 'delta', text: reply.response }, { type: 'complete', ...reply, visual: requests[2].body.currentVisual }); await setImmediate() })
+  await advance(t, 5)
+  assert.equal(container.querySelectorAll('.lesson-visual').length, 1)
+  assert.equal(requests.length, 3, 'One conversation request per message, no render requests')
+  await click('Lesson')
+  assert.ok(container.querySelector('.lesson-visual-diagram'), 'Original lesson visual is unchanged')
+  await click('Talk it through')
+  assert.ok(container.querySelector('.lesson-visual-comparison'), 'Tool switches retain the supplemental visual')
+
+  const savedResume = updates.at(-1).resume
+  await act(async () => root.render(null))
+  await act(async () => root.render(createElement(StudySession, { ...props, initialThread: { resume: savedResume } })))
+  assert.ok(container.querySelector('.lesson-visual-diagram'))
+  await click('Talk it through')
+  assert.equal(container.querySelector('.lesson-visual'), null, 'Refresh restores text and original lesson, not supplemental visuals')
+  assert.ok(container.querySelector('.study-message-orbit .study-content'))
+})
+
+test('invalid visuals leave conversation text intact, failed streams cannot install visuals, and new lessons clear them', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const nextLesson = { ...lesson, concept: 'A new example of props', content: 'A parent passes a title as a prop.' }
+  const requests = mockRequests(t, nextLesson)
+  await renderStudy()
+  await enterMessage('Show me a visual')
+  await click('Send')
+  await act(async () => { requests[0].send({ type: 'delta', text: reply.response }, { type: 'complete', ...reply, visual: { ...nativeVisual, links: [null] } }); await setImmediate() })
+  await advance(t, 5)
+  assert.equal(container.querySelector('.lesson-visual'), null)
+  assert.ok(container.querySelector('.study-message-orbit .study-content'))
+  assert.equal(container.querySelector('[role="alert"]'), null)
+
+  await enterMessage('Try the diagram again')
+  await click('Send')
+  await act(async () => { requests[1].send({ type: 'delta', text: 'Incomplete explanation', visual: nativeVisual }); requests[1].end(); await setImmediate() })
+  await advance(t, 5)
+  assert.equal(container.querySelector('.lesson-visual'), null)
+  assert.ok(container.querySelector('[role="alert"]'))
+  await click('Try again')
+  await act(async () => { requests[2].send({ type: 'delta', text: reply.response }, { type: 'complete', ...reply, visual: nativeVisual }); await setImmediate() })
+  await advance(t, 5)
+  assert.ok(container.querySelector('.lesson-visual-diagram'))
+
+  await enterMessage('Thanks, what does the child receive?')
+  await click('Send')
+  await act(async () => { requests[3].send({ type: 'delta', text: reply.response }, { type: 'complete', ...reply }); await setImmediate() })
+  await advance(t, 5)
+  assert.equal(container.querySelectorAll('.lesson-visual').length, 1, 'A text-only follow-up does not destroy the useful visual')
+  await click('Continue to next lesson')
+  assert.equal(container.querySelector('h1').textContent, nextLesson.concept)
+  await click('Talk it through')
+  assert.equal(container.querySelector('.lesson-visual'), null)
+  assert.equal(container.querySelector('.study-mastery').textContent, 'Mastery · 40%')
+})
+
+test('switching to Quiz during visual reply drain cancels the pending visual without changing mastery', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const requests = mockRequests(t)
+  await renderStudy()
+  await enterMessage('Diagram this differently')
+  await click('Send')
+  const response = 'A parent supplies inputs to the child. '.repeat(8)
+  await act(async () => { requests[0].send({ type: 'delta', text: response }, { type: 'complete', response, signal: 'neutral', visual: nativeVisual }); await setImmediate() })
+  assert.equal(container.querySelector('.lesson-visual'), null, 'Validated metadata waits for the visible reply to finish')
+  await click('Quiz me')
+  await advance(t, 30)
+  await click('Talk it through')
+  assert.equal(container.querySelector('.lesson-visual'), null)
+  assert.equal(container.querySelector('textarea').value, 'Diagram this differently')
+  assert.equal(container.querySelector('.study-mastery').textContent, 'Mastery · 40%')
 })
 
 test('Study shows chunks before completion, keeps thinking, then saves one formatted exchange and anchor for resume', async (t) => {

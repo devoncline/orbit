@@ -1,13 +1,16 @@
 import { MAX_STUDY_RESPONSE_LENGTH } from './studyConversation.js'
 import { suggestedLearningAnchor } from './studyLearningContext.js'
 import { readStreamLines } from './streamLines.js'
+import { nativeLessonVisual } from './learningPath.js'
 
 export async function readStudyConversationStream(response, { signal, onDelta, topic }) {
     let text = ''
     try {
         signal?.throwIfAborted()
         if (!response.headers?.get('content-type')?.includes('application/x-ndjson')) throw new Error('Invalid stream type')
-        for await (const line of readStreamLines(response.body, { signal })) {
+        // Completion includes bounded visual/text/anchor fields and their JSON escapes.
+        // A reused visual comes from context, outside the provider's output-size bound.
+        for await (const line of readStreamLines(response.body, { signal, maxLineLength: 32768 })) {
             if (!line.trim()) continue
             const event = JSON.parse(line)
             if (event?.type === 'delta') {
@@ -21,10 +24,12 @@ export async function readStudyConversationStream(response, { signal, onDelta, t
                     throw new Error('Invalid final reply')
                 }
                 signal?.throwIfAborted()
+                const visual = nativeLessonVisual(event.visual)
                 return {
                     response: event.response,
                     signal: event.signal,
                     ...suggestedLearningAnchor(event.anchor, topic, event.signal),
+                    ...(visual ? { visual } : {}),
                 }
             } else {
                 throw new Error('Invalid or failed stream event')

@@ -25,6 +25,7 @@ import useResultReveal from './useResultReveal'
 import StudyContent from './StudyContent'
 import StudyPath from './StudyPath'
 import LessonVisual from './LessonVisual'
+import { logVisualRouting } from '../services/visualDiagnostics'
 import './StudySession.css'
 
 export default function StudySession({
@@ -72,6 +73,8 @@ export default function StudySession({
     const [lessonError, setLessonError] = useState('')
     const [lessonAttempt, setLessonAttempt] = useState(0)
     const [conversation, setConversation] = useState(resume.conversation)
+    // One supplemental visual per mounted lesson. It is not part of saved exchanges or resume.
+    const [conversationVisual, setConversationVisual] = useState(null)
     const [turnOffset, setTurnOffset] = useState(0)
     const [learningAnchors, setLearningAnchors] = useState(() => retainLearningAnchors([...(course.learningAnchors || []), ...resume.learningAnchors]))
     const [learnerMessage, setLearnerMessage] = useState('')
@@ -107,6 +110,15 @@ export default function StudySession({
     const recommendation = recommendStudyAction({ lesson, activeInteraction, learningPath, example, lessonError, conversation,
         activity, activityError, activityFeedback, activityResponse, answerResult, followUpResult, evaluation, evaluationError, questionError })
     const lastPublished = useRef('')
+
+    useEffect(() => {
+        if (!import.meta.env.DEV || !active || !lesson || !['lesson', 'conversation'].includes(activeInteraction)) return
+        const source = activeInteraction === 'conversation' ? 'conversation' : 'lesson'
+        const requested = source === 'lesson' ? lesson.visual : conversationVisual
+        const normalized = nativeLessonVisual(requested)
+        logVisualRouting(true, { source, phase: 'display', concept: lesson.concept, requested, normalized,
+            rendered: Boolean(normalized) && !loadingLesson })
+    }, [active, activeInteraction, lesson, conversationVisual, loadingLesson])
 
     useEffect(() => { latestContextKey.current = contextKey }, [contextKey])
 
@@ -242,6 +254,7 @@ export default function StudySession({
                 history: conversation,
                 example,
                 activityContext,
+                currentVisual: conversationVisual || lessonVisual,
                 anchors: learningAnchors,
                 signal: controller.signal,
                 onDelta: display.append,
@@ -249,6 +262,8 @@ export default function StudySession({
             await display.finish()
             if (controller.signal.aborted || conversationRequest.current !== controller) return
 
+            const visual = nativeLessonVisual(result.visual)
+            if (visual) setConversationVisual(visual)
             rememberAnchor(result.anchor)
             if (conversation.length === MAX_STUDY_EXCHANGES) {
                 const oldest = conversation[0]
@@ -354,6 +369,7 @@ export default function StudySession({
             if (action === 'simplify') {
                 rememberInteraction('lesson', lesson.concept, lesson.content)
                 setLesson(result)
+                setConversationVisual(null)
             } else {
                 if (example) rememberInteraction('example', lesson.concept, example)
                 setExample(result.content)
@@ -393,6 +409,7 @@ export default function StudySession({
             setThreadContext((current) => ({ positionKey, requestedTopic: current.positionKey === positionKey ? current.requestedTopic : '' }))
             setLearningPath(acceptPathLesson(result, learningPath, lesson, requestedContextKey))
             setLesson(result)
+            setConversationVisual(null)
             // Clear only lesson-specific interactions after a successful transition.
             // Learning anchors, thread history, and course mastery continue independently.
             setExample('')
@@ -626,6 +643,7 @@ export default function StudySession({
                                 ))}
                             </div>
 
+                            <LessonVisual visual={conversationVisual} />
                             <form className="study-composer" onSubmit={sendMessage} aria-busy={loadingConversation}>
                                 <label className="study-composer-label" htmlFor={`study-message-${id}`}>Ask about this idea or share a connection</label>
                                 <textarea

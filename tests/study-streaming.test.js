@@ -4,11 +4,15 @@ import { setImmediate } from 'node:timers/promises'
 import { test } from 'node:test'
 import handler from '../api/respond-to-study-message.js'
 import { respondToStudyMessageStream } from '../src/services/meta.js'
+import { nativeLessonVisual } from '../src/services/learningPath.js'
 
 const course = { name: 'React', nextTask: 'Explore props', importantTopics: ['Props'], mastery: { overall: 40, topics: { Props: 20 } } }
 const lesson = { topic: 'Props', concept: 'Inputs', content: 'A parent supplies inputs to a component.' }
 const anchor = { type: 'analogy', topic: 'Props', summary: 'Connects props to function arguments.', confidence: 'high' }
 const reply = { response: 'Yes, props supply **inputs** to a component.', signal: 'connection', anchor }
+const visual = { type: 'diagram', purpose: 'Follow component inputs.', focus: '', data: [
+  { label: 'Parent', detail: 'Supplies a value.' }, { label: 'Child', detail: 'Receives the value as a prop.' },
+], links: [{ from: 0, to: 1, label: 'Passes a prop' }] }
 const requestBody = { courseName: course.name, lesson, message: 'Like function arguments?', stream: true }
 const encode = (text) => new TextEncoder().encode(text)
 const sse = (event) => `event: ${event.type}\r\ndata: ${JSON.stringify(event)}\r\n\r\n`
@@ -86,6 +90,54 @@ test('JSON escapes, Unicode, CRLF and SSE frames survive single-byte network spl
   assert.equal(events().filter((event) => event.type === 'delta').map((event) => event.text).join(''), result.response)
   assert.deepEqual(events().at(-1), { type: 'complete', ...result })
   assert.doesNotMatch(events().filter((event) => event.type === 'delta').map((event) => event.text).join(''), /signal|anchor|confidence|\\ud83d/)
+})
+
+test('streaming API releases normalized native visuals only with validated completion, including reuse', async (t) => {
+  for (const extra of [{ visual: { ...visual, url: 'PRIVATE_ASSET' } }, { reuseVisual: true }, { visual: { ...visual, data: [] } }]) {
+    const upstream = controlledStream()
+    const mock = t.mock.method(globalThis, 'fetch', async () => new Response(upstream.body, { headers: { 'Content-Type': 'text/event-stream' } }))
+    const { req, res, events } = httpExchange({ ...requestBody, lesson: { ...lesson, visual }, message: 'Show me a visual' })
+    const pending = handler(req, res)
+    const json = JSON.stringify({ ...reply, ...extra })
+    upstream.push(sse(delta(json)))
+    await setImmediate()
+    assert.ok(events().every((event) => event.type === 'delta'))
+    assert.equal(events().map((event) => event.text).join(''), reply.response)
+    assert.doesNotMatch(res.chunks.join(''), /PRIVATE_ASSET|"visual"|"links"/)
+    upstream.push(sse(complete(json)))
+    await pending
+    const expected = extra.reuseVisual ? visual : nativeLessonVisual(extra.visual)
+    assert.deepEqual(events().at(-1), { type: 'complete', ...reply, ...(expected ? { visual: expected } : {}) })
+    assert.equal(mock.mock.callCount(), 1)
+    mock.mock.restore()
+  }
+})
+
+test('streaming client retains valid visuals, drops invalid visuals, and leaves text-only replies unchanged', async (t) => {
+  for (const value of [visual, undefined, { type: 'none' }, { ...visual, type: 'generated_image' }, { ...visual, data: [] }, { ...visual, links: [null] }]) {
+    const payload = ndjson({ type: 'delta', text: reply.response }, { type: 'complete', ...reply, visual: value })
+    const mock = t.mock.method(globalThis, 'fetch', async () => new Response(payload, { headers: { 'Content-Type': 'application/x-ndjson' } }))
+    const deltas = []
+    const result = await respondToStudyMessageStream(course, lesson, { message: 'Show me a visual', currentVisual: visual, onDelta: (text) => deltas.push(text) })
+    const expected = nativeLessonVisual(value)
+    assert.deepEqual(result, { ...reply, ...(expected ? { visual: expected } : {}) })
+    assert.deepEqual(deltas, [reply.response])
+    assert.deepEqual(JSON.parse(mock.mock.calls[0].arguments[1].body).currentVisual, visual)
+    mock.mock.restore()
+  }
+})
+
+test('completion framing fits a maximum reused visual with JSON escapes without relaxing field bounds', async (t) => {
+  const large = { ...visual, purpose: '\u0001'.repeat(240), focus: '\u0001'.repeat(120),
+    data: Array.from({ length: 6 }, (_, index) => ({ label: `${index}${'\u0001'.repeat(119)}`, detail: '\u0001'.repeat(240) })),
+    links: Array.from({ length: 8 }, (_, index) => ({ from: index % 6, to: (index + 1) % 6, label: '\u0001'.repeat(120) })) }
+  const finalReply = { response: '\u0001'.repeat(900), signal: 'neutral', visual: large }
+  const normalized = nativeLessonVisual(large)
+  const payload = ndjson({ type: 'delta', text: finalReply.response }, { type: 'complete', ...finalReply })
+  assert.ok(JSON.stringify({ type: 'complete', ...finalReply }).length > 16384)
+  t.mock.method(globalThis, 'fetch', async () => new Response(payload, { headers: { 'Content-Type': 'application/x-ndjson' } }))
+  const result = await respondToStudyMessageStream(course, lesson, { message: 'Show me a visual' })
+  assert.deepEqual(result, { ...finalReply, visual: normalized })
 })
 
 test('provider failures, truncation and invalid final replies never emit a completion or provider error details', async (t) => {
