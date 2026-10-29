@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import handler from '../api/generate-study-lesson.js'
-import { acceptPathLesson, learningPathContextKey, learningPathPosition, normalizeLearningPath, normalizeLessonVisual } from '../src/services/learningPath.js'
+import { acceptPathLesson, learningPathContextKey, learningPathPosition, normalizeLearningPath, normalizeLessonVisual, recommendStudyAction, studyPathView } from '../src/services/learningPath.js'
 import { generateNextStudyLesson } from '../src/services/meta.js'
 import { compactThreadResume, createLearnerSnapshot, loadLearnerMemory, saveLearnerMemory } from '../src/services/learnerMemory.js'
 import { applyPositionOverride, coursePositionRequest, localDate } from '../src/services/coursePosition.js'
@@ -11,6 +11,89 @@ const lesson = { topic: 'Perspectives', concept: 'Different explanations of beha
 const next = { topic: 'Research', concept: 'Testing explanations', content: '## Testing an idea\nPsychologists collect evidence to test explanations.\n\n## An example\nCompare recall after different amounts of sleep.' }
 const visual = { type: 'comparison', purpose: 'Compare explanations of one behavior.', data: [{ label: 'Cognitive', detail: 'Attention and memory' }, { label: 'Social', detail: 'Influence of other people' }], focus: 'Same behavior, different explanations' }
 const request = { courseName: course.name, mastery: 40, topicMastery: {}, ...coursePositionRequest(course), learningPath: normalizeLearningPath() }
+
+test('path display uses the actual lesson and safely normalizes missing, malformed and stale path data', () => {
+  assert.deepEqual(studyPathView(undefined, lesson, '12345678'), {
+    step: 1, visited: [], current: { topic: lesson.topic, concept: lesson.concept }, upcoming: [], isCurrent: false,
+  })
+  const malformed = studyPathView({ step: -1, visited: [null, {}], upcoming: 'bad' }, null, '12345678')
+  assert.equal(malformed.step, 1)
+  assert.equal(malformed.current, null)
+  assert.deepEqual(malformed.visited, [])
+  assert.deepEqual(malformed.upcoming, [])
+  const path = { step: 4, visited: [lesson], upcoming: [next, lesson], contextKey: '12345678' }
+  const before = structuredClone(path)
+  const view = studyPathView(path, next, '12345678')
+  assert.equal(view.step, 4)
+  assert.equal(view.current.concept, next.concept)
+  assert.equal(view.visited.at(-1).concept, lesson.concept)
+  assert.deepEqual(view.upcoming, []) // Neither the current nor an already visited lesson is next.
+  assert.deepEqual(studyPathView({ ...path, upcoming: [next] }, lesson, '87654321').upcoming, [])
+  assert.deepEqual(path, before)
+})
+
+test('recommendations guide reading, examples and applying without inferring that a lesson was read or mastered', () => {
+  assert.equal(recommendStudyAction(), null)
+  const fresh = recommendStudyAction({ lesson })
+  assert.equal(fresh.action, 'example')
+  assert.match(fresh.hint, /Start with the lesson above/)
+  assert.equal(recommendStudyAction({ lesson, example: 'A concrete example' }).action, 'activity')
+  assert.equal(recommendStudyAction({ lesson, conversation: [{ message: 'Why?', response: 'Because…' }] }).action, 'activity')
+  assert.equal(recommendStudyAction({ lesson, learningPath: { understood: true } }).action, 'continue')
+  assert.equal(recommendStudyAction({ lesson, activeInteraction: 'history' }).action, 'lesson')
+})
+
+test('activity recommendations use matching submitted feedback and keep drafts focused on the activity', () => {
+  const activityFeedback = { learnerResponse: 'My attempt', feedback: 'A useful connection.', signal: 'applied_understanding' }
+  const state = { lesson, activeInteraction: 'activity', activityFeedback, activityResponse: 'My attempt ' }
+  assert.equal(recommendStudyAction(state).action, 'quiz')
+  assert.equal(recommendStudyAction({ ...state, activityResponse: 'A revised attempt' }).action, null)
+  assert.equal(recommendStudyAction({ ...state, activityFeedback: null }).action, null)
+  assert.equal(recommendStudyAction({ ...state, activityError: { action: 'generate' } }).action, 'retryActivity')
+  assert.equal(recommendStudyAction({ ...state, activeInteraction: 'lesson', learningPath: { understood: true } }).action, 'continue')
+  for (const signal of ['misconception', 'partial_understanding']) {
+    const needsSupport = { ...state, activityFeedback: { ...activityFeedback, signal } }
+    assert.equal(recommendStudyAction(needsSupport).action, 'example')
+    assert.equal(recommendStudyAction({ ...needsSupport, activeInteraction: 'example', example: 'Another way to see it' }).action, 'activity')
+  }
+})
+
+test('failed example and activity generation recommend a retry instead of assuming content exists', () => {
+  const example = recommendStudyAction({ lesson, activeInteraction: 'example', lessonError: 'Unavailable' })
+  assert.equal(example.action, 'example')
+  assert.equal(example.label, 'Try the example again')
+  assert.equal(recommendStudyAction({ lesson, activeInteraction: 'activity', activityError: { action: 'generate' } }).action, 'retryActivity')
+  const draft = { lesson, activeInteraction: 'activity', activity: { title: 'Try it' }, activityResponse: 'An attempt', activityError: { action: 'evaluate' } }
+  assert.equal(recommendStudyAction(draft).action, null)
+  assert.match(recommendStudyAction(draft).hint, /share what you notice/)
+})
+
+test('quiz recovery outranks readiness and activity feedback, including failures and returning from another tool', () => {
+  const state = { lesson, activeInteraction: 'quiz', answerResult: 'incorrect', learningPath: { understood: true }, evaluation: {} }
+  assert.equal(recommendStudyAction(state).action, null)
+  assert.match(recommendStudyAction(state).hint, /follow-up/)
+  assert.equal(recommendStudyAction({ ...state, evaluationError: 'Unavailable' }).action, 'retryExplanation')
+  assert.equal(recommendStudyAction({ ...state, activeInteraction: 'lesson' }).action, 'recover')
+  assert.equal(recommendStudyAction({ ...state, followUpResult: 'incorrect' }).action, 'conversation')
+  assert.equal(recommendStudyAction({ ...state, followUpResult: 'incorrect', activeInteraction: 'conversation' }).action, null)
+  assert.equal(recommendStudyAction({ ...state, followUpResult: 'correct' }).action, 'continue')
+  assert.equal(recommendStudyAction({ lesson, activeInteraction: 'quiz', answerResult: 'correct' }).action, 'continue')
+  assert.equal(recommendStudyAction({ lesson, activeInteraction: 'quiz' }).action, null)
+  assert.equal(recommendStudyAction({ lesson, activeInteraction: 'quiz', questionError: 'Unavailable' }).action, 'retryQuiz')
+})
+
+test('progression and resume derive guidance from retained evidence without changing mastery or saving recommendations', () => {
+  const before = structuredClone(course)
+  const path = acceptPathLesson({ ...lesson, nextLessons: [next] }, undefined, undefined, learningPathContextKey(course))
+  const saved = compactThreadResume({ lesson, learningPath: { ...path, understood: true }, recommendation: { action: 'quiz' } })
+  assert.equal(recommendStudyAction(saved).action, 'continue')
+  assert.equal(saved.recommendation, undefined)
+  const advanced = { lesson: next, learningPath: acceptPathLesson(next, saved.learningPath, lesson, learningPathContextKey(course)) }
+  assert.equal(recommendStudyAction(advanced).action, 'example')
+  assert.equal(studyPathView(advanced.learningPath, next, learningPathContextKey(course)).step, 2)
+  assert.equal(recommendStudyAction(compactThreadResume({ lesson })).action, 'example')
+  assert.deepEqual(course, before)
+})
 
 async function call(body) {
   const res = { statusCode: 200, status(code) { this.statusCode = code; return this }, json(body) { this.body = body; return this } }

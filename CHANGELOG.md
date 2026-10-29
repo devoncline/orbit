@@ -4,6 +4,7 @@
 
 ### Improvements
 
+- Study now keeps your place visible in a compact, expandable path and suggests one useful next step as you explore, try an activity, or practice. Study tools stay close at hand without crowding the lesson, with a smaller path on phones and easy access to "I lost you." You can still choose another tool or continue whenever you are ready.
 - Active lessons now share Orbit's page alignment, heading scale, and companion placement, with a clean background and compact Study threads / New thread controls. Removed the extra Back home row and session banners on other pages; Home and Learn still return to the active lesson.
 - Learn now offers a guided lesson flow with a clear current lesson, optional readiness check, and a way to continue without taking a quiz. A compact, expandable learning path adapts to course materials, learner corrections, and study context; reading or moving forward does not increase mastery.
 - Lessons, examples, and Muse replies are easier to scan with short sections, key concepts, and concrete examples. Conversations keep the current lesson in view, and recent lesson progress resumes in the same browser.
@@ -33,6 +34,7 @@
 
 ### Manual test checklist
 
+- On desktop and a narrow phone, expand the path and Study tools, switch among all five interactions, and return to the lesson. Check the suggestion after an example, activity feedback, a revised response, incorrect quiz/follow-up answers, and successful practice. Try failed requests and retries, continue twice, then refresh and resume; lesson position and mastery should remain correct, with no horizontal scrolling or required sequence.
 - Open an existing lesson on desktop and a phone. Check the companion, long title wrapping, lesson actions, progression controls, and Study threads / New thread placement. Expand/collapse history, open/close the new-thread form, and navigate through Calendar, Library, Home, and Learn; the same lesson should resume without global banners. Check narrower phones, keyboard focus, and reduced motion.
 - Start Introduction to Psychology without materials. Check for a useful introductory concept, readable sections, one suggested next lesson, and a collapsed path. Mark "I understand" and continue twice without a quiz; mastery should stay unchanged. Refresh and check the current lesson, lesson number, and small path resume.
 - Ask a question, request an example, use "Let me try it", and try correct/incorrect quizzes before continuing. Check that the lesson title and next-lesson action remain visible; the first quiz in a new lesson should cover that lesson. Check "Next question" still runs adaptive practice.

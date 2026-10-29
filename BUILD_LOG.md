@@ -611,6 +611,15 @@ The goal is for Orbit to move with the learner instead of waiting passively for 
 
 ---
 
+## October 28, 2026 — Adaptive Study Path
+
+- Reused the existing lesson path, interaction state, and local resume to show a compact current/visited/next treatment. The full bounded path expands on demand; phones hide the visited preview and keep the current step and one next idea visible. All five interactions remain in a collapsible Study tools control, with "I lost you" directly on the lesson.
+- Added deterministic next-step guidance after the content. Fresh lessons encourage reading then an example; examples suggest applying the idea; submitted activity feedback suggests a quiz or extra support; incorrect quizzes prioritize the existing adapted explanation/follow-up; successful practice or self-reported readiness can suggest continuation. Unfinished responses stay focused on their form. Every recommendation is optional, and moving through lessons still does not award mastery.
+- Kept existing request cancellation, thread resume, history, lesson progression, mastery fallbacks, lesson prompts, and visual metadata. First-question retries now retain the current lesson context. No new requests to select guidance, dependencies, database, migrations, manual SQL, or persistence schema changes. Visual rendering and image generation remain deferred.
+- Validation: all 130 tests, full lint, production build, and diff checks pass. Coverage includes missing/stale path data, current/visited/next rendering, recommendation precedence, edited activity responses, generation retries, and saved-path progression/resume, alongside the existing mocked lesson/activity/conversation/quiz suites. Browser inspection of the already running local app covered desktop and a 320px responsive preview, long-title wrapping, collapsed/expanded study tools, conversation access, and returning to the same lesson, with no visible horizontal overflow. Live Meta-backed flows, a physical phone, and complete keyboard/reduced-motion checks remain manual; the existing tab uses plain Vite without an API proxy. No new dev server was started.
+
+---
+
 # Next
 
 The next major development steps are:

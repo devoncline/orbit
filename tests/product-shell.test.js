@@ -175,8 +175,15 @@ test('guided Study exposes course, lesson, readiness and continuation while the 
   assert.match(html, /<strong>Perspectives<\/strong>/)
   assert.match(html, />I understand<\/button>/)
   assert.match(html, />Continue to next lesson<\/button>/)
-  assert.match(html, /Up next · <strong>Testing an idea<\/strong>/)
-  assert.match(html, /<details class="study-path"><summary>View learning path<\/summary>/)
+  assert.match(html, /Next idea<\/small><span>Testing an idea<\/span>/)
+  assert.match(html, /<details class="study-path"><summary aria-label="View learning path, step 1">/)
+  assert.match(html, /aria-current="step"><small>Step 1 · Now<\/small><strong>Explaining behavior/)
+  assert.match(html, /<details class="study-tools"><summary>Study tools/)
+  assert.match(html, /Suggested next/)
+  assert.match(html, /Start with the lesson above/)
+  assert.equal((html.match(/class="study-primary-action"/g) || []).length, 1)
+  assert.ok(html.indexOf('study-path') < html.indexOf('study-active-panel'))
+  assert.ok(html.indexOf('study-recommendation') > html.indexOf('A useful lens'))
   assert.match(html, /Mastery · 40%/)
   assert.match(html, /Let me try it/)
   assert.match(html, /Talk it through/)
@@ -194,6 +201,23 @@ test('resuming after course evidence changes preserves the current lesson but hi
   assert.match(html, /Explaining behavior/)
   assert.match(html, /latest course context/)
   assert.doesNotMatch(html, /STALE_SUGGESTION/)
+})
+
+test('a resumed path shows visited, current and tentative next concepts without claiming completion', () => {
+  const course = { name: 'Psychology' }
+  const previous = { topic: 'Perspectives', concept: 'Explaining behavior', content: 'Different lenses.' }
+  const lesson = { topic: 'Research', concept: 'Testing an idea', content: 'Compare an idea with evidence.' }
+  const contextKey = learningPathContextKey(course)
+  const first = acceptPathLesson(previous, undefined, undefined, contextKey)
+  const learningPath = acceptPathLesson({ ...lesson, nextLessons: [{ topic: 'Research', concept: 'Comparing groups' }] }, first, previous, contextKey)
+  const html = renderToStaticMarkup(createElement(StudySession, {
+    course, mastery: 40, initialThread: { resume: { lesson, learningPath } },
+  }))
+  assert.match(html, /study-path-previous"><small>Visited<\/small><span>Explaining behavior/)
+  assert.match(html, /Step 2 · Now<\/small><strong>Testing an idea/)
+  assert.match(html, /Next idea<\/small><span>Comparing groups/)
+  assert.match(html, /Visited lessons are separate from mastery/)
+  assert.doesNotMatch(html, /<details[^>]*open|Completed|Mastered/)
 })
 
 test('teaching formatting renders headings, paragraphs, bullets and emphasis while HTML and image syntax stay inert', () => {
