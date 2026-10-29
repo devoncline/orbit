@@ -527,7 +527,7 @@ The current focus is strengthening the core learning experience and preparing a 
 - [x] Atmospheric learning environment
 - [x] Responsive desktop/mobile UI
 - [ ] Deeper adaptive learning behavior
-- [ ] Dynamic learning visuals
+- [x] Native lesson visuals (V1)
 - [ ] Expanded Orbit character interactions
 - [ ] Additional attention-aware learning tools
 - [ ] Final hackathon demo polish
@@ -562,26 +562,18 @@ It may eventually insert review steps, skip material that is already understood,
 
 ## Dynamic Learning Visuals
 
-A major direction for Orbit is making explanations more visual and interactive.
+Lessons can now include lightweight native illustrations using Orbit's blue/violet surfaces, luminous outlines, and simplified objects. They share the lesson space with the explanation on wide screens and stack beneath it on phones. The existing course/lesson context and compact path lead into the lesson; collapsed Study tools and one suggested action follow it.
 
-The goal is not simply to place a static diagram inside a card.
+- **Diagrams** show rounded nodes and only explicitly supplied directed relationships.
+- **Processes** preserve the supplied teaching order, flowing across short desktop sequences and vertically on smaller screens or longer sequences.
+- **Comparisons** use distinct concept areas that stack on phones.
+- **Concept illustrations** compose schematic plants, suns, water droplets, molecules, containers, slots, planets, or components. Without a fitting symbol, labelled abstract objects provide a conservative view of the supplied concepts.
 
-Instead, parts of the learning environment could eventually respond to what is being taught.
+The existing lesson response supplies `visual: { type, purpose, data, focus }`. Optional allowlisted `data[].symbol` values select native objects; optional `links: [{ from, to, label }]` use zero-based data indices for diagrams and concept illustrations. A matching focus label places the main illustration object at the center. The shared normalizer bounds and validates these fields on API responses, local resume, and rendering. No relationships or subject-specific symbols are guessed from keywords. Older metadata still works without connections.
 
-Visuals may help show:
+Labels, details, and connections are readable HTML; the decorative SVG repeats no screen-reader announcements. Visuals are static and require no animation to understand. Missing, malformed, unsupported, `none`, and `generated_image` visuals produce no panel and leave the lesson usable. Rendering adds no requests, external images, or dependencies.
 
-- relationships between concepts
-- sequences and processes
-- spatial ideas
-- changes over time
-- cause and effect
-- abstract ideas that are difficult to explain with text alone
-
-Orbit itself may eventually participate in those visuals.
-
-The learning system is already being structured so lessons can eventually describe when a visual would help, but visual generation and rendering are still future work.
-
-The goal is for visual learning to feel integrated into the experience rather than added on top of it.
+Muse Image, generated imagery, interactive simulations, and animated teaching scenes remain future work. Save to notes is also deferred: current local storage supports learning resume, not a notebook. There is no new takeaway field or AI request for a summary.
 
 ---
 

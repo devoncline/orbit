@@ -665,6 +665,17 @@ The goal is for Orbit to move with the learner instead of waiting passively for 
 
 ---
 
+## October 28, 2026 — Native Visual Learning V1
+
+- Added a reusable LessonVisual renderer for diagrams, ordered processes, comparisons, and schematic concept illustrations. Native HTML/CSS/SVG objects use Orbit's blue/violet palette, luminous outlines, restrained gradients, and occasional warm/green accents. Readable HTML labels, details, and directed relationship descriptions accompany the decorative SVG. Visuals are static, so reduced motion needs no alternate illustration.
+- Moved the existing compact path beneath the course/lesson context and before the lesson title. Lessons with visuals share text and illustration columns on wide screens; tablet and phone layouts stack them before learning controls. The companion becomes a small desktop guide and is hidden on illustrated phone lessons while its existing accessible request status remains. Collapsed Study tools follow the active content; adaptive recommendations, progression, mastery, and interaction handlers are preserved.
+- Extended the existing visual metadata with optional allowlisted symbols and bounded, explicitly labelled links. The existing lesson prompt explains those fields and process ordering; no extra request was added. API responses, native rendering, and the existing local resume projection use the same validation. Legacy metadata remains usable without invented relationships; invalid, absent, unsupported, none, and generated-image visuals render no panel. Schematic molecule objects deliberately avoid suggesting atom counts or bond geometry.
+- Validation: all 186 tests, full lint, production build, API/service syntax checks, and diff checks pass. Added rendering/fallback/accessibility coverage, malformed-link and markup rejection, API/resume round trips, and a mounted Study test that switches tools and continues to a new visual without extra requests or mastery changes. Existing recommendation and Study Path coverage remains passing.
+- Inspected an isolated sample-lesson page in the existing local Chrome/Vite session at exact iframe viewport widths of 320, 768, and 1440 pixels. Measured document widths matched those viewports. Reviewed concept illustrations, stacked phone comparisons, vertical phone/tablet processes, and desktop diagrams; tightened diagram spacing afterward. Temporary review files were removed. No live Muse generation, real screen-reader, physical-device, or complete keyboard/reduced-motion walkthrough was performed; these remain in the manual checklist. No new dev server was started and saved learner data was not changed by the review page.
+- Updated README and Unreleased product notes/manual checks. No new dependencies, external illustration assets, image calls/routes, accounts, database, migrations, historical migration edits, manual SQL, or new persistence mechanism. Muse Image/generated imagery, a notebook/save action, a new takeaway summary, and animated teaching scenes remain deferred.
+
+---
+
 # Next
 
 The next major development steps are:

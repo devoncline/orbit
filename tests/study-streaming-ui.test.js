@@ -97,6 +97,38 @@ async function renderStudy(onThreadUpdate) {
   await click('Talk it through')
 }
 
+test('native visuals follow the active lesson across tool switches and continuation without extra requests', async (t) => {
+  const visual = { type: 'comparison', purpose: 'Compare component inputs.', focus: '', data: [
+    { label: 'Props', detail: 'Supplied by a parent.' }, { label: 'State', detail: 'Remembered by the component.' },
+  ] }
+  const nextLesson = { topic: 'Props', concept: 'Passing inputs', content: 'A parent passes inputs to a child.',
+    visual: { type: 'process', purpose: 'Follow an input.', focus: '', data: [
+      { label: 'Parent', detail: 'Supplies an input.' }, { label: 'Child', detail: 'Receives that input.' },
+    ] } }
+  const requests = []
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    requests.push({ url, body: JSON.parse(options.body) })
+    assert.equal(url, '/api/generate-study-lesson', 'Rendering must not request an image or another service')
+    return new Response(JSON.stringify(nextLesson), { headers: { 'Content-Type': 'application/json' } })
+  })
+  await act(async () => root.render(createElement(StudySession, { ...props, initialThread: { resume: { lesson: { ...lesson, visual } } } })))
+  assert.ok(container.querySelector('.lesson-visual-comparison'))
+  assert.equal(requests.length, 0)
+  await click('Talk it through')
+  assert.equal(container.querySelector('.lesson-visual'), null)
+  await click('Lesson')
+  assert.ok(container.querySelector('.lesson-visual-comparison'))
+  assert.equal(requests.length, 0)
+  await click('Continue to next lesson')
+  assert.equal(requests.length, 1)
+  assert.equal(requests[0].body.action, 'next')
+  assert.ok(container.querySelector('.lesson-visual-process'))
+  assert.equal(container.querySelector('.lesson-visual-comparison'), null)
+  assert.match(container.querySelector('.study-subject').textContent, /Lesson 2/)
+  assert.match(container.querySelector('.study-path-previous').textContent, /Inputs/)
+  assert.equal(container.querySelector('.study-recommendation button').textContent, 'Give me an example')
+})
+
 test('Study shows chunks before completion, keeps thinking, then saves one formatted exchange and anchor for resume', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] })
   const requests = mockRequests(t)

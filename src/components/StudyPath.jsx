@@ -1,5 +1,5 @@
 export default function StudyPath({ path }) {
-    if (!path.current) return null
+    if (!path?.current) return null
     const previous = path.visited.at(-1)
     const next = path.upcoming[0]
     return <details className="study-path">

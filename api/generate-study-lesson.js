@@ -111,9 +111,12 @@ Use one or two meaningful Markdown section headings (##), short paragraphs, occa
 Do not use HTML, links, images, tables, or code fences. No long lists or quiz questions.
 Do not repeat the course/topic/concept title, mastery, path, or navigation instructions in content; the UI shows them.
 Keep topic and concept labels under 120 characters.
-Optionally specify a visual only when it would aid understanding. This is a future teaching specification, not an image to display now.
+Optionally specify a visual only when it would aid understanding. Native visuals enhance the complete text explanation; never depend on a visual being displayed.
 Visual types: none, diagram, process, comparison, concept_illustration, generated_image.
-For a visual, provide purpose (under 240 characters), data (at most 6 objects with label under 120 and detail under 240 characters), and focus (under 120 characters).
+Prefer the native types; generated_image is deferred. For a visual, provide purpose (under 240 characters), data (1-6 objects with a short label under 120 and concise detail under 240 characters), and focus (under 120 characters).
+Diagram, process, and comparison need at least 2 items. Process data must be in teaching order; comparison items describe contrasting concepts.
+For diagram or concept_illustration, optionally include links: [{"from": 0, "to": 1, "label": "supplies energy to"}]. Indices refer to data; include only explicit, accurate directed relationships, at most 8. Without links, objects are shown without connections.
+For concept_illustration, each data item may include one symbol: plant, sun, water, molecule, container, slots, planet, or component. Choose only a fitting simplified metaphor; omit the symbol when none fits. These are schematic objects, not exact structures or quantities. Set focus to the main object's exact label when there is one.
 Never supply HTML, SVG, URLs, image bytes, or scripts. Do not tell the learner a visual is visible.
 Return ONLY valid JSON in this exact shape:
 {"topic": "", "concept": "", "content": ""${advances ? ', "nextLessons": [{"topic": "", "concept": ""}]' : ''}, "visual": {"type": "none"}}

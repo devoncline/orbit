@@ -15,7 +15,7 @@ import { rememberLearningAnchor, anchorAfterFollowUp, retainLearningAnchors } fr
 import { compactThreadResume } from '../services/learnerMemory'
 import { applyPositionOverride, readPositionStatement } from '../services/coursePosition'
 import { selectStudyInteraction, studyThreadMetadata } from '../services/studyThreads'
-import { acceptPathLesson, learningPathContextKey, normalizeLearningPath, recommendStudyAction, studyPathView } from '../services/learningPath'
+import { acceptPathLesson, learningPathContextKey, nativeLessonVisual, normalizeLearningPath, recommendStudyAction, studyPathView } from '../services/learningPath'
 import CoursePosition from './CoursePosition'
 import OrbitStage from './OrbitStage'
 import { OrbitResponse } from './OrbitSignal'
@@ -24,6 +24,7 @@ import { createStreamDisplay } from '../services/streamDisplay'
 import useResultReveal from './useResultReveal'
 import StudyContent from './StudyContent'
 import StudyPath from './StudyPath'
+import LessonVisual from './LessonVisual'
 import './StudySession.css'
 
 export default function StudySession({
@@ -64,6 +65,8 @@ export default function StudySession({
     const contextKey = learningPathContextKey(course, today)
     const latestContextKey = useRef(contextKey)
     const pathView = studyPathView(learningPath, lesson, contextKey)
+    const lessonVisual = nativeLessonVisual(lesson?.visual)
+    const illustratedLesson = activeInteraction === 'lesson' && Boolean(lessonVisual)
     const [example, setExample] = useState('')
     const [loadingLesson, setLoadingLesson] = useState(resume.lesson ? '' : 'lesson')
     const [lessonError, setLessonError] = useState('')
@@ -509,25 +512,15 @@ export default function StudySession({
     }
 
     return (
-        <section className="study-session">
+        <section className={`study-session${illustratedLesson ? ' study-session-illustrated' : ''}`}>
             <header className="study-context">
-                <p className="study-topic">{course.name}{lesson ? ` · Lesson ${learningPath.step}` : ''}</p>
+                <p className="study-subject"><span>{course.name}</span>{lesson && <span>Lesson {learningPath.step}</span>}</p>
+                {lesson && <StudyPath path={pathView} />}
                 {lesson && lesson.topic !== lesson.concept && <p className="study-topic">{lesson.topic}</p>}
                 <h1>{lesson?.concept || course.nextTask || course.name}</h1>
             </header>
             <OrbitStage thinking={busy} thinkingContext={studyThinkingContext({ loadingLesson, loadingConversation, loadingActivity, loadingQuestion, loadingEvaluation })} />
             <div className="study-body">
-            {lesson && <StudyPath path={pathView} />}
-            {lesson && <details className="study-tools" ref={studyTools}>
-                <summary>Study tools <span>· {{ lesson: 'Lesson', example: 'Example', activity: 'Activity', conversation: 'Talk it through', quiz: 'Quiz', history: 'Earlier work' }[activeInteraction]}</span></summary>
-                <div className="study-lesson-actions" role="group" aria-label="Choose a study interaction">
-                <button disabled={busy} aria-pressed={activeInteraction === 'lesson'} onClick={() => openInteraction('lesson')}>Lesson</button>
-                <button disabled={busy} aria-pressed={activeInteraction === 'example'} onClick={() => example ? openInteraction('example') : changeLesson('example')}>Give me an example</button>
-                <button disabled={busy} aria-pressed={activeInteraction === 'activity'} onClick={() => activity ? openInteraction('activity') : runActivity('generate')}>Let me try it</button>
-                <button disabled={busy} aria-pressed={activeInteraction === 'conversation'} onClick={() => openInteraction('conversation')}>Talk it through</button>
-                <button disabled={Boolean(loadingLesson || loadingQuestion || loadingEvaluation)} aria-pressed={activeInteraction === 'quiz'} onClick={() => studyQuestion ? openInteraction('quiz') : loadQuestion(lesson)}>Quiz me</button>
-                </div>
-            </details>}
             <section className="study-active-panel" data-study-interaction={activeInteraction} ref={panel} tabIndex={-1} aria-label="Current study interaction">
             {resumeSummary && <p className="orbit-muted">Last time: {resumeSummary} Your lesson is ready to revisit; activities and quizzes start fresh.</p>}
             {positionChanged && <div className="study-position-notice" role="status">Your course starting point is updated. Continue when you are ready to use it.
@@ -545,9 +538,14 @@ export default function StudySession({
                         <OrbitResponse pending={loadingLesson === 'lesson' || loadingLesson === 'simplify'} context={loadingLesson === 'simplify' ? 'simplify' : 'lesson'} reveal={resultReveal}>
                         <div>
                             {lesson && <>
-                            <StudyContent content={lesson.content} />
+                            <div className={`study-lesson-composition${lessonVisual ? ' study-lesson-composition-visual' : ''}`}>
+                                <StudyContent content={lesson.content} />
+                                <LessonVisual visual={lessonVisual} />
+                            </div>
+                            <div className="study-lesson-support">
                             <button disabled={busy} onClick={() => changeLesson('simplify')}>I lost you</button>
                             <CoursePosition course={course} today={today} showSummary={false} onChange={onPositionChange ? changePosition : undefined} />
+                            </div>
                             </>}
                         </div>
                         </OrbitResponse>
@@ -763,6 +761,16 @@ export default function StudySession({
             )}
             </OrbitResponse>
             </section>
+            {lesson && <details className="study-tools" ref={studyTools}>
+                <summary>Study tools <span>· {{ lesson: 'Lesson', example: 'Example', activity: 'Activity', conversation: 'Talk it through', quiz: 'Quiz', history: 'Earlier work' }[activeInteraction]}</span></summary>
+                <div className="study-lesson-actions" role="group" aria-label="Choose a study interaction">
+                <button disabled={busy} aria-pressed={activeInteraction === 'lesson'} onClick={() => openInteraction('lesson')}>Lesson</button>
+                <button disabled={busy} aria-pressed={activeInteraction === 'example'} onClick={() => example ? openInteraction('example') : changeLesson('example')}>Give me an example</button>
+                <button disabled={busy} aria-pressed={activeInteraction === 'activity'} onClick={() => activity ? openInteraction('activity') : runActivity('generate')}>Let me try it</button>
+                <button disabled={busy} aria-pressed={activeInteraction === 'conversation'} onClick={() => openInteraction('conversation')}>Talk it through</button>
+                <button disabled={Boolean(loadingLesson || loadingQuestion || loadingEvaluation)} aria-pressed={activeInteraction === 'quiz'} onClick={() => studyQuestion ? openInteraction('quiz') : loadQuestion(lesson)}>Quiz me</button>
+                </div>
+            </details>}
             {lesson && <nav className="study-continuation" aria-label="Lesson progression" aria-busy={busy}>
                 <div className="study-recommendation">
                     <p><strong>Suggested next</strong><span>{recommendation.hint}</span></p>

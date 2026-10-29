@@ -128,15 +128,31 @@ export function isPathTopicAllowed(topic, position) {
   return !position.timeline.some((item) => item.period === 'future' && item.topic.toLowerCase() === text(topic).toLowerCase())
 }
 
-// Reserved teaching metadata only: no URLs, executable markup, image requests, or rendering.
+// Bounded teaching data shared by the API, local resume, and native renderer.
+// Symbols and directed links are explicit; never infer them from subject keywords.
 export function normalizeLessonVisual(value) {
   if (!value || !['none', 'diagram', 'process', 'comparison', 'concept_illustration', 'generated_image'].includes(value.type)) return null
   if (value.type === 'none') return { type: 'none' }
-  if (!text(value.purpose, 240) || !Array.isArray(value.data) || value.data.length > 6) return null
-  if (value.data.some((item) => !text(item?.label) || !text(item?.detail, 240))) return null
+  const minimum = ['diagram', 'process', 'comparison'].includes(value.type) ? 2 : 1
+  if (!text(value.purpose, 240) || !Array.isArray(value.data) || value.data.length < minimum || value.data.length > 6) return null
+  if (!Array.from(value.data).every((item) => text(item?.label) && text(item?.detail, 240))) return null
+  const symbols = ['plant', 'sun', 'water', 'molecule', 'container', 'slots', 'planet', 'component']
+  if (value.links !== undefined && (!Array.isArray(value.links) || value.links.length > 8 ||
+    !Array.from(value.links).every((link) => Number.isInteger(link?.from) && Number.isInteger(link?.to) &&
+      link.from >= 0 && link.to >= 0 && link.from < value.data.length && link.to < value.data.length &&
+      link.from !== link.to && text(link.label, 120)))) return null
   return {
     type: value.type, purpose: text(value.purpose, 240),
-    data: value.data.map((item) => ({ label: text(item.label), detail: text(item.detail, 240) })),
+    data: value.data.map((item) => ({ label: text(item.label), detail: text(item.detail, 240),
+      ...(symbols.includes(item.symbol) ? { symbol: item.symbol } : {}) })),
     focus: text(value.focus),
+    ...(value.links?.length && ['diagram', 'concept_illustration'].includes(value.type)
+      ? { links: value.links.map((link) => ({ from: link.from, to: link.to, label: text(link.label, 120) })) } : {}),
   }
+}
+
+// Keep unavailable renderers out of both the visual slot and its surrounding layout.
+export function nativeLessonVisual(value) {
+  const visual = normalizeLessonVisual(value)
+  return visual && ['diagram', 'process', 'comparison', 'concept_illustration'].includes(visual.type) ? visual : null
 }
