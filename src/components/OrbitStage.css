@@ -8,25 +8,64 @@
 .orbit-stage-companion {
   position: absolute;
   width: var(--orbit-page-companion-width);
-  height: auto;
+  aspect-ratio: 1;
   right: 0;
   top: var(--orbit-page-companion-top);
   pointer-events: none;
-  filter: drop-shadow(0 28px 32px rgb(2 5 14 / 32%));
 }
+
+.orbit-stage-thinking-motion { transform-origin: 50% 68%; }
+.orbit-stage-artwork { display: block; width: 100%; height: auto; filter: drop-shadow(0 28px 32px rgb(2 5 14 / 32%)); }
+.orbit-thoughts { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.orbit-thought-fragment {
+  position: absolute;
+  top: 4%;
+  left: 2%;
+  max-width: calc(100% - 24px);
+  padding: 4px 8px;
+  border-radius: 8px;
+  color: var(--orbit-text, var(--text-h));
+  background: var(--orbit-surface, var(--bg));
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.orbit-thought-fragment:nth-child(2) { top: 15%; left: 8%; }
+.orbit-thought-trail { position: absolute; top: 26%; left: 24%; display: flex; gap: 9px; align-items: center; color: var(--orbit-accent, var(--accent)); }
+.orbit-thought-trail i { display: block; width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: .35; }
+.orbit-thought-trail i:nth-child(2) { width: 4px; height: 4px; margin-top: -5px; }
+.orbit-thought-trail i:nth-child(3) { width: 5px; height: 5px; margin-top: -10px; }
+.orbit-thinking-status { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 .orbit-stage-object { position: relative; z-index: 1; width: 76%; margin-top: 10%; }
 .orbit-stage-annotations { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
 .orbit-stage-annotations > * { pointer-events: auto; }
 .orbit-stage-with-visual .orbit-stage-companion { width: 46%; top: 40%; right: -2%; }
+.orbit-stage-with-visual .orbit-thoughts { inset: 40% 0 0 54%; }
+.orbit-stage-with-visual .orbit-thought-fragment:nth-child(2) { display: none; }
 
 @keyframes orbit-stage-drift {
   0%, 100% { transform: translate(-3px, 5px) rotate(-.6deg); }
   50% { transform: translate(3px, -7px) rotate(.6deg); }
 }
 
+@keyframes orbit-thought-drift {
+  0%, 100% { transform: translate(0, 2px); opacity: .76; }
+  50% { transform: translate(3px, -2px); opacity: 1; }
+}
+
+@keyframes orbit-thought-travel {
+  0%, 100% { transform: translate(-3px, 2px); opacity: .18; }
+  55% { transform: translate(3px, -2px); opacity: .55; }
+}
+
 @media (prefers-reduced-motion: no-preference) {
-  .orbit-stage-companion { animation: orbit-stage-drift 10s ease-in-out infinite; }
+  .orbit-stage-artwork { animation: orbit-stage-drift 10s ease-in-out infinite; }
+  .orbit-thought-fragment { animation: orbit-thought-drift 7s ease-in-out infinite; }
+  .orbit-thought-fragment:nth-child(2) { animation-delay: -3.5s; }
+  .orbit-thought-trail i { animation: orbit-thought-travel 4.8s ease-in-out infinite; }
+  .orbit-thought-trail i:nth-child(2) { animation-delay: -.8s; }
+  .orbit-thought-trail i:nth-child(3) { animation-delay: -1.6s; }
 }
 
 @media (max-width: 760px) {
@@ -34,4 +73,7 @@
   .orbit-stage-with-visual { height: 280px; }
   .orbit-stage-with-visual .orbit-stage-companion { width: 42%; top: 35%; right: 0; }
   .orbit-stage-object { width: 72%; margin-top: 0; }
+  .orbit-thought-fragment { top: 12px; left: 12px; max-width: 40%; }
+  .orbit-thought-fragment:nth-child(2) { display: none; }
+  .orbit-thought-trail { top: 40%; left: 20%; }
 }

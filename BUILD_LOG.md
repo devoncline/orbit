@@ -620,6 +620,16 @@ The goal is for Orbit to move with the learner instead of waiting passively for 
 
 ---
 
+## October 28, 2026 — Orbit Thinking Experience
+
+- Extended the shared Orbit stage with deterministic context for lessons, examples, activities, replies, quizzes, evaluations, and Home recommendations. The existing request flag controls the thinking face independently of visible content, leaving room for future streaming without implementing it.
+- Added a slow, restrained sway and a brief return from the current angle to rest using browser transform animation. Two short drifting thoughts and three faint traveling dots fit inside the existing stage; mobile shows one thought without increasing stage height. Reduced motion leaves the face and context static, including when the preference changes during a request.
+- Replaced duplicated visual loading paragraphs with one persistent polite status per stage; decorative thoughts and dots stay out of the accessibility tree. Existing lesson content, request handlers, cancellation, retries, mastery, and local persistence are unchanged. No new API calls, backend changes, dependencies, artwork, database changes, migrations, or manual SQL.
+- Validation: all 139 tests, full lint, production build, and diff check pass. New coverage checks context selection, asset switching, single-status rendering, visible content during thinking, interrupted settling, quick retries, preference changes, and motion cleanup. An initial syntax error in a new test was corrected before the successful runs.
+- Browser visual verification could not be completed: Windows Computer Use stopped because it could not confidently determine the browser URL. The temporary local review page was removed. Desktop/mobile animation appearance, real screen-reader announcements, and live AI loading/failure flows remain manual. No new dev server was started. Updated Unreleased notes and the manual checklist.
+
+---
+
 # Next
 
 The next major development steps are:

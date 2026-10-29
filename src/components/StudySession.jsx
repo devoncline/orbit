@@ -18,6 +18,7 @@ import { selectStudyInteraction, studyThreadMetadata } from '../services/studyTh
 import { acceptPathLesson, learningPathContextKey, normalizeLearningPath, recommendStudyAction, studyPathView } from '../services/learningPath'
 import CoursePosition from './CoursePosition'
 import OrbitStage from './OrbitStage'
+import { studyThinkingContext } from './orbitThinking'
 import StudyContent from './StudyContent'
 import StudyPath from './StudyPath'
 import './StudySession.css'
@@ -461,7 +462,7 @@ export default function StudySession({
                 {lesson && lesson.topic !== lesson.concept && <p className="study-topic">{lesson.topic}</p>}
                 <h1>{lesson?.concept || course.nextTask || course.name}</h1>
             </header>
-            <OrbitStage thinking={Boolean(loadingLesson || loadingConversation || loadingActivity || loadingQuestion || loadingEvaluation)} />
+            <OrbitStage thinking={busy} thinkingContext={studyThinkingContext({ loadingLesson, loadingConversation, loadingActivity, loadingQuestion, loadingEvaluation })} />
             <div className="study-body">
             {lesson && <StudyPath path={pathView} />}
             {lesson && <details className="study-tools" ref={studyTools}>
@@ -503,15 +504,6 @@ export default function StudySession({
                         </div>
                     )}
 
-                    {loadingLesson && loadingLesson !== 'next' && (
-                        <p role="status">
-                            {loadingLesson === 'lesson'
-                                ? 'Orbit is preparing a short lesson...'
-                                : loadingLesson === 'simplify'
-                                    ? 'Orbit is trying a different approach...'
-                                    : 'Orbit is finding an example...'}
-                        </p>
-                    )}
                     {lessonError && <p role="alert">{lessonError}</p>}
                     {!lesson && !loadingLesson && (
                         <button onClick={retryLesson}>Try again</button>
@@ -553,13 +545,6 @@ export default function StudySession({
                                         )}
                                     </div>
                                 </>
-                            )}
-                            {loadingActivity && (
-                                <p role="status">
-                                    {loadingActivity === 'generate'
-                                        ? 'Orbit is preparing something to try...'
-                                        : 'Orbit is looking at your response...'}
-                                </p>
                             )}
                             {activityError && <p role="alert">{activityError.message}</p>}
                             {activityError?.action === 'generate' && (
@@ -609,7 +594,6 @@ export default function StudySession({
                                     {conversationError ? 'Try again' : 'Send'}
                                 </button>
                             </form>
-                            {loadingConversation && <p role="status">Orbit is thinking about that...</p>}
                             {conversationError && <p role="alert">{conversationError}</p>}
                         </div>
                     )}
@@ -618,7 +602,6 @@ export default function StudySession({
 
             {stage === 'quiz' && <h3>Question {questionNumber}{studyQuestion?.topic && studyQuestion.topic !== lesson?.topic ? ` · ${studyQuestion.topic}` : ''}</h3>}
 
-            {loadingQuestion && <p role="status">Orbit is building your question...</p>}
             {questionError && (
                 <div role="alert">
                     <p>{questionError}</p>
@@ -654,10 +637,6 @@ export default function StudySession({
                         <button disabled={busy} onClick={loadNextQuestion}>
                             Next question
                         </button>
-                    )}
-
-                    {answerResult === 'incorrect' && loadingEvaluation && (
-                        <p>Orbit is changing the approach...</p>
                     )}
 
                     {answerResult === 'incorrect' && evaluation && (
@@ -741,7 +720,6 @@ export default function StudySession({
                         {loadingLesson === 'next' ? 'Preparing next lesson…' : progressionError ? 'Try next lesson again' : 'Continue to next lesson'}
                     </button>}
                 </div>
-                {loadingLesson === 'next' && <p role="status">Orbit is choosing the next useful lesson…</p>}
                 {progressionError && <p role="alert">{progressionError}</p>}
             </nav>}
             </div>

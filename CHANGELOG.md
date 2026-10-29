@@ -4,6 +4,7 @@
 
 ### Improvements
 
+- Orbit now thinks with a gentle sway, brief contextual thoughts, and a quiet trail of dots while preparing lessons, examples, activities, replies, and questions. The compact mobile treatment keeps lessons in focus, with static visuals for reduced motion and concise screen-reader announcements.
 - Study now keeps your place visible in a compact, expandable path and suggests one useful next step as you explore, try an activity, or practice. Study tools stay close at hand without crowding the lesson, with a smaller path on phones and easy access to "I lost you." You can still choose another tool or continue whenever you are ready.
 - Active lessons now share Orbit's page alignment, heading scale, and companion placement, with a clean background and compact Study threads / New thread controls. Removed the extra Back home row and session banners on other pages; Home and Learn still return to the active lesson.
 - Learn now offers a guided lesson flow with a clear current lesson, optional readiness check, and a way to continue without taking a quiz. A compact, expandable learning path adapts to course materials, learner corrections, and study context; reading or moving forward does not increase mastery.
@@ -34,6 +35,7 @@
 
 ### Manual test checklist
 
+- Try each Study action and Home recommendation loading on desktop and a narrow phone. Check that Orbit keeps its thinking face throughout the wait, then settles smoothly, including fast retries and failures. Confirm two short thoughts on desktop, one on mobile, no overlap or horizontal scrolling, unchanged lesson/draft content, and a single loading announcement. Enable reduced motion before and during a request; all motion should stop while the thinking face and context remain visible.
 - On desktop and a narrow phone, expand the path and Study tools, switch among all five interactions, and return to the lesson. Check the suggestion after an example, activity feedback, a revised response, incorrect quiz/follow-up answers, and successful practice. Try failed requests and retries, continue twice, then refresh and resume; lesson position and mastery should remain correct, with no horizontal scrolling or required sequence.
 - Open an existing lesson on desktop and a phone. Check the companion, long title wrapping, lesson actions, progression controls, and Study threads / New thread placement. Expand/collapse history, open/close the new-thread form, and navigate through Calendar, Library, Home, and Learn; the same lesson should resume without global banners. Check narrower phones, keyboard focus, and reduced motion.
 - Start Introduction to Psychology without materials. Check for a useful introductory concept, readable sections, one suggested next lesson, and a collapsed path. Mark "I understand" and continue twice without a quiz; mastery should stay unchanged. Refresh and check the current lesson, lesson number, and small path resume.

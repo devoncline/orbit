@@ -17,6 +17,7 @@ let StudyThreads
 let App
 let StudySession
 let StudyContent
+let OrbitStage
 
 before(async () => {
   server = await createServer({ server: { middlewareMode: true, watch: null }, appType: 'custom' })
@@ -28,6 +29,7 @@ before(async () => {
   App = (await server.ssrLoadModule('/src/App.jsx')).default
   StudySession = (await server.ssrLoadModule('/src/components/StudySession.jsx')).default
   StudyContent = (await server.ssrLoadModule('/src/components/StudyContent.jsx')).default
+  OrbitStage = (await server.ssrLoadModule('/src/components/OrbitStage.jsx')).default
 })
 after(async () => { await server?.close() })
 
@@ -37,6 +39,52 @@ const courses = Array.from({ length: 7 }, (_, index) => ({
   mastery: { overall: 40, topics: {} },
 }))
 const renderHome = (spaces) => renderToStaticMarkup(createElement(HomeScreen, { courses: spaces, recommendedCourse: spaces[0] }))
+
+test('thinking retains the existing asset, bounds decorative fragments, and exposes only one loading status', () => {
+  const html = renderToStaticMarkup(createElement(OrbitStage, { thinking: true, thinkingContext: 'example' }))
+  assert.match(html, /orbit-teaching-tilt-transparent.png/)
+  assert.doesNotMatch(html, /orbit-hero-asset-transparent.png/)
+  assert.match(html, /class="orbit-thoughts" aria-hidden="true"/)
+  assert.equal((html.match(/class="orbit-thought-fragment"/g) || []).length, 2)
+  assert.match(html, /finding a clearer angle/)
+  assert.match(html, /matching an example/)
+  assert.match(html, /class="orbit-thought-trail"><i><\/i><i><\/i><i><\/i>/)
+  assert.equal((html.match(/role="status"/g) || []).length, 1)
+  assert.match(html, /class="orbit-thinking-status" role="status" aria-live="polite" aria-atomic="true">Orbit is finding an example/)
+  assert.doesNotMatch(html, /class="orbit-stage orbit-stage-study" aria-hidden/)
+})
+
+test('resting restores the smiling asset and clears thinking UI even when context is retained', () => {
+  const html = renderToStaticMarkup(createElement(OrbitStage, { thinking: false, thinkingContext: 'example' }))
+  assert.match(html, /orbit-hero-asset-transparent.png/)
+  assert.doesNotMatch(html, /orbit-teaching-tilt-transparent.png|orbit-thought-fragment|finding an example/)
+  assert.match(html, /role="status" aria-live="polite" aria-atomic="true"><\/span>/)
+})
+
+test('visible content does not end thinking and visual slots remain accessible', () => {
+  const html = renderToStaticMarkup(createElement(OrbitStage, {
+    thinking: true, thinkingContext: 'lesson', annotations: createElement('span', null, 'Useful annotation'),
+  }, createElement('p', null, 'Partial lesson')))
+  assert.match(html, /role="group" aria-label="Visual explanation"/)
+  assert.match(html, /orbit-teaching-tilt-transparent.png/)
+  assert.match(html, /Partial lesson/)
+  assert.match(html, /Useful annotation/)
+  assert.match(html, /Orbit is preparing a short lesson/)
+})
+
+test('initial Study loading uses the shared status and Home keeps its action available while thinking', () => {
+  const html = renderToStaticMarkup(createElement(StudySession, { course: courses[0], mastery: 40 }))
+  assert.equal((html.match(/Orbit is preparing a short lesson/g) || []).length, 1)
+  assert.match(html, /orbit-teaching-tilt-transparent.png/)
+  assert.match(html, /finding the next idea/)
+  assert.doesNotMatch(html, /<p role="status">Orbit/)
+  const home = renderToStaticMarkup(createElement(HomeScreen, { courses: [courses[0]], recommendedCourse: courses[0], loadingRecommendation: true }))
+  assert.equal((home.match(/role="status"/g) || []).length, 1)
+  assert.match(home, /Orbit is updating your recommendation/)
+  assert.match(home, /checking your progress/)
+  assert.match(home, /Show me idea 1/)
+  assert.doesNotMatch(home, /disabled/)
+})
 
 test('zero spaces offers all three ways to begin without a recommendation or invented work', () => {
   const html = renderHome([])

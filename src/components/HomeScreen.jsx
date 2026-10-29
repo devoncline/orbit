@@ -37,11 +37,10 @@ export default function HomeScreen({
               {reason && <p className="home-reason">{reason}</p>}
               <button className="orbit-button orbit-button-primary" onClick={() => onContinue(recommendedCourse)}>{learningAction(nextAction, recommendedCourse.name, resuming)}</button>
               <CoursePosition course={recommendedCourse} today={today} onChange={onPositionChange} showSummary={false} />
-              <p className="home-status" role="status">{loadingRecommendation ? 'Updating recommendation…' : ''}</p>
             </div>
           )}
         </div>
-        <OrbitStage variant="home" thinking={loadingRecommendation} />
+        <OrbitStage variant="home" thinking={loadingRecommendation} thinkingContext="recommendation" />
       </section>
       {!empty && (
         <div className="home-support">
