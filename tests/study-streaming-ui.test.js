@@ -5,6 +5,7 @@ import { act, createElement, StrictMode } from 'react'
 import { Window } from 'happy-dom'
 import { createServer } from 'vite'
 import { loadLearnerMemory, saveLearnerMemory } from '../src/services/learnerMemory.js'
+import { generatedLessonVisual } from '../src/services/learningPath.js'
 import { STREAM_DISPLAY_INTERVAL } from '../src/services/streamDisplay.js'
 import { getThinkingCopy } from '../src/components/orbitThinking.js'
 import { readFile } from 'node:fs/promises'
@@ -81,6 +82,7 @@ async function enterMessage(message = 'Are props like function arguments?') {
 function mockRequests(t, nextLesson) {
   const requests = []
   t.mock.method(globalThis, 'fetch', async (url, options) => {
+    if (url === '/api/generate-lesson-image') return new Response(JSON.stringify({ url: 'https://images.example.test/lesson.webp' }));
     if (nextLesson && url === '/api/generate-study-lesson') return new Response(JSON.stringify(nextLesson), { headers: { 'Content-Type': 'application/json' } })
     if (url === '/api/generate-study-question') return new Response(JSON.stringify({ topic: 'Props', question: 'What supplies inputs?', answers: [{ text: 'Props', correct: true }], explanation: 'Props supply inputs.' }), { headers: { 'Content-Type': 'application/json' } })
     assert.equal(url, '/api/respond-to-study-message')
@@ -101,7 +103,7 @@ async function renderStudy(onThreadUpdate) {
   await click('Talk it through')
 }
 
-test('native visuals follow the active lesson across tool switches and continuation without extra requests', async (t) => {
+test('generated visuals follow the active lesson across tool switches without duplicate generation', async (t) => {
   const visual = { type: 'comparison', purpose: 'Compare component inputs.', focus: '', data: [
     { label: 'Props', detail: 'Supplied by a parent.' }, { label: 'State', detail: 'Remembered by the component.' },
   ] }
@@ -112,22 +114,23 @@ test('native visuals follow the active lesson across tool switches and continuat
   const requests = []
   t.mock.method(globalThis, 'fetch', async (url, options) => {
     requests.push({ url, body: JSON.parse(options.body) })
-    assert.equal(url, '/api/generate-study-lesson', 'Rendering must not request an image or another service')
+    if (url === '/api/generate-lesson-image') return new Response(JSON.stringify({ url: 'https://images.example.test/lesson.webp' }));
+    assert.equal(url, '/api/generate-study-lesson')
     return new Response(JSON.stringify(nextLesson), { headers: { 'Content-Type': 'application/json' } })
   })
   await act(async () => root.render(createElement(StudySession, { ...props, initialThread: { resume: { lesson: { ...lesson, visual } } } })))
-  assert.ok(container.querySelector('.lesson-visual-comparison'))
-  assert.equal(requests.length, 0)
+  assert.ok(container.querySelector('.lesson-visual-generated_image'))
+  assert.equal(requests.length, 1)
   await click('Talk it through')
   assert.equal(container.querySelector('.lesson-visual'), null)
   await click('Lesson')
-  assert.ok(container.querySelector('.lesson-visual-comparison'))
-  assert.equal(requests.length, 0)
-  await click('Continue to next lesson')
+  assert.ok(container.querySelector('.lesson-visual-generated_image'))
   assert.equal(requests.length, 1)
-  assert.equal(requests[0].body.action, 'next')
-  assert.ok(container.querySelector('.lesson-visual-process'))
-  assert.equal(container.querySelector('.lesson-visual-comparison'), null)
+  await click('Continue to next lesson')
+  assert.equal(requests.length, 3)
+  assert.equal(requests[1].body.action, 'next')
+  assert.ok(container.querySelector('.lesson-visual-generated_image'))
+  assert.match(container.querySelector('.lesson-visual-purpose').textContent, /Follow an input/)
   assert.match(container.querySelector('.study-subject').textContent, /Lesson 2/)
   assert.match(container.querySelector('.study-path-previous').textContent, /Inputs/)
   assert.equal(container.querySelector('.study-recommendation button').textContent, 'Give me an example')
@@ -163,7 +166,7 @@ test('conversation installs one visual only after completion, reuses current con
   assert.equal(container.querySelector('.lesson-visual'), null, 'Text is the default; no automatic duplicate of the lesson visual')
   await enterMessage('Show me a visual')
   await click('Send')
-  assert.deepEqual(requests[0].body.currentVisual, nativeVisual)
+  assert.deepEqual(requests[0].body.currentVisual, generatedLessonVisual(nativeVisual))
   await act(async () => { requests[0].send({ type: 'delta', text: reply.response }); await setImmediate() })
   await advance(t, 5)
   assert.equal(container.querySelector('.lesson-visual'), null, 'Text deltas cannot install metadata')
@@ -186,23 +189,23 @@ test('conversation installs one visual only after completion, reuses current con
   await act(async () => { requests[1].send({ type: 'delta', text: reply.response }, { type: 'complete', ...reply, visual: alternate }); await setImmediate() })
   await advance(t, 5)
   assert.equal(container.querySelectorAll('.lesson-visual').length, 1)
-  assert.ok(container.querySelector('.lesson-visual-comparison'))
+  assert.ok(container.querySelector('.lesson-visual-generated_image'))
   await enterMessage('Show me that again')
   await click('Send')
-  assert.equal(requests[2].body.currentVisual.type, 'comparison')
+  assert.equal(requests[2].body.currentVisual.composition, 'comparison')
   await act(async () => { requests[2].send({ type: 'delta', text: reply.response }, { type: 'complete', ...reply, visual: requests[2].body.currentVisual }); await setImmediate() })
   await advance(t, 5)
   assert.equal(container.querySelectorAll('.lesson-visual').length, 1)
   assert.equal(requests.length, 3, 'One conversation request per message, no render requests')
   await click('Lesson')
-  assert.ok(container.querySelector('.lesson-visual-diagram'), 'Original lesson visual is unchanged')
+  assert.ok(container.querySelector('.lesson-visual-generated_image'), 'Original lesson visual is unchanged')
   await click('Talk it through')
-  assert.ok(container.querySelector('.lesson-visual-comparison'), 'Tool switches retain the supplemental visual')
+  assert.ok(container.querySelector('.lesson-visual-generated_image'), 'Tool switches retain the supplemental visual')
 
   const savedResume = updates.at(-1).resume
   await act(async () => root.render(null))
   await act(async () => root.render(createElement(StudySession, { ...props, initialThread: { resume: savedResume } })))
-  assert.ok(container.querySelector('.lesson-visual-diagram'))
+  assert.ok(container.querySelector('.lesson-visual-generated_image'))
   await click('Talk it through')
   assert.equal(container.querySelector('.lesson-visual'), null, 'Refresh restores text and original lesson, not supplemental visuals')
   assert.ok(container.querySelector('.study-message-orbit .study-content'))
@@ -230,7 +233,7 @@ test('invalid visuals leave conversation text intact, failed streams cannot inst
   await click('Try again')
   await act(async () => { requests[2].send({ type: 'delta', text: reply.response }, { type: 'complete', ...reply, visual: nativeVisual }); await setImmediate() })
   await advance(t, 5)
-  assert.ok(container.querySelector('.lesson-visual-diagram'))
+  assert.ok(container.querySelector('.lesson-visual-generated_image'))
 
   await enterMessage('Thanks, what does the child receive?')
   await click('Send')

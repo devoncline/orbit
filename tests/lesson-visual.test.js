@@ -4,7 +4,7 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { createServer } from 'vite'
 import { Window } from 'happy-dom'
-import { acceptPathLesson, learningPathContextKey, nativeLessonVisual, normalizeLessonVisual, recommendStudyAction } from '../src/services/learningPath.js'
+import { acceptPathLesson, learningPathContextKey, generatedLessonVisual, nativeLessonVisual, normalizeLessonVisual, recommendStudyAction } from '../src/services/learningPath.js'
 import { compactThreadResume } from '../src/services/learnerMemory.js'
 import handler from '../api/generate-study-lesson.js'
 import { lessonVisualComposition, visualConnector } from '../src/services/lessonVisualComposition.js'
@@ -22,7 +22,7 @@ const plant = { type: 'concept_illustration', purpose: 'Light supplies energy fo
 
 before(async () => {
   server = await createServer({ server: { middlewareMode: true, watch: null }, appType: 'custom' })
-  LessonVisual = (await server.ssrLoadModule('/src/components/LessonVisual.jsx')).default
+  LessonVisual = (await server.ssrLoadModule('/src/components/LegacyLessonVisual.jsx')).default
   StudySession = (await server.ssrLoadModule('/src/components/StudySession.jsx')).default
   StudyPath = (await server.ssrLoadModule('/src/components/StudyPath.jsx')).default
   dom = new Window()
@@ -138,7 +138,7 @@ test('StudySession places context and path before the lesson, visuals before too
 })
 
 test('lessons without usable visuals preserve content, tools, and recommendation without illustrated layout', () => {
-  for (const value of [undefined, { type: 'none' }, { ...visual, type: 'generated_image' }, { ...visual, data: [] }]) {
+  for (const value of [undefined, { type: 'none' }, { ...visual, data: [] }]) {
     const body = render(StudySession, { course, mastery: 40, initialThread: { resume: { lesson: { ...lesson, visual: value } } } })
     assert.equal(body.querySelector('.lesson-visual, .study-session-illustrated'), null)
     assert.ok(body.textContent.includes(lesson.content))
@@ -153,8 +153,8 @@ test('optional symbols and relationships survive the existing API and resume pro
   const res = { status(code) { this.code = code; return this }, json(body) { this.body = body; return this } }
   await handler({ method: 'POST', body: { courseName: 'React', mastery: 40 } }, res)
   assert.equal(res.code, 200)
-  assert.deepEqual(res.body.visual, plant)
-  assert.deepEqual(compactThreadResume({ lesson: res.body }).lesson.visual, plant)
+  assert.deepEqual(res.body.visual, generatedLessonVisual(plant))
+  assert.deepEqual(compactThreadResume({ lesson: res.body }).lesson.visual, generatedLessonVisual(plant))
 })
 
 test('process symbols and explicit interval labels replace numbered cards without inventing notes', () => {

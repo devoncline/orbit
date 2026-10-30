@@ -2,7 +2,7 @@ import { retainStudyExchanges } from './studyConversation.js'
 import { readStudyConversationStream } from './studyConversationStream.js'
 import { learningAnchorRequest } from './studyLearningContext.js'
 import { coursePositionRequest, inferCoursePosition, localDate } from './coursePosition.js'
-import { learningPathContextKey, nativeLessonVisual, normalizeLearningPath } from './learningPath.js'
+import { learningPathContextKey, generatedLessonVisual, normalizeLearningPath } from './learningPath.js'
 
 export async function analyzeCourseFile(file) {
     const base64File = await fileToBase64(file)
@@ -81,7 +81,7 @@ async function requestStudyLesson(course, mastery, action, lesson, example, anch
 export async function respondToStudyMessage(course, lesson, options) {
     const response = await requestStudyConversation(course, lesson, options)
     const { visual: value, ...reply } = await response.json()
-    const visual = nativeLessonVisual(value)
+    const visual = generatedLessonVisual(value)
     return { ...reply, ...(visual ? { visual } : {}) }
 }
 
@@ -96,7 +96,7 @@ async function requestStudyConversation(
     { message, history = [], example = '', activityContext, signal, anchors = [], currentVisual },
     streaming = false,
 ) {
-    const visual = nativeLessonVisual(currentVisual)
+    const visual = generatedLessonVisual(currentVisual)
     const response = await fetch('/api/respond-to-study-message', {
         method: 'POST',
         headers: {

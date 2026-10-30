@@ -4,7 +4,7 @@ import { setImmediate } from 'node:timers/promises'
 import { test } from 'node:test'
 import handler from '../api/respond-to-study-message.js'
 import { respondToStudyMessageStream } from '../src/services/meta.js'
-import { nativeLessonVisual } from '../src/services/learningPath.js'
+import { generatedLessonVisual } from '../src/services/learningPath.js'
 
 const course = { name: 'React', nextTask: 'Explore props', importantTopics: ['Props'], mastery: { overall: 40, topics: { Props: 20 } } }
 const lesson = { topic: 'Props', concept: 'Inputs', content: 'A parent supplies inputs to a component.' }
@@ -106,7 +106,7 @@ test('streaming API releases normalized native visuals only with validated compl
     assert.doesNotMatch(res.chunks.join(''), /PRIVATE_ASSET|"visual"|"links"/)
     upstream.push(sse(complete(json)))
     await pending
-    const expected = extra.reuseVisual ? visual : nativeLessonVisual(extra.visual)
+    const expected = extra.reuseVisual ? generatedLessonVisual(visual) : generatedLessonVisual(extra.visual)
     assert.deepEqual(events().at(-1), { type: 'complete', ...reply, ...(expected ? { visual: expected } : {}) })
     assert.equal(mock.mock.callCount(), 1)
     mock.mock.restore()
@@ -119,10 +119,10 @@ test('streaming client retains valid visuals, drops invalid visuals, and leaves 
     const mock = t.mock.method(globalThis, 'fetch', async () => new Response(payload, { headers: { 'Content-Type': 'application/x-ndjson' } }))
     const deltas = []
     const result = await respondToStudyMessageStream(course, lesson, { message: 'Show me a visual', currentVisual: visual, onDelta: (text) => deltas.push(text) })
-    const expected = nativeLessonVisual(value)
+    const expected = generatedLessonVisual(value)
     assert.deepEqual(result, { ...reply, ...(expected ? { visual: expected } : {}) })
     assert.deepEqual(deltas, [reply.response])
-    assert.deepEqual(JSON.parse(mock.mock.calls[0].arguments[1].body).currentVisual, visual)
+    assert.deepEqual(JSON.parse(mock.mock.calls[0].arguments[1].body).currentVisual, generatedLessonVisual(visual))
     mock.mock.restore()
   }
 })
@@ -132,7 +132,7 @@ test('completion framing fits a maximum reused visual with JSON escapes without 
     data: Array.from({ length: 6 }, (_, index) => ({ label: `${index}${'\u0001'.repeat(119)}`, detail: '\u0001'.repeat(240) })),
     links: Array.from({ length: 8 }, (_, index) => ({ from: index % 6, to: (index + 1) % 6, label: '\u0001'.repeat(120) })) }
   const finalReply = { response: '\u0001'.repeat(900), signal: 'neutral', visual: large }
-  const normalized = nativeLessonVisual(large)
+  const normalized = generatedLessonVisual(large)
   const payload = ndjson({ type: 'delta', text: finalReply.response }, { type: 'complete', ...finalReply })
   assert.ok(JSON.stringify({ type: 'complete', ...finalReply }).length > 16384)
   t.mock.method(globalThis, 'fetch', async () => new Response(payload, { headers: { 'Content-Type': 'application/x-ndjson' } }))

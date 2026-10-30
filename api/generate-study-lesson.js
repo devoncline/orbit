@@ -3,7 +3,7 @@ import { lessonVisualPrompt } from './_lib/lessonVisualPrompt.js'
 import { logVisualRouting } from '../src/services/visualDiagnostics.js'
 import { formatCoursePosition, inferCoursePosition, isPositionTopicAllowed } from '../src/services/coursePosition.js'
 import { formatLearningAnchors } from '../src/services/studyLearningContext.js'
-import { isPathTopicAllowed, learningPathPosition, lessonKey, lessonOutline, normalizeLearningPath, normalizeLessonVisual } from '../src/services/learningPath.js'
+import { isPathTopicAllowed, learningPathPosition, lessonKey, lessonOutline, normalizeLearningPath, normalizeLessonVisual, generatedLessonVisual } from '../src/services/learningPath.js'
 
 function isShortText(value, maxLength) {
   return typeof value === 'string' && value.trim().length > 0 && value.length <= maxLength
@@ -113,13 +113,13 @@ Use one or two meaningful Markdown section headings (##), short paragraphs, occa
 Do not use HTML, links, images, tables, or code fences. No long lists or quiz questions.
 Do not repeat the course/topic/concept title, mastery, path, or navigation instructions in content; the UI shows them.
 Keep topic and concept labels under 120 characters.
-Actively evaluate whether a native visual would materially improve understanding of this specific concept before selecting visual.type. Do not force visuals for every lesson.
-Prefer a native visual for processes, flows, sequences, cause and effect, spatial relationships, system components, inputs/outputs, transformations, comparisons, physical structure, scientific mechanisms, programming data flow, nested structure, and mathematical structure that benefits from organization.
-Photosynthesis, cellular respiration, gravity/orbits, React state flow, API request/response flow, arrays, scope, props vs state, SQL vs NoSQL, mitosis, and the water cycle should usually receive a native visual when teaching those mechanisms or relationships.
+Actively evaluate whether an instructional image would materially improve understanding of this specific concept before selecting visual.type. Do not force visuals for every lesson.
+Prefer an instructional image for processes, flows, sequences, cause and effect, spatial relationships, system components, inputs/outputs, transformations, comparisons, physical structure, scientific mechanisms, programming data flow, nested structure, and mathematical structure that benefits from organization.
+Photosynthesis, cellular respiration, gravity/orbits, React state flow, API request/response flow, arrays, scope, props vs state, SQL vs NoSQL, mitosis, and the water cycle should usually receive an instructional image when teaching those mechanisms or relationships.
 Short factual recall, pure vocabulary, simple definitions, or concepts where a visual adds no meaningful value may use none.
 ${lessonVisualPrompt}
 Do not tell the learner a visual is visible; the complete lesson text must stand alone.
-Return ONLY valid JSON with topic, concept, content${advances ? ', nextLessons (one or two objects with topic and concept)' : ''}, and visual. Select visual using the teaching rules above, including a full native specification when useful or {"type":"none"} otherwise.
+Return ONLY valid JSON with topic, concept, content${advances ? ', nextLessons (one or two objects with topic and concept)' : ''}, and visual. Select visual using the teaching rules above, including a full generated_image specification when useful or {"type":"none"} otherwise.
         `,
       }),
     })
@@ -146,7 +146,7 @@ Return ONLY valid JSON with topic, concept, content${advances ? ', nextLessons (
       result.nextLessons.some((item) => !isShortText(item?.topic, 120) || !isShortText(item?.concept, 120)))) {
       return res.status(502).json({ error: 'Invalid study lesson response' })
     }
-    const visual = normalizeLessonVisual(result.visual)
+    const visual = generatedLessonVisual(result.visual) || (normalizeLessonVisual(result.visual)?.type === 'none' ? { type: 'none' } : null)
     logVisualRouting(process.env.NODE_ENV === 'development', { source: 'lesson', phase: 'response',
       concept: result.concept, requested: result.visual, normalized: visual, rendered: false })
     const nextSeen = new Set([...seen, lessonKey(result)])

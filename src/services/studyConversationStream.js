@@ -1,7 +1,7 @@
 import { MAX_STUDY_RESPONSE_LENGTH } from './studyConversation.js'
 import { suggestedLearningAnchor } from './studyLearningContext.js'
 import { readStreamLines } from './streamLines.js'
-import { nativeLessonVisual } from './learningPath.js'
+import { generatedLessonVisual } from './learningPath.js'
 
 export async function readStudyConversationStream(response, { signal, onDelta, topic }) {
     let text = ''
@@ -24,7 +24,7 @@ export async function readStudyConversationStream(response, { signal, onDelta, t
                     throw new Error('Invalid final reply')
                 }
                 signal?.throwIfAborted()
-                const visual = nativeLessonVisual(event.visual)
+                const visual = generatedLessonVisual(event.visual)
                 return {
                     response: event.response,
                     signal: event.signal,

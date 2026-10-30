@@ -128,7 +128,7 @@ export function isPathTopicAllowed(topic, position) {
   return !position.timeline.some((item) => item.period === 'future' && item.topic.toLowerCase() === text(topic).toLowerCase())
 }
 
-// Bounded teaching data shared by the API, local resume, and native renderer.
+// Bounded teaching data shared by the API and local resume; never image URLs/bytes.
 // Symbols and directed links are explicit; never infer them from subject keywords.
 export function normalizeLessonVisual(value) {
   if (!value || !['none', 'diagram', 'process', 'comparison', 'concept_illustration', 'generated_image'].includes(value.type)) return null
@@ -146,13 +146,23 @@ export function normalizeLessonVisual(value) {
     data: value.data.map((item) => ({ label: text(item.label), detail: text(item.detail, 240),
       ...(symbols.includes(item.symbol) ? { symbol: item.symbol } : {}) })),
     focus: text(value.focus),
-    ...(value.links?.length && ['diagram', 'concept_illustration', 'process'].includes(value.type)
+    ...(value.type === 'generated_image' && ['diagram', 'process', 'comparison', 'concept_illustration'].includes(value.composition)
+      ? { composition: value.composition } : {}),
+    ...(text(value.recoveryContext, 400) ? { recoveryContext: text(value.recoveryContext, 400) } : {}),
+    ...(value.links?.length && ['diagram', 'concept_illustration', 'process', 'generated_image'].includes(value.type)
       ? { links: value.links.map((link) => ({ from: link.from, to: link.to, label: text(link.label, 120),
         ...(link.kind === 'contains' && value.type !== 'process' ? { kind: 'contains' } : {}) })) } : {}),
   }
 }
 
-// Keep unavailable renderers out of both the visual slot and its surrounding layout.
+// Adapt saved/native specifications without restoring the legacy SVG renderer.
+export function generatedLessonVisual(value) {
+  const visual = normalizeLessonVisual(value)
+  if (!visual || visual.type === 'none') return null
+  return visual.type === 'generated_image' ? visual : { ...visual, type: 'generated_image', composition: visual.type }
+}
+
+// Legacy renderer only; no learner-facing route uses this selector.
 export function nativeLessonVisual(value) {
   const visual = normalizeLessonVisual(value)
   return visual && ['diagram', 'process', 'comparison', 'concept_illustration'].includes(visual.type) ? visual : null

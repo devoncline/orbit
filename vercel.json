@@ -1,5 +1,8 @@
 {
   "functions": {
+    "api/generate-lesson-image.js": {
+      "maxDuration": 200
+    },
     "api/respond-to-study-message.js": {
       "supportsCancellation": true
     }

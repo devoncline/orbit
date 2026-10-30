@@ -1,18 +1,11 @@
 // Both teaching routes describe the same schema consumed by normalizeLessonVisual.
 export const lessonVisualPrompt = `
-Orbit can render native visuals using structured metadata. Keep the text explanation useful on its own.
-Choose the type to fit the teaching purpose:
-- process: ordered steps, transformations, sequences, or progression; data must be in teaching order.
-- diagram: relationships between parts, systems, inputs/outputs, data flow, or cause/effect structure.
-- comparison: contrasting two or more concepts.
-- concept_illustration: physical/scientific concepts, spatial teaching metaphors, or abstract ideas that benefit from a visual scene.
-- none: only when a visual would not materially improve understanding.
-generated_image is deferred and cannot render. Prefer a suitable native type; do not request image generation.
-A native visual has type, purpose (under 240 characters), data (1-6 objects with a short label under 120 and concise detail under 240 characters), and focus (under 120 characters).
-Diagram, process, and comparison need at least 2 items.
-For diagram or concept_illustration, optionally include links: [{"from": 0, "to": 1, "label": "supplies energy to"}]. Indices refer to data; include only explicit, accurate directed relationships, at most 8. Without links, objects are shown without connections. One-to-many links show branching/reuse; many-to-one links show convergence. A focused object with incoming/outgoing links becomes a mechanism scene. Do not turn simultaneous inputs or reused instances into sequential steps.
-Only when one item truly contains another, a link may add "kind":"contains". A valid containment tree renders nested objects; ordinary direction must not imply containment. Do not supply coordinates or layout instructions.
-For process, data order supplies the sequence; optional links between adjacent items may label the transition (for example "whole step" or "half step"). Only include note/interval relationships actually supported by the lesson; do not invent missing steps. Prefer a diagram for relationships that are not a sequence.
-For any native type, each data item may include one symbol: plant, leaf, sun, water, molecule, container, slots, planet, component, or note. Choose a fitting simplified metaphor; omit the symbol when none fits. Use symbols to distinguish inputs, objects, and results instead of numbered boxes. These are schematic objects, not exact structures or quantities. Set focus to the main object's exact label when there is one, and supply its actual incoming/outgoing links. Keep primary labels and connection labels especially short; details explain the idea alongside the object.
+Orbit can request an instructional image from Muse Image using structured metadata. Keep the text explanation useful on its own, including if image generation fails.
+Choose visual.type as "none" when imagery adds no meaningful teaching value, or "generated_image" when it materially improves understanding. Do not automatically request an image for every lesson.
+A generated_image has purpose (under 240 characters: exactly what the image should teach), data (1-6 objects with a short label under 120 and concise detail under 240 characters), and focus (under 120 characters: what should receive visual emphasis).
+Choose composition to fit the teaching purpose: process for ordered steps/transformations (data in teaching order); diagram for relationships, systems, inputs/outputs or data flow; comparison for contrasts; concept_illustration for physical structure, spatial metaphors or scientific mechanisms. Processes and comparisons should usually have at least two items.
+Optionally include links: [{"from": 0, "to": 1, "label": "supplies energy to"}]. Indices refer to data. Include only explicit, accurate directed relationships, at most 8. Do not invent quantities, causal links, or scientific structures. Do not turn simultaneous inputs or reused instances into sequential steps. Only actual containment may add "kind":"contains".
+When adapting to confusion, optionally include recoveryContext (under 400 characters) describing only the conceptual difficulty and the changed teaching approach, without personal details or conversation transcripts.
+Describe a polished educational illustration with a clear relationship/process/structure, minimal necessary text, and no decorative or unrelated imagery. Use exact teaching details; do not specify generic planets or stock-art filler.
 Never supply HTML, SVG, URLs, image bytes, or scripts. Put visual metadata outside the text response, never inside prose or a code block.
 `

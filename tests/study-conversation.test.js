@@ -4,7 +4,7 @@ import { test } from 'node:test'
 import handler from '../api/respond-to-study-message.js'
 import { respondToStudyMessage } from '../src/services/meta.js'
 import { retainStudyExchanges } from '../src/services/studyConversation.js'
-import { nativeLessonVisual } from '../src/services/learningPath.js'
+import { generatedLessonVisual } from '../src/services/learningPath.js'
 import { logVisualRouting } from '../src/services/visualDiagnostics.js'
 
 const course = {
@@ -246,7 +246,7 @@ test('conversation accepts all four native types through the lesson normalizer i
     const mock = t.mock.method(globalThis, 'fetch', async () => modelResponse({ ...reply, visual: value }))
     const res = await callHandler({ ...body, message: 'Show me a visual' })
     assert.equal(res.statusCode, 200)
-    assert.deepEqual(res.body, { ...reply, visual: nativeLessonVisual(value) })
+    assert.deepEqual(res.body, { ...reply, visual: generatedLessonVisual(value) })
     assert.equal(mock.mock.callCount(), 1)
     assert.doesNotMatch(JSON.stringify(res.body), /PRIVATE_.*_SENTINEL/)
     mock.mock.restore()
@@ -254,12 +254,12 @@ test('conversation accepts all four native types through the lesson normalizer i
 })
 
 test('conversation prompt routes explicit visual requests and forbids fake prose-only image substitutes', async (t) => {
-  const mock = t.mock.method(globalThis, 'fetch', async () => modelResponse({ ...reply, visual }))
+  const mock = t.mock.method(globalThis, 'fetch', async () => modelResponse({ ...reply, visual: generatedLessonVisual(visual) }))
   await callHandler({ ...body, message: 'Can you diagram this?' })
   const { input } = JSON.parse(mock.mock.calls[0].arguments[1].body)
   assert.match(input, /Text remains the default/)
   assert.match(input, /Only include visual metadata when the learner explicitly requests a visual or the response genuinely benefits from one/)
-  assert.match(input, /use Orbit's native visual system/)
+  assert.match(input, /use Orbit's generated instructional images/)
   assert.match(input, /NEVER say "I can't show pictures", "Imagine this image", "Here's a visual in words", "I can't display a diagram", or "Picture this because I can't show it"/)
   assert.match(input, /return "reuseVisual": true and omit a new visual specification/)
   assert.match(input, /show me a different visual/)
@@ -271,21 +271,21 @@ test('reuse returns the current native visual without duplicating it and differe
   const unchanged = structuredClone(lesson)
   const mock = t.mock.method(globalThis, 'fetch', async () => modelResponse({ ...reply, reuseVisual: true, visual: alternative }))
   const res = await callHandler({ ...body, lesson: { ...lesson, visual }, message: 'Show me a visual' })
-  assert.deepEqual(res.body, { ...reply, visual })
+  assert.deepEqual(res.body, { ...reply, visual: generatedLessonVisual(visual) })
   assert.equal(res.body.reuseVisual, undefined)
   assert.deepEqual(lesson, unchanged)
   assert.equal(mock.mock.callCount(), 1)
   const later = await callHandler({ ...body, lesson: { ...lesson, visual }, currentVisual: alternative })
-  assert.deepEqual(later.body.visual, nativeLessonVisual(alternative), 'Prefer the latest supplemental visual')
+  assert.deepEqual(later.body.visual, generatedLessonVisual(alternative), 'Prefer the latest supplemental visual')
   const { input } = JSON.parse(mock.mock.calls[1].arguments[1].body)
-  assert.ok(input.includes(JSON.stringify(nativeLessonVisual(alternative))))
+  assert.ok(input.includes(JSON.stringify(generatedLessonVisual(alternative))))
   mock.mock.restore()
   t.mock.method(globalThis, 'fetch', async () => modelResponse({ ...reply, visual: alternative }))
-  assert.deepEqual((await callHandler({ ...body, lesson: { ...lesson, visual }, message: 'Diagram it differently' })).body.visual, nativeLessonVisual(alternative))
+  assert.deepEqual((await callHandler({ ...body, lesson: { ...lesson, visual }, message: 'Diagram it differently' })).body.visual, generatedLessonVisual(alternative))
 })
 
-test('invalid, absent, none and deferred conversation visuals preserve valid text', async (t) => {
-  for (const value of [undefined, null, {}, { type: 'none' }, { ...visual, type: 'generated_image' },
+test('invalid, absent and none conversation visuals preserve valid text', async (t) => {
+  for (const value of [undefined, null, {}, { type: 'none' },
     { ...visual, data: [] }, { ...visual, data: [null] }, { ...visual, links: [{ from: 0, to: 99, label: 'Invalid' }] }]) {
     const mock = t.mock.method(globalThis, 'fetch', async () => modelResponse({ ...reply, visual: value }))
     const res = await callHandler({ ...body, currentVisual: { type: 'script', url: 'PRIVATE_ASSET_SENTINEL' } })
@@ -302,9 +302,9 @@ test('non-streaming client validates optional visuals and sends only bounded cur
   let output = { ...reply, visual: { ...visual, url: 'PRIVATE_ASSET_SENTINEL' } }
   const mock = t.mock.method(globalThis, 'fetch', async () => ({ ok: true, json: async () => output }))
   const result = await respondToStudyMessage(course, lesson, { message: 'Show me a visual', currentVisual: { ...visual, url: 'PRIVATE_ASSET_SENTINEL' } })
-  assert.deepEqual(result, { ...reply, visual })
+  assert.deepEqual(result, { ...reply, visual: generatedLessonVisual(visual) })
   const payload = JSON.parse(mock.mock.calls[0].arguments[1].body)
-  assert.deepEqual(payload.currentVisual, visual)
+  assert.deepEqual(payload.currentVisual, generatedLessonVisual(visual))
   assert.doesNotMatch(JSON.stringify(payload), /PRIVATE_ASSET_SENTINEL/)
   output = { ...reply, visual: { ...visual, data: [] } }
   assert.deepEqual(await respondToStudyMessage(course, lesson, { message: 'Show me a visual' }), reply)

@@ -15,7 +15,8 @@ import { rememberLearningAnchor, anchorAfterFollowUp, retainLearningAnchors } fr
 import { compactThreadResume } from '../services/learnerMemory'
 import { applyPositionOverride, readPositionStatement } from '../services/coursePosition'
 import { selectStudyInteraction, studyThreadMetadata } from '../services/studyThreads'
-import { acceptPathLesson, learningPathContextKey, nativeLessonVisual, normalizeLearningPath, recommendStudyAction, studyPathView } from '../services/learningPath'
+import { acceptPathLesson, learningPathContextKey, generatedLessonVisual, normalizeLearningPath, recommendStudyAction, studyPathView } from '../services/learningPath'
+import { createLessonImageCache } from '../services/lessonImages'
 import CoursePosition from './CoursePosition'
 import OrbitStage from './OrbitStage'
 import { OrbitResponse } from './OrbitSignal'
@@ -66,7 +67,8 @@ export default function StudySession({
     const contextKey = learningPathContextKey(course, today)
     const latestContextKey = useRef(contextKey)
     const pathView = studyPathView(learningPath, lesson, contextKey)
-    const lessonVisual = nativeLessonVisual(lesson?.visual)
+    const lessonVisual = generatedLessonVisual(lesson?.visual)
+    const [lessonImageCache] = useState(createLessonImageCache)
     const illustratedLesson = activeInteraction === 'lesson' && Boolean(lessonVisual)
     const [example, setExample] = useState('')
     const [loadingLesson, setLoadingLesson] = useState(resume.lesson ? '' : 'lesson')
@@ -116,7 +118,7 @@ export default function StudySession({
         if (!import.meta.env.DEV || !active || !lesson || !['lesson', 'conversation'].includes(activeInteraction)) return
         const source = activeInteraction === 'conversation' ? 'conversation' : 'lesson'
         const requested = source === 'lesson' ? lesson.visual : conversationVisual
-        const normalized = nativeLessonVisual(requested)
+        const normalized = generatedLessonVisual(requested)
         logVisualRouting(true, { source, phase: 'display', concept: lesson.concept, requested, normalized,
             rendered: Boolean(normalized) && !loadingLesson })
     }, [active, activeInteraction, lesson, conversationVisual, loadingLesson])
@@ -263,7 +265,7 @@ export default function StudySession({
             await display.finish()
             if (controller.signal.aborted || conversationRequest.current !== controller) return
 
-            const visual = nativeLessonVisual(result.visual)
+            const visual = generatedLessonVisual(result.visual)
             if (visual) setConversationVisual(visual)
             rememberAnchor(result.anchor)
             if (conversation.length === MAX_STUDY_EXCHANGES) {
@@ -560,7 +562,7 @@ export default function StudySession({
                                 <StudyContent content={lesson.content} />
                                 {lessonVisual && <div className="study-visual-presentation">
                                     {!busy && companion}
-                                    <LessonVisual visual={lessonVisual} />
+                                    <LessonVisual visual={lessonVisual} lesson={lesson} courseName={course.name} cache={lessonImageCache} active={active} />
                                 </div>}
                             </div>
                             <div className="study-lesson-support">
@@ -647,7 +649,7 @@ export default function StudySession({
                                 ))}
                             </div>
 
-                            <LessonVisual visual={conversationVisual} />
+                            <LessonVisual visual={conversationVisual} lesson={lesson} courseName={course.name} cache={lessonImageCache} active={active} />
                             <form className="study-composer" onSubmit={sendMessage} aria-busy={loadingConversation}>
                                 <label className="study-composer-label" htmlFor={`study-message-${id}`}>Ask about this idea or share a connection</label>
                                 <textarea

@@ -2,6 +2,11 @@
 .lesson-visual figcaption { display: grid; gap: 7px; max-width: 40ch; margin-bottom: 24px; }
 .lesson-visual-eyebrow { color: var(--orbit-accent); font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
 .lesson-visual-purpose { font-size: 16px; line-height: 1.5; color: #dde5fa; }
+.lesson-generated-image { display: block; width: 100%; max-width: 100%; height: auto; border-radius: 16px; }
+.lesson-generated-image[hidden] { display: none; }
+.lesson-image-status { padding: 12px 0; border-top: 1px solid rgb(158 176 238 / 22%); }
+.lesson-image-retry { color: var(--orbit-muted); font-size: 13px; padding: 12px 0; }
+/* Remaining scene styles support LegacyLessonVisual for rollback/reference only. */
 .lesson-visual strong { font-size: 14px; font-weight: 600; line-height: 1.4; }
 .study-body .lesson-visual p, .lesson-visual p { margin: 6px 0 0; color: var(--orbit-muted); font-size: 13px; line-height: 1.6; }
 .lesson-object-copy { min-width: 0; }

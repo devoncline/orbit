@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import handler from '../api/generate-study-lesson.js'
-import { acceptPathLesson, learningPathContextKey, learningPathPosition, normalizeLearningPath, normalizeLessonVisual, recommendStudyAction, studyPathView } from '../src/services/learningPath.js'
+import { acceptPathLesson, learningPathContextKey, learningPathPosition, normalizeLearningPath, normalizeLessonVisual, generatedLessonVisual, recommendStudyAction, studyPathView } from '../src/services/learningPath.js'
 import { generateNextStudyLesson } from '../src/services/meta.js'
 import { compactThreadResume, createLearnerSnapshot, loadLearnerMemory, saveLearnerMemory } from '../src/services/learnerMemory.js'
 import { applyPositionOverride, coursePositionRequest, localDate } from '../src/services/coursePosition.js'
@@ -110,7 +110,7 @@ test('guided course start returns readable lesson, bounded suggestions and a vis
   assert.equal(res.statusCode, 200)
   assert.equal(res.body.content, lesson.content)
   assert.deepEqual(res.body.nextLessons, [{ topic: next.topic, concept: next.concept }])
-  assert.deepEqual(res.body.visual, visual)
+  assert.deepEqual(res.body.visual, generatedLessonVisual(visual))
   assert.equal(res.body.mastery, undefined)
   assert.equal(res.body.curriculum, undefined)
   assert.equal(mock.mock.callCount(), 1)
@@ -120,24 +120,25 @@ test('guided course start returns readable lesson, bounded suggestions and a vis
   assert.match(prompt, /Real course evidence overrides AI assumptions/)
 })
 
-test('lesson prompt evaluates visual teaching value, selects native types, and still accepts none', async (t) => {
+test('lesson prompt evaluates visual teaching value, selects generated images, and still accepts none', async (t) => {
   const biology = { topic: 'Photosynthesis', concept: 'Light becomes stored energy', content: 'Plants use light energy to make sugars.' }
   for (const specification of [{ ...visual, type: 'concept_illustration' }, { type: 'none' }]) {
     const mock = mockModel(t, { ...biology, visual: specification })
     const res = await call({ courseName: 'Biology', importantTopics: ['Photosynthesis'], mastery: 40 })
     assert.equal(res.statusCode, 200)
-    assert.deepEqual(res.body.visual, specification)
+    assert.deepEqual(res.body.visual, generatedLessonVisual(specification) || specification)
     assert.equal(mock.mock.callCount(), 1)
     const { input } = JSON.parse(mock.mock.calls[0].arguments[1].body)
-    assert.match(input, /Actively evaluate whether a native visual would materially improve understanding/)
+    assert.match(input, /Actively evaluate whether an instructional image would materially improve understanding/)
     assert.match(input, /Do not force visuals for every lesson/)
     assert.match(input, /Photosynthesis, cellular respiration, gravity\/orbits, React state flow/)
     assert.match(input, /Short factual recall, pure vocabulary, simple definitions/)
-    assert.match(input, /process: ordered steps/)
-    assert.match(input, /diagram: relationships between parts/)
-    assert.match(input, /comparison: contrasting two or more concepts/)
-    assert.match(input, /concept_illustration: physical\/scientific concepts/)
-    assert.match(input, /generated_image is deferred and cannot render/)
+    assert.match(input, /process for ordered steps/)
+    assert.match(input, /diagram for relationships/)
+    assert.match(input, /comparison for contrasts/)
+    assert.match(input, /concept_illustration for physical structure/)
+    assert.match(input, /"generated_image" when it materially improves understanding/)
+    assert.doesNotMatch(input, /generated_image is deferred/)
     assert.doesNotMatch(input, /"visual"\s*:\s*\{\s*"type"\s*:\s*"none"/)
     mock.mock.restore()
   }
