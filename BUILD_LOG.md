@@ -714,6 +714,18 @@ The goal is for Orbit to move with the learner instead of waiting passively for 
 
 ---
 
+## October 30, 2026 - Controlled Adaptive Study Presentation
+
+- Added five authored Study compositions: focus, visual, practice, check, and recover. A pure selector in src/services/studyPresentation.js derives the mode, reason, primary action location, and guidance; a small useStudyPresentation hook subscribes to the existing image cache without starting or changing requests. Model output cannot provide layouts, markup, components, styles, or class names.
+- Priority is active recovery, active quiz, active activity, usable/pending current image, then focus. Recovery is scoped to the selected interaction: I lost you, an active incorrect-answer explanation/follow-up, matching misconception/partial-understanding activity feedback, or the latest completed conversation confusion signal. Old results cannot override another active tool. Editing an activity response returns to practice; resubmitting unchanged feedback retains recovery while pending. A successful follow-up returns to check. That helps ends lesson recovery without changing readiness, mastery, or saved memory; successful continuation clears it, while failed continuation preserves it.
+- Visual mode gives the instructional image the larger desktop column with a compact companion. The image uses a stable 3:2 dark frame and contain sizing to keep the full opaque source visible without cropping, blending, background removal, or text overlays. Generation/decode keep the same mode; errors use the appropriate nonvisual layout and existing explicit retry. Recovery stacks supporting images under the explanation. Tablet visual layouts stack; phone task layouts prioritize content and preserve the accessible request status while hiding artwork. Focus retains a compact full mascot. No layout animation was added.
+- Activities and questions now lead their own compositions, with a closed Lesson context disclosure. Recovery narrows the active task, emphasizes activity feedback, and collapses older conversation exchanges without deleting them. Shared navigation, history, threads, draft state, scoring, mastery, course positioning, learning-path advancement, local memory rules, credentials, image APIs, cost/deduplication logic, and legacy native visuals are unchanged.
+- Validation: all 235 tests pass, including 10 new selector tests and 6 mounted UI tests. Coverage includes active-interaction precedence, pending/error/retry behavior, next-lesson reset/failure, recovery exits, retained discussion/drafts, stable keyboard focus, image request reuse, and unchanged score writes. Updated old mascot-placement and heading assertions. Full lint and production build pass; no validation failures remain.
+- Browser review was attempted through the computer-use tool but blocked by an app-approval timeout before any page review. Temporary isolated review files were removed. No new dev server, live Meta request, image-quality review, physical-device check, or screen-reader walkthrough was performed. README documents the architecture and exact priority; CHANGELOG Unreleased includes product notes and the ordered 1440px, 768px, 390px, and 320px manual sequence.
+- No dependencies, database changes, migrations, historical migration edits, manual SQL, new persistence, or new AI APIs. Learning Profile/ADHD preferences, Show me, and legacy-renderer removal remain deferred.
+
+---
+
 # Next
 
 The next major development steps are:

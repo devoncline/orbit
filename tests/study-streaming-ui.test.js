@@ -136,14 +136,14 @@ test('generated visuals follow the active lesson across tool switches without du
   assert.equal(container.querySelector('.study-recommendation button').textContent, 'Give me an example')
 })
 
-test('an illustrated lesson keeps one thinking presenter during replacement and restores it beside the visual', async (t) => {
+test('an illustrated lesson keeps one stable presenter through recovery and replacement', async (t) => {
   let complete
   t.mock.method(globalThis, 'fetch', (_url, options) => {
     assert.equal(JSON.parse(options.body).action, 'simplify')
     return new Promise((resolve) => { complete = resolve })
   })
   await act(async () => root.render(createElement(StudySession, { ...props, initialThread: { resume: { lesson: { ...lesson, visual: nativeVisual } } } })))
-  assert.ok(container.querySelector('.study-visual-presentation > .orbit-stage'))
+  assert.ok(container.querySelector('.study-session > .orbit-stage'))
   await click('I lost you')
   assert.equal(container.querySelectorAll('.orbit-stage').length, 1)
   assert.ok(container.querySelector('.study-session > .orbit-stage'))
@@ -152,7 +152,7 @@ test('an illustrated lesson keeps one thinking presenter during replacement and 
   await act(async () => { complete(new Response(JSON.stringify({ ...lesson, visual: nativeVisual }), { headers: { 'Content-Type': 'application/json' } })); await setImmediate() })
   assert.equal(thinking(), false)
   assert.equal(container.querySelectorAll('.orbit-stage').length, 1)
-  assert.ok(container.querySelector('.study-visual-presentation > .orbit-stage'))
+  assert.ok(container.querySelector('.study-session > .orbit-stage'))
 })
 
 test('conversation installs one visual only after completion, reuses current context, and keeps it out of resume', async (t) => {
@@ -529,7 +529,7 @@ test('activities and activity feedback yield in place, preserve drafts on failur
   await click('Share response')
   const feedbackSlot = checkSignal('response')
   assert.equal(container.querySelector('textarea').value, 'A name is the input.')
-  assert.equal(feedbackSlot.previousElementSibling.tagName, 'FORM')
+  assert.equal(feedbackSlot.parentElement.previousElementSibling.tagName, 'FORM')
   await complete(requests[1], { feedback: 'Yes, the name is a prop.', signal: 'applied_understanding' })
   assert.match(feedbackSlot.textContent, /Yes, the name/)
   await click('Share response')

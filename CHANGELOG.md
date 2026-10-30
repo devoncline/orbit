@@ -4,7 +4,8 @@
 
 ### Improvements
 
-- Lessons now include generated instructional images when they help explain the concept. Text and Study controls stay usable while images load; repeated navigation reuses the same visual, and unavailable images offer a quiet retry without decorative fallbacks. Talk It Through can reuse or adapt a visual, with the existing desktop and mobile layout preserved.
+- Study now adapts its composition to the current task: calm explanations, prominent instructional images, focused activities and questions, and a simpler recovery view when something is unclear. Lesson context and earlier work remain accessible. “That helps” returns from a simpler explanation without changing mastery.
+- Lessons now include generated instructional images when they help explain the concept. Text and Study controls stay usable while images load; repeated navigation reuses the same visual, and unavailable images offer a quiet retry without decorative fallbacks. Talk It Through can reuse or adapt a visual.
 - Study now shows a compact Orbit Signal where each new lesson, example, activity, question, or explanation will appear. New text reveals smoothly without reserving a large empty area; reduced motion shows completed results promptly.
 - Talk It Through keeps recent discussion in view with simple learner bubbles and subtle, space-inspired Orbit replies. The composer clears when you send, responses arrive smoothly in one place, and older exchanges collapse below the suggested next action. Interrupted replies remain retryable, and only completed exchanges are saved for resume.
 - Orbit now thinks with a gentle sway and varied contextual thoughts while preparing lessons, examples, activities, replies, and questions. Thought pairs change between requests and stay steady during each one, with one thought on phones, static visuals for reduced motion, and concise screen-reader announcements. Removed the decorative dot trail.
@@ -37,6 +38,20 @@
 - Study answers now update mastery for the question's topic, with overall course mastery calculated as the rounded average of topic scores. Questions without a topic retain the existing course mastery behavior.
 
 ### Manual test checklist
+
+Adaptive presentation review (in order; browser/live-image review is still pending):
+
+1. At about **1440px**, start a text-only lesson. Check the calm explanation, complete companion, one emphasized recommendation, collapsed Study tools, and keyboard focus outlines.
+2. Open a lesson with a generated image. Check the wide split, stable image area while loading, full uncropped educational content, readable labels, and a usable lesson while waiting. Switch tools and return; confirm the image request is reused.
+3. Choose **I lost you**. Confirm the narrower recovery layout stays through loading and the simpler explanation. Click **That helps**; confirm focus/visual returns, focus remains at the current panel, and mastery does not change.
+4. Open Study tools → **Let me try it**. Confirm the task and response field lead, Lesson context stays accessible, and Share response is emphasized. Submit a misconception, revise the response, then switch away and back; check recovery/practice transitions and draft retention.
+5. Open **Quiz me**. Confirm question/answers dominate. Choose an incorrect answer; check the simpler recovery explanation, original-question disclosure, follow-up, and accessible lesson context. Answer the follow-up correctly; confirm check mode returns and existing mastery scoring is unchanged. Load the next question.
+6. Return to Lesson, use **I lost you**, then **Continue to next lesson**. Check recovery clears only after success, the lesson/path advances once, history remains available, and old quiz/activity/image state cannot take over. Also test a failed continuation and retry.
+7. Block the image request or returned image URL. Confirm a usable nonvisual layout with a quiet **Retry visual**, no broken image, no fallback artwork, and no automatic retries. Unblock and retry once; verify the wide visual layout returns.
+8. In Talk It Through, trigger confusion after earlier exchanges. Check the latest reply and composer lead, earlier discussion can be expanded, and a later understanding response returns to focus/visual. Verify thread/Home navigation preserves the existing learning context.
+9. Repeat the representative lesson, visual, activity, quiz, and recovery screens at **768px**, **390px**, and **320px**. Check stacked images, primary content order, long titles, answer wrapping, no horizontal scrolling, and the phone keyboard. Repeat transitions with reduced motion and a keyboard/screen reader; check focus and loading announcements.
+
+Other existing feature checks:
 
 - Start the full app with `npm run dev:api` and the existing server-side key. Start a photosynthesis or React state-flow lesson. Confirm one instructional image request after a useful visual is selected; a text-only lesson should make none. Read and use Study tools during generation. Check the image teaches the stated relationship and uses accurate, minimal labels.
 - Switch between Lesson, Talk It Through, Home, Learn, and threads while an image is pending and after it loads. In browser Network, confirm the same image request is reused. Ask to see the current visual in Talk It Through, then ask for a different explanation. Simplify or continue while an image is pending and verify no stale image appears in the new lesson. Mastery and path progress must change only through their existing controls.

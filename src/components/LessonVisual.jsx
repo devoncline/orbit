@@ -29,10 +29,12 @@ function GeneratedLessonImage({ requestKey, cache, active }) {
       <span className="lesson-visual-eyebrow">Explore the idea</span>
       <span className="lesson-visual-purpose">{visual.purpose}</span>
     </figcaption>
-    {image.status === 'ready'
-      ? <ImageContent key={image.url} url={image.url} alt={`${visual.purpose} ${visual.data.map((item) => `${item.label}: ${item.detail}`).join(' ')}`}
-        onError={() => cache.fail(requestKey)} />
-      : <p className="lesson-image-status" role="status">Preparing a lesson image…</p>}
+    <div className="lesson-image-surface">
+      {image.status === 'ready'
+        ? <ImageContent key={image.url} url={image.url} alt={`${visual.purpose} ${visual.data.map((item) => `${item.label}: ${item.detail}`).join(' ')}`}
+          onError={() => cache.fail(requestKey)} />
+        : <p className="lesson-image-status" role="status">Preparing a lesson image…</p>}
+    </div>
   </figure>
 }
 

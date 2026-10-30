@@ -26,6 +26,7 @@ import useResultReveal from './useResultReveal'
 import StudyContent from './StudyContent'
 import StudyPath from './StudyPath'
 import LessonVisual from './LessonVisual'
+import useStudyPresentation from './useStudyPresentation'
 import { logVisualRouting } from '../services/visualDiagnostics'
 import './StudySession.css'
 
@@ -61,6 +62,7 @@ export default function StudySession({
     const studyTools = useRef(null)
     const id = useId()
     const [lesson, setLesson] = useState(resume.lesson)
+    const [recoveringLesson, setRecoveringLesson] = useState(false)
     const [learningPath, setLearningPath] = useState(() => normalizeLearningPath(resume.learningPath))
     const [progressionError, setProgressionError] = useState('')
     const nextLessonRequest = useRef(null)
@@ -69,7 +71,6 @@ export default function StudySession({
     const pathView = studyPathView(learningPath, lesson, contextKey)
     const lessonVisual = generatedLessonVisual(lesson?.visual)
     const [lessonImageCache] = useState(createLessonImageCache)
-    const illustratedLesson = activeInteraction === 'lesson' && Boolean(lessonVisual)
     const [example, setExample] = useState('')
     const [loadingLesson, setLoadingLesson] = useState(resume.lesson ? '' : 'lesson')
     const [lessonError, setLessonError] = useState('')
@@ -111,6 +112,10 @@ export default function StudySession({
     const busy = Boolean(loadingLesson || loadingConversation || loadingActivity || loadingQuestion || loadingEvaluation)
     const recommendation = recommendStudyAction({ lesson, activeInteraction, learningPath, example, lessonError, conversation,
         activity, activityError, activityFeedback, activityResponse, answerResult, followUpResult, evaluation, evaluationError, questionError })
+    const presentation = useStudyPresentation({ courseName: course.name, activeInteraction, lesson, conversationVisual,
+        recoveringLesson, loadingLesson, loadingQuestion, loadingEvaluation, loadingActivity, answerResult, followUpResult,
+        showAdaptedLesson, evaluation, evaluationError, questionError, activityFeedback, activityResponse, activityError, conversation }, lessonImageCache)
+    const showRecommendationAction = presentation.primary === 'recommendation'
     const lastPublished = useRef('')
     const companion = <OrbitStage thinking={busy} thinkingContext={studyThinkingContext({ loadingLesson, loadingConversation, loadingActivity, loadingQuestion, loadingEvaluation })} />
 
@@ -154,6 +159,7 @@ export default function StudySession({
     }, [pendingTurn])
 
     function openInteraction(next) {
+        if (next !== 'lesson') setRecoveringLesson(false)
         if (next !== 'conversation') {
             if (conversationRequest.current && pendingTurn) setLearnerMessage(pendingTurn.message)
             conversationRequest.current?.abort()
@@ -359,6 +365,7 @@ export default function StudySession({
     async function changeLesson(action) {
         if (loadingLesson || loadingQuestion || loadingConversation || loadingActivity) return
         openInteraction(action === 'example' ? 'example' : 'lesson')
+        if (action === 'simplify') setRecoveringLesson(true)
         setLoadingLesson(action)
         setLessonError('')
         setQuestionError('')
@@ -413,6 +420,7 @@ export default function StudySession({
             setLearningPath(acceptPathLesson(result, learningPath, lesson, requestedContextKey))
             setLesson(result)
             setConversationVisual(null)
+            setRecoveringLesson(false)
             // Clear only lesson-specific interactions after a successful transition.
             // Learning anchors, thread history, and course mastery continue independently.
             setExample('')
@@ -532,14 +540,15 @@ export default function StudySession({
     }
 
     return (
-        <section className={`study-session${illustratedLesson ? ' study-session-illustrated' : ''}`}>
+        <section className={`study-session study-mode-${presentation.mode}${presentation.splitVisual ? ' study-session-illustrated' : ''}`}
+            data-presentation-mode={presentation.mode} data-presentation-reason={presentation.reason}>
             <header className="study-context">
                 <p className="study-subject"><span>{course.name}</span>{lesson && <span>Lesson {learningPath.step}</span>}</p>
                 {lesson && <StudyPath path={pathView} />}
                 {lesson && lesson.topic !== lesson.concept && <p className="study-topic">{lesson.topic}</p>}
                 <h1>{lesson?.concept || course.nextTask || course.name}</h1>
             </header>
-            {(!illustratedLesson || busy) && companion}
+            {companion}
             <div className="study-body">
             <section className="study-active-panel" data-study-interaction={activeInteraction} ref={panel} tabIndex={-1} aria-label="Current study interaction">
             {resumeSummary && <p className="orbit-muted">Last time: {resumeSummary} Your lesson is ready to revisit; activities and quizzes start fresh.</p>}
@@ -547,6 +556,7 @@ export default function StudySession({
                 <button onClick={onNewThread}>Start a thread there</button>
             </div>}
             <OrbitResponse pending={loadingLesson === 'next'} context="next" reveal={resultReveal}>
+            <p className="study-presentation-label">{presentation.label}</p>
             {activeInteraction === 'example' && <div className="study-example">
                 <OrbitResponse pending={loadingLesson === 'example'} context="example" reveal={resultReveal}>
                     {example && <><StudyContent content={example} /><button disabled={busy} onClick={() => changeLesson('example')}>Another example</button></>}
@@ -558,14 +568,15 @@ export default function StudySession({
                         <OrbitResponse pending={loadingLesson === 'lesson' || loadingLesson === 'simplify'} context={loadingLesson === 'simplify' ? 'simplify' : 'lesson'} reveal={resultReveal}>
                         <div>
                             {lesson && <>
-                            <div className={`study-lesson-composition${lessonVisual ? ' study-lesson-composition-visual' : ''}`}>
+                            <div className={`study-lesson-composition${presentation.splitVisual ? ' study-lesson-composition-visual' : ''}`}>
                                 <StudyContent content={lesson.content} />
                                 {lessonVisual && <div className="study-visual-presentation">
-                                    {!busy && companion}
                                     <LessonVisual visual={lessonVisual} lesson={lesson} courseName={course.name} cache={lessonImageCache} active={active} />
                                 </div>}
                             </div>
                             <div className="study-lesson-support">
+                            {presentation.primary === 'recovery_done' && <button className="study-primary-action" disabled={busy}
+                                onClick={() => { setRecoveringLesson(false); panel.current?.focus({ preventScroll: true }) }}>That helps</button>}
                             <button disabled={busy} onClick={() => changeLesson('simplify')}>I lost you</button>
                             <CoursePosition course={course} today={today} showSummary={false} onChange={onPositionChange ? changePosition : undefined} />
                             </div>
@@ -584,8 +595,10 @@ export default function StudySession({
                             <OrbitResponse pending={loadingActivity === 'generate'} context="activity" reveal={resultReveal}>
                             {activity && (
                                 <>
-                                    <div className="study-panel-heading"><h4>{activity.title}</h4><button disabled={busy} onClick={() => runActivity('generate')}>Another activity</button></div>
-                                    <p>{activity.instruction}</p>
+                                    <div className="study-activity-brief">
+                                    <div className="study-panel-heading"><h2>{activity.title}</h2><button disabled={busy} onClick={() => runActivity('generate')}>Another activity</button></div>
+                                    <p className="study-task-instruction">{activity.instruction}</p>
+                                    </div>
                                     <form onSubmit={submitActivity}>
                                         <label htmlFor={`study-activity-response-${id}`}>What did you try or notice?</label>
                                         <textarea
@@ -602,7 +615,7 @@ export default function StudySession({
                                             required
                                         />
                                         <button
-                                            className={!recommendation?.action ? 'study-primary-action' : undefined}
+                                            className={presentation.primary === 'activity' ? 'study-primary-action' : undefined}
                                             type="submit"
                                             disabled={!activityResponse.trim() || Boolean(loadingLesson || loadingActivity) ||
                                                 loadingQuestion || loadingConversation}
@@ -610,13 +623,13 @@ export default function StudySession({
                                             {activityError?.action === 'evaluate' ? 'Try again' : 'Share response'}
                                         </button>
                                     </form>
-                                    {(loadingActivity === 'evaluate' || activityFeedback?.learnerResponse === activityResponse.trim()) && <OrbitResponse pending={loadingActivity === 'evaluate'} context="response" reveal={resultReveal}>
+                                    {(loadingActivity === 'evaluate' || activityFeedback?.learnerResponse === activityResponse.trim()) && <div className="study-activity-feedback"><OrbitResponse pending={loadingActivity === 'evaluate'} context="response" reveal={resultReveal}>
                                     <div>
                                         {activityFeedback?.learnerResponse === activityResponse.trim() && (
                                             <p><strong>Orbit:</strong> {activityFeedback.feedback}</p>
                                         )}
                                     </div>
-                                    </OrbitResponse>}
+                                    </OrbitResponse></div>}
                                 </>
                             )}
                             </OrbitResponse>
@@ -633,10 +646,18 @@ export default function StudySession({
                     )}
 
                     {lesson && activeInteraction === 'conversation' && (
-                        <div className="study-conversation">
+                        <div className={`study-conversation${presentation.splitVisual ? ' study-conversation-visual' : ''}`}>
+                            {presentation.compactConversation && conversation.length > 1 && <details className="study-recovery-history">
+                                <summary>Earlier in this discussion</summary>
+                                {conversation.slice(0, -1).map((exchange, index) => <div className="study-exchange" key={turnOffset + index}>
+                                    <div className="study-message study-message-learner"><p>{exchange.message}</p></div>
+                                    <div className="study-message study-message-orbit"><StudyContent content={exchange.response} /></div>
+                                </div>)}
+                            </details>}
                             <div className="study-transcript" aria-label="Lesson discussion">
                                 {[...conversation, ...(pendingTurn ? [{ ...pendingTurn, pending: true }] : [])].map((exchange, index) => (
-                                    <article className={`study-exchange${exchange.pending ? ' study-current-turn' : ''}`} key={turnOffset + index} ref={exchange.pending ? currentTurn : undefined}>
+                                    <article className={`study-exchange${exchange.pending ? ' study-current-turn' : ''}`} key={turnOffset + index} ref={exchange.pending ? currentTurn : undefined}
+                                        hidden={presentation.compactConversation && index < conversation.length - 1}>
                                         <div className="study-message study-message-learner" aria-label="Your message"><p>{exchange.message}</p></div>
                                         <div className="study-message study-message-orbit" aria-label="Orbit reply">
                                             <OrbitResponse pending={exchange.pending && loadingConversation && !streamedResponse} busy={Boolean(exchange.pending && loadingConversation)} context="conversation">
@@ -666,7 +687,7 @@ export default function StudySession({
                                     required
                                 />
                                 <button
-                                    className={!recommendation?.action ? 'study-primary-action' : undefined}
+                                    className={presentation.primary === 'conversation' ? 'study-primary-action' : undefined}
                                     type="submit"
                                     disabled={!learnerMessage.trim() || Boolean(loadingLesson || loadingActivity) ||
                                         loadingQuestion || loadingConversation}
@@ -679,7 +700,7 @@ export default function StudySession({
                 </div>
             )}
 
-            {stage === 'quiz' && <h3>Question {questionNumber}{studyQuestion?.topic && studyQuestion.topic !== lesson?.topic ? ` · ${studyQuestion.topic}` : ''}</h3>}
+            {stage === 'quiz' && <h2 className="study-question-number">Question {questionNumber || 1}{studyQuestion?.topic && studyQuestion.topic !== lesson?.topic ? ` · ${studyQuestion.topic}` : ''}</h2>}
 
             {questionError && (
                 <div role="alert">
@@ -694,7 +715,7 @@ export default function StudySession({
                 <div className="study-quiz">
                     <OrbitResponse pending={loadingQuestion || loadingEvaluation} context={loadingEvaluation ? 'evaluation' : 'quiz'} reveal={resultReveal}>
                     {studyQuestion && !(showAdaptedLesson && evaluation) && (
-                        <p>{studyQuestion.question}</p>
+                        <p className="study-task-instruction">{studyQuestion.question}</p>
                     )}
                     {selectedAnswer && !(showAdaptedLesson && evaluation) && <p className="orbit-muted">Your answer: {selectedAnswer.text}</p>}
                     {evaluationError && <div role="alert"><p>{evaluationError}</p><button onClick={() => answerQuestion(selectedAnswer, true)}>Try again</button></div>}
@@ -720,19 +741,19 @@ export default function StudySession({
                     )}
 
                     {answerResult === 'incorrect' && evaluation && (
-                        <p>{evaluation.feedback}</p>
+                        <p className="study-recovery-feedback">{evaluation.feedback}</p>
                     )}
 
                     {showAdaptedLesson && evaluation && (
                         <div className="study-adapted">
                             <details><summary>Review the original question</summary><p>{studyQuestion.question}</p><p>Your answer: {selectedAnswer?.text}</p></details>
-                            <h3>Orbit changed the approach</h3>
+                            <h3>Another way to think about it</h3>
 
                             <p>{evaluation.adaptedExplanation}</p>
 
-                            <h4>Try this instead:</h4>
+                            <h3>Try this instead</h3>
 
-                            <p>{evaluation.followUpQuestion}</p>
+                            <p className="study-task-instruction">{evaluation.followUpQuestion}</p>
 
                             {evaluation.followUpAnswers.map((answer) => (
                                 <button className="study-answer"
@@ -785,6 +806,10 @@ export default function StudySession({
             )}
             </OrbitResponse>
             </section>
+            {lesson && activeInteraction !== 'lesson' && <details className="study-lesson-reference">
+                <summary>Lesson context</summary>
+                <StudyContent content={lesson.content} />
+            </details>}
             {lesson && <details className="study-tools" ref={studyTools}>
                 <summary>Study tools <span>· {{ lesson: 'Lesson', example: 'Example', activity: 'Activity', conversation: 'Talk it through', quiz: 'Quiz', history: 'Earlier work' }[activeInteraction]}</span></summary>
                 <div className="study-lesson-actions" role="group" aria-label="Choose a study interaction">
@@ -797,8 +822,8 @@ export default function StudySession({
             </details>}
             {lesson && <nav className="study-continuation" aria-label="Lesson progression" aria-busy={busy}>
                 <div className="study-recommendation">
-                    <p><strong>Suggested next</strong><span>{recommendation.hint}</span></p>
-                    {recommendation.action && <button className="study-primary-action" disabled={busy} onClick={takeRecommendedStep}>
+                    <p><strong>Suggested next</strong><span>{presentation.guidance || recommendation.hint}</span></p>
+                    {showRecommendationAction && recommendation.action && <button className="study-primary-action" disabled={busy} onClick={takeRecommendedStep}>
                         {recommendation.action === 'continue'
                             ? loadingLesson === 'next' ? 'Preparing next lesson…' : progressionError ? 'Try next lesson again' : recommendation.label
                             : recommendation.label}
@@ -808,7 +833,7 @@ export default function StudySession({
                     {activeInteraction === 'lesson' && <button disabled={busy} aria-pressed={learningPath.understood} onClick={() => setLearningPath((current) => ({ ...current, understood: !current.understood }))}>
                         {learningPath.understood ? 'Feeling ready' : 'I understand'}
                     </button>}
-                    {recommendation.action !== 'continue' && <button disabled={busy} onClick={continueLesson}>
+                    {(!showRecommendationAction || recommendation.action !== 'continue') && <button disabled={busy} onClick={continueLesson}>
                         {loadingLesson === 'next' ? 'Preparing next lesson…' : progressionError ? 'Try next lesson again' : 'Continue to next lesson'}
                     </button>}
                 </div>

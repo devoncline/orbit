@@ -568,17 +568,42 @@ Muse Spark decides whether imagery materially improves the current lesson. It re
 
 The image prompt uses only the bounded course name, topic, concept, current explanation, and visual brief. It asks for a sophisticated educational illustration, clear relationships and emphasis, minimal text, and a dark blue/violet-compatible palette without decorative planets or generic sci-fi filler. Full conversations, course files, scores, and credentials are not sent as image context.
 
-While the image generates, the lesson and unrelated controls stay usable with a small local status. Successful images scale within the existing Study layout and provide descriptive alternative text. Generation or image-loading failure removes the image and offers a quiet Retry visual action. There is no native, planet, stock-art, or SVG fallback.
+While the image generates, the lesson and unrelated controls stay usable with a local status inside a reserved image surface. Visual mode gives the image most of the desktop lesson width; an opaque dark frame and `object-fit: contain` preserve the full image and its descriptive alternative text. Generation or image-loading failure removes the image, returns to a suitable nonvisual layout, and offers a quiet Retry visual action. There is no native, planet, stock-art, or SVG fallback.
 
 Each mounted StudySession owns an in-memory cache keyed by the complete bounded lesson/visual request. Pending requests, completed URLs, and failures survive React StrictMode, rerenders, tool switches, Home/Learn navigation, and thread switches. Identical reuse does not generate another image; a changed explanation, concept, or visual brief uses a new entry. Late responses cannot install a visual for a different request. Retries after failure are explicit, with no automatic paid retry loop. Inactive restored threads defer generation until opened.
 
-Talk It Through preserves its text-first behavior and can return a new brief or reuse the current brief. Streaming accepts visual metadata only after validated completion. The supplemental image stays beneath the discussion and clears on successful simplification or continuation. This does not change conversation text, scores, course positioning, or path progression.
+Talk It Through preserves its text-first behavior and can return a new brief or reuse the current brief. Streaming accepts visual metadata only after validated completion. A supplemental image sits beside the discussion on wide screens and below it on narrower screens; it clears on successful simplification or continuation. This does not change conversation text, scores, course positioning, or path progression.
 
 Only the compact lesson visual brief is saved by the existing resume projection. Generated URLs and image bytes are never written to localStorage; supplemental conversation visuals remain session-only. A full page reload starts a new image cache and may generate the restored lesson image again. Returned URLs are temporary signed URLs; their lifetime is not assumed. An expired URL is omitted and requires an explicit retry. Returning only a bounded URL keeps image bytes out of Vercel's response-size limit. This first implementation has no durable image history or cross-session cost deduplication.
 
 The old renderer remains in `src/components/LegacyLessonVisual.jsx`, with `src/services/lessonVisualComposition.js`, `nativeLessonVisual()`, its existing scene CSS, fixtures, and tests retained for rollback/reference. Learner-facing code never imports it. Older saved native specifications are translated into generated-image briefs, preserving their instructional purpose.
 
-Validation uses mocked provider responses and mounted React tests. Live Muse Image quality, credentials/model access, signed-URL loading, and desktop/mobile rendering still need the checks in CHANGELOG.md. Adaptive presentation modes, image editing, simulations, animations, and Save to notes remain deferred.
+Validation uses mocked provider responses and mounted React tests. Live Muse Image quality, credentials/model access, signed-URL loading, and desktop/mobile rendering still need the checks in CHANGELOG.md. Image editing, simulations, animated teaching scenes, and Save to notes remain deferred.
+
+## Controlled Study Presentation
+
+Study uses five authored compositions. `src/services/studyPresentation.js` selects a normalized mode, reason, primary action location, and short guidance from the active interaction and validated learning state. `useStudyPresentation` reads the existing image cache without generating or retrying requests. Model output cannot supply layouts, markup, components, CSS, class names, or styles.
+
+| Mode | Composition |
+| --- | --- |
+| `focus` | Calm lesson or discussion with a companion and one emphasized next action. Study tools stay collapsed. |
+| `visual` | Asymmetric lesson/image split, with about two-thirds of the lesson area devoted to the image and a compact companion. A discussion can also use its own image. |
+| `practice` | Activity instructions and response form lead; the lesson remains in a closed Lesson context disclosure. |
+| `check` | Question and full-width answer controls lead, with lesson context available below. |
+| `recover` | Narrower explanation, feedback, or follow-up with one primary task. Earlier discussion collapses during conversation recovery; supporting imagery stacks below the explanation. |
+
+Priority is **active recovery > active quiz > active activity > active usable/pending image > focus**. Recovery is scoped to the interaction currently open:
+
+1. Lesson recovery starts with **I lost you** and stays active while simplification loads, succeeds, or fails. **That helps**, selecting another tool, or successfully continuing ends that presentation state. That helps does not update readiness, mastery, or memory.
+2. Quiz recovery requires an incorrect answer with an active adapted explanation, pending evaluation, or evaluation retry. A successful follow-up returns to check; loading a new question ignores the old recovery result.
+3. Activity recovery requires misconception or partial-understanding feedback matching the current response. Resubmitting that response retains recovery while feedback loads. Editing it or generating a new activity returns to practice.
+4. Conversation recovery uses the latest completed confusion signal. Pending replies keep that layout; a newer non-confusion signal releases it. Previous quiz mistakes cannot override a different active tool.
+
+A valid current image brief selects visual immediately and retains it through generation and image decoding. Image errors return to focus unless recovery is active; only an explicit retry re-enters visual. The existing request key isolates late images from a different lesson. Successful continuation resets lesson-specific recovery, while failed continuation retains the current lesson and mode. Presentation state is not persisted and introduces no new learning evidence.
+
+Wide screens keep the shared sidebar and use the split visual composition above 1100px. At tablet widths the image stacks at full content width. At 760px and below every mode uses one column: focus retains a compact full mascot; task layouts hide the artwork while keeping its accessible request status. Existing focus indicators, controls, live regions, and reduced-motion behavior remain; no layout animation is added. Automatic mode changes do not move focus. Existing explicit tool/lesson navigation still focuses the active panel.
+
+Selector and mounted React tests cover all five modes, pending/error transitions, recovery exits, preserved history/drafts, keyboard focus, next-lesson reset, image request reuse, and unchanged mastery writes. See the ordered adaptive-presentation checklist in CHANGELOG.md for browser review. The Learning Profile questionnaire, Show me, new AI APIs, and legacy-renderer removal are outside this change.
 
 ---
 
