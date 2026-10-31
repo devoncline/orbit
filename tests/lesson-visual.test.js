@@ -128,7 +128,8 @@ test('StudySession places context and path before the lesson, visuals before too
   assert.equal(body.querySelectorAll('.orbit-stage').length, 1)
   const html = body.innerHTML
   assert.ok(html.indexOf('study-subject') < html.indexOf('study-path'))
-  assert.ok(html.indexOf('study-path') < html.indexOf('<h1>'))
+  assert.ok(html.indexOf('<h1>') < html.indexOf('study-path'))
+  assert.ok(html.indexOf('study-path') < html.indexOf('study-active-panel'))
   assert.ok(html.indexOf('</figure>') < html.indexOf('class="study-tools"'))
   assert.ok(html.indexOf('class="study-tools"') < html.indexOf('study-recommendation'))
   assert.equal(body.querySelectorAll('.study-primary-action').length, 1)

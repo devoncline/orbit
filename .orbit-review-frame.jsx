@@ -2,8 +2,10 @@ import { createRoot } from 'react-dom/client'
 import { useState } from 'react'
 import AppShell from './src/components/AppShell.jsx'
 import StudySession from './src/components/StudySession.jsx'
+import StudyThreads from './src/components/StudyThreads.jsx'
 import LearningPreferences from './src/components/LearningPreferences.jsx'
 import { normalizeLearningPreferences } from './src/services/learningProfile.js'
+import { learningPathContextKey } from './src/services/learningPath.js'
 import './src/index.css'
 const scenario = new URLSearchParams(location.search).get('scenario')
 const profiles = {
@@ -40,9 +42,21 @@ window.fetch = async (url, options = {}) => {
 }
 export default function Review() {
   const [preferences, setPreferences] = useState(() => normalizeLearningPreferences({ status: 'saved', profile: profiles[scenario] }))
+  const [threads, setThreads] = useState([
+    { id: 'earlier', title: 'Passing values from a parent to a child component', courseName: course.name, context: 'lesson', summary: 'Props carry values into a component.', createdAt: '2026-10-30T09:00:00', status: 'practiced' },
+    { id: 'review', title: lesson.concept, courseName: course.name, context: 'lesson', summary: 'You were comparing stored state with visible text.', createdAt: '2026-10-30T10:00:00', status: 'active' },
+  ])
+  const [activeId, setActiveId] = useState('review')
+  const activeThread = threads.find(thread => thread.id === activeId)
+  const learningPath = { step: 3, visited: [{ topic: 'State', concept: 'Remembering a value', understood: true }], upcoming: [{ topic: 'Events', concept: 'Responding to a click and updating the value on screen' }, { topic: 'State', concept: 'Sharing state between components' }], contextKey: learningPathContextKey(course) }
   return <AppShell courses={[course]} destination="study" onNavigate={()=>{}} onSelectSpace={()=>{}} onNewSpace={()=>{}}>
-    <div className="orbit-page study-page"><div className="study-room">
-      <StudySession course={course} learningProfile={preferences.profile} threadId="review" initialThread={{ summary: 'You were comparing stored state with visible text.', context: 'quiz', resume: { lesson } }} mastery={40} setMastery={()=>{}} updateTopicMastery={()=>{}} />
+    <div className="orbit-page study-page">
+      <StudyThreads threads={threads} activeId={activeId} courses={[course]} onSwitch={setActiveId} onCreate={(_, topic) => {
+        const thread = { ...activeThread, id: `review-${threads.length}`, title: topic || lesson.concept }
+        setThreads([...threads, thread]); setActiveId(thread.id)
+      }} />
+      <div className="study-room">
+      <StudySession key={activeId} course={course} learningProfile={preferences.profile} threadId={activeId} initialThread={{ ...activeThread, resume: { lesson: { ...lesson, concept: activeThread.title }, learningPath } }} mastery={40} setMastery={()=>{}} updateTopicMastery={()=>{}} />
       {profiles[scenario] && <LearningPreferences value={preferences} onChange={(value) => setPreferences(normalizeLearningPreferences(value))} />}
     </div></div>
   </AppShell>

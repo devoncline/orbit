@@ -605,9 +605,9 @@ export default function StudySession({
             data-presentation-mode={presentation.mode} data-presentation-reason={presentation.reason} data-choice-density={presentation.choiceDensity}>
             <header className="study-context">
                 <p className="study-subject"><span>{course.name}</span>{lesson && <span>Lesson {learningPath.step}</span>}</p>
-                {lesson && <StudyPath path={pathView} />}
                 {lesson && lesson.topic !== lesson.concept && <p className="study-topic">{lesson.topic}</p>}
                 <h1>{lesson?.concept || course.nextTask || course.name}</h1>
+                {lesson && <StudyPath path={pathView} />}
             </header>
             {companion}
             <div className="study-body">

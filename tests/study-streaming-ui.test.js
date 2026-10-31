@@ -132,7 +132,7 @@ test('generated visuals follow the active lesson across tool switches without du
   assert.ok(container.querySelector('.lesson-visual-generated_image'))
   assert.match(container.querySelector('.lesson-visual-purpose').textContent, /Follow an input/)
   assert.match(container.querySelector('.study-subject').textContent, /Lesson 2/)
-  assert.match(container.querySelector('.study-path-previous').textContent, /Inputs/)
+  assert.match(container.querySelector('.study-path li').textContent, /VisitedInputs/)
   assert.equal(container.querySelector('.study-recommendation button').textContent, 'Give me an example')
 })
 

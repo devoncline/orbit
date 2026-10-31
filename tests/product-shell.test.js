@@ -224,8 +224,8 @@ test('guided Study exposes course, lesson, readiness and continuation while the 
   assert.match(html, />I understand<\/button>/)
   assert.match(html, />Continue to next lesson<\/button>/)
   assert.match(html, /Next idea<\/small><span>Testing an idea<\/span>/)
-  assert.match(html, /<details class="study-path"><summary aria-label="View learning path, step 1">/)
-  assert.match(html, /aria-current="step"><small>Step 1 · Now<\/small><strong>Explaining behavior/)
+  assert.match(html, /<details class="study-path"><summary><span class="study-path-label">Study path/)
+  assert.match(html, /aria-current="step"><small>Lesson 1 · Current lesson<\/small><strong>Explaining behavior/)
   assert.match(html, /<details class="study-tools"><summary>Study tools/)
   assert.match(html, /Suggested next/)
   assert.match(html, /Start with the lesson above/)
@@ -261,8 +261,8 @@ test('a resumed path shows visited, current and tentative next concepts without 
   const html = renderToStaticMarkup(createElement(StudySession, {
     course, mastery: 40, initialThread: { resume: { lesson, learningPath } },
   }))
-  assert.match(html, /study-path-previous"><small>Visited<\/small><span>Explaining behavior/)
-  assert.match(html, /Step 2 · Now<\/small><strong>Testing an idea/)
+  assert.match(html, /<li><small>Visited<\/small><span>Explaining behavior/)
+  assert.match(html, /Lesson 2 · Current lesson<\/small><strong>Testing an idea/)
   assert.match(html, /Next idea<\/small><span>Comparing groups/)
   assert.match(html, /Visited lessons are separate from mastery/)
   assert.doesNotMatch(html, /<details[^>]*open|Completed|Mastered/)
@@ -308,9 +308,10 @@ test('thread navigation starts collapsed and identifies the current objective wi
       { id: 'second', title: 'Events', courseName: courses[0].name, context: 'activity', summary: 'Trying a button.', createdAt: '2026-10-27T10:05:00Z' },
     ],
   }))
-  assert.match(html, /<details><summary>Study threads/)
+  assert.match(html, /<details class="study-thread-selector"><summary><span class="study-thread-context"><span>Study threads/)
   assert.doesNotMatch(html, /<details open|<textarea/)
   assert.match(html, /aria-current="true"/)
+  assert.match(html, /class="thread-current">Current<\/small>/)
   assert.ok(html.indexOf('Events') < html.indexOf('Props basics'))
   assert.match(html, /This browser keeps up to 20 recent threads/)
 })

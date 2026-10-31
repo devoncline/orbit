@@ -5,7 +5,7 @@ import { act, createElement } from 'react'
 import { Window } from 'happy-dom'
 import { createServer } from 'vite'
 
-let dom, server, createRoot, StudySession, root, container
+let dom, server, createRoot, StudySession, StudyThreads, root, container
 const globals = new Map()
 const course = { name: 'React', mastery: { overall: 40, topics: {} } }
 const lesson = { topic: 'State', concept: 'Remembering a value', content: 'State remembers a value between renders.' }
@@ -30,6 +30,7 @@ before(async () => {
   createRoot = (await import('react-dom/client')).createRoot
   server = await createServer({ server: { middlewareMode: true, watch: null, hmr: false }, appType: 'custom' })
   StudySession = (await server.ssrLoadModule('/src/components/StudySession.jsx')).default
+  StudyThreads = (await server.ssrLoadModule('/src/components/StudyThreads.jsx')).default
 })
 beforeEach(() => { container = dom.document.createElement('div'); dom.document.body.append(container); root = createRoot(container) })
 afterEach(async () => { await act(async () => root.unmount()); container.remove() })
@@ -56,6 +57,59 @@ async function type(value) {
     field.dispatchEvent(new dom.Event('input', { bubbles: true }))
   })
 }
+
+test('thread disclosure dismisses on Escape, outside pointer and focus exit, and returns focus after switching', async () => {
+  const switches = []
+  const threads = ['one', 'two'].map(id => ({ id, title: `Thread ${id}`, courseName: course.name, context: 'lesson', summary: 'A saved lesson.', createdAt: '2026-10-30T10:00:00Z' }))
+  await act(async () => root.render(createElement(StudyThreads, { courses: [course], threads, activeId: 'one', onSwitch: id => switches.push(id) })))
+  const selector = container.querySelector('details')
+  const summary = selector.querySelector('summary')
+  assert.equal(selector.open, false)
+  assert.match(summary.textContent, /Thread one/)
+  assert.equal(selector.querySelector('[aria-current] .thread-current').textContent, 'Current')
+
+  selector.open = true
+  selector.querySelector('button').focus()
+  await act(async () => selector.dispatchEvent(new dom.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+  assert.equal(selector.open, false)
+  assert.equal(dom.document.activeElement, summary)
+  assert.deepEqual(switches, [])
+
+  selector.open = true
+  await act(async () => dom.document.body.dispatchEvent(new dom.PointerEvent('pointerdown', { bubbles: true })))
+  assert.equal(selector.open, false)
+
+  selector.open = true
+  await act(async () => container.querySelector('.study-thread-new').focus())
+  assert.equal(selector.open, false)
+
+  selector.open = true
+  await act(async () => selector.querySelector('button').click())
+  assert.deepEqual(switches, ['two'])
+  assert.equal(selector.open, false)
+  assert.equal(dom.document.activeElement, summary)
+})
+
+test('New thread keeps its labelled disclosure and existing course/topic submission', async () => {
+  const creations = []
+  await act(async () => root.render(createElement(StudyThreads, { courses: [course], threads: [], onCreate: (...args) => creations.push(args) })))
+  const trigger = container.querySelector('.study-thread-new')
+  assert.equal(trigger.textContent, 'New thread')
+  assert.equal(trigger.getAttribute('aria-expanded'), 'false')
+  await act(async () => trigger.click())
+  const form = container.querySelector('form')
+  assert.equal(trigger.getAttribute('aria-controls'), form.id)
+  assert.equal(trigger.getAttribute('aria-expanded'), 'true')
+  const field = form.querySelector('input')
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(dom.HTMLInputElement.prototype, 'value').set.call(field, '  Events  ')
+    field.dispatchEvent(new dom.Event('input', { bubbles: true }))
+  })
+  await act(async () => form.dispatchEvent(new dom.Event('submit', { bubbles: true, cancelable: true })))
+  assert.deepEqual(creations, [[course, 'Events']])
+  assert.equal(container.querySelector('form'), null)
+  assert.equal(trigger.getAttribute('aria-expanded'), 'false')
+})
 
 test('Show me retains I lost you explanation and its request after That helps and tool switches', async (t) => {
   const images = []

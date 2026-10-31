@@ -53,7 +53,7 @@ export default function AppShell({ courses, destination, selectedSpace, onNaviga
       <div className="orbit-environment" aria-hidden="true" />
       <aside className="shell-sidebar">{navigation()}</aside>
       <header className="shell-mobile-header">
-        <button className="orbit-text-button shell-menu-toggle" onClick={() => { drawer.current.showModal(); setDrawerOpen(true) }} aria-label="Open navigation" aria-haspopup="dialog" aria-controls="orbit-navigation" aria-expanded={drawerOpen}>
+        <button className="orbit-icon-button shell-menu-toggle" onClick={() => { drawer.current.showModal(); setDrawerOpen(true) }} aria-label="Open navigation" aria-haspopup="dialog" aria-controls="orbit-navigation" aria-expanded={drawerOpen}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
         </button>
         <button className="shell-brand" onClick={() => onNavigate('home')} aria-label="Orbit home"><img src={orbitLogo} width="528" height="176" alt="Orbit" /></button>

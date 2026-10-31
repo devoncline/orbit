@@ -1,24 +1,49 @@
-import { useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 
 export default function StudyThreads({ threads, activeId, courses, onSwitch, onCreate }) {
   const active = threads.find((thread) => thread.id === activeId)
   const [creating, setCreating] = useState(false)
   const [courseName, setCourseName] = useState(active?.courseName || courses[0]?.name || '')
   const [topic, setTopic] = useState('')
+  const selector = useRef(null)
+  const createId = useId()
+
+  useEffect(() => {
+    function dismiss(event) {
+      if (selector.current?.open && !selector.current.contains(event.target)) selector.current.open = false
+    }
+    document.addEventListener('pointerdown', dismiss)
+    return () => document.removeEventListener('pointerdown', dismiss)
+  }, [])
+
+  function closeSelector() {
+    if (!selector.current) return
+    selector.current.open = false
+    selector.current.querySelector('summary')?.focus()
+  }
+
   return <div className="study-threads">
-    <details>
-      <summary>Study threads <span>{threads.length}</span></summary>
+    <div className="study-thread-toolbar">
+    <details className="study-thread-selector" ref={selector} onKeyDown={(event) => {
+      if (event.key === 'Escape' && event.currentTarget.open) { event.preventDefault(); event.stopPropagation(); closeSelector() }
+    }} onBlur={(event) => {
+      if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false
+    }}>
+      <summary><span className="study-thread-context"><span>Study threads <small>{threads.length}</small></span><strong>{active?.title || 'Choose a thread'}</strong></span></summary>
+      <div className="thread-menu">
       <p className="orbit-muted">This browser keeps up to 20 recent threads, their summaries, and a little context to continue.</p>
       <ul className="thread-list">{[...threads].reverse().map((thread) => <li key={thread.id}>
-        <button className="orbit-button" aria-current={thread.id === activeId ? 'true' : undefined} onClick={(event) => { onSwitch(thread.id); event.currentTarget.closest('details').open = false }}>
-          <strong>{thread.title}</strong>
+        <button aria-current={thread.id === activeId ? 'true' : undefined} onClick={() => { closeSelector(); onSwitch(thread.id) }}>
+          <span className="thread-option-heading"><strong>{thread.title}</strong>{thread.id === activeId && <small className="thread-current">Current</small>}</span>
           <small>{thread.courseName} · {thread.context} · {thread.status === 'practiced' ? 'Practiced' : 'In progress'} · <time dateTime={thread.createdAt}>{new Date(thread.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</time></small>
-          <span>{thread.summary}</span>
+          <span className="thread-option-summary">{thread.summary}</span>
         </button>
       </li>)}</ul>
+      </div>
     </details>
-    <button className="orbit-button study-thread-new" onClick={() => { setCourseName(active?.courseName || courses[0]?.name || ''); setCreating(!creating) }} aria-expanded={creating}><span aria-hidden="true">＋</span>New thread</button>
-    {creating && <form className="orbit-form thread-create" onSubmit={(event) => {
+    <button className="orbit-text-button study-thread-new" onClick={() => { setCourseName(active?.courseName || courses[0]?.name || ''); setCreating(!creating) }} aria-expanded={creating} aria-controls={createId}><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><path d="M10 4v12M4 10h12" /></svg><span>New thread</span></button>
+    </div>
+    {creating && <form id={createId} className="orbit-form thread-create" onSubmit={(event) => {
       event.preventDefault()
       const course = courses.find((entry) => entry.name === courseName)
       if (!course) return

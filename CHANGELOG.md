@@ -4,6 +4,7 @@
 
 ### Improvements
 
+- Study controls now have clearer visual hierarchy: quiet section disclosures, a current-thread selector, softer selected states, and distinct keyboard focus. The lesson path puts the current lesson and next idea first, while mobile navigation and New thread use compact, unboxed controls.
 - Learning preferences now produce clearer differences in explanation length and example order. Choosing visuals only on request reliably keeps new lessons text-only until the learner asks.
 - Instructional images favor fewer, larger labels and clearer process arrows. Return recaps remove formatting marks and avoid clipped words, image descriptions are shorter, and request failures keep technical details private.
 - Optional learning preferences on Home and in Library let Orbit tailor explanation length, example timing, useful visuals, next-step guidance, and return recaps. Five quick choices can be skipped, edited, or reset without changing learning progress. Explicit Study actions remain available.
@@ -44,6 +45,13 @@
 ### Manual test checklist
 
 Current submission evidence and remaining checks are recorded in [SUBMISSION_CHECKLIST.md](SUBMISSION_CHECKLIST.md). The sequences below remain reusable regression checklists, not claims that every step was manually completed.
+
+Study control polish (isolated Chrome preview inspected at 1440, 768, 390 and 320px; physical-device, full screen-reader and reduced-motion checks remain manual):
+
+1. Open Study. Check the current lesson heading and next idea, then expand Study path to see visited, current and suggested lessons with complete names.
+2. Open Study threads; check the Current marker, select a different thread, and reopen. Press Escape and Tab out; the selector should close, with focus returned to its trigger on Escape or selection. Try New thread and its learning-space selector.
+3. Open Study tools and choose Let me try it. Expand Lesson context and Study tools; check the selected action, keyboard focus and readable content. Repeat at 390px and 320px, including opening/closing mobile navigation.
+4. Enable reduced motion and repeat disclosure toggles. With a screen reader, check expanded/collapsed announcements, current thread, pressed Study action and navigation dialog focus. Verify touch targets and scrolling on a physical phone.
 
 Learning preferences (automated checks and two contrasting live profiles completed; full reset/device/screen-reader coverage remains manual):
 
