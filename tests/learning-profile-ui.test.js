@@ -150,7 +150,7 @@ test('editing preferences updates the next teaching request without reloading th
   assert.equal(requests[1].learningProfile.exampleTiming, 'after')
 })
 
-test('an unopened session uses the latest profile when first activated and does not regenerate after later edits', async (t) => {
+test('an unopened session waits for Start lesson, uses the latest profile and does not regenerate after later edits', async (t) => {
   const requests = []
   t.mock.method(dom, 'matchMedia', () => ({ matches: true, addEventListener() {}, removeEventListener() {} }))
   t.mock.method(globalThis, 'fetch', async (_path, options) => { requests.push(JSON.parse(options.body)); return json(lesson) })
@@ -158,6 +158,8 @@ test('an unopened session uses the latest profile when first activated and does 
   await renderStudy({ initialThread: undefined, active: false, learningProfile: { chunkSize: 'detailed' } })
   assert.equal(requests.length, 0)
   await renderStudy({ initialThread: undefined, active: true, learningProfile: { chunkSize: 'detailed' } })
+  assert.equal(requests.length, 0)
+  await click('Start lesson')
   assert.equal(requests.length, 1)
   assert.equal(requests[0].learningProfile.chunkSize, 'detailed')
   await renderStudy({ initialThread: undefined, active: true })

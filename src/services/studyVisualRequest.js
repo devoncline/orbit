@@ -37,8 +37,21 @@ export function studyVisualContext(state) {
   return { source: activeInteraction, explanation: text(explanation, 900), details: details.filter((entry) => entry.detail), recovery }
 }
 
-// Ephemeral, bounded snapshot made on a deliberate click. It uses the existing
-// image request schema/cache; no transcript, progress, asset, or new persistence.
+export function savedStudyVisual(value) {
+  const request = lessonImageRequest(value?.request)
+  return request ? { request, explanation: text(value.explanation, 900), recovery: value.recovery === true } : null
+}
+
+export function savedVisualRecovery(value) {
+  if (!value?.recovery || !['lesson', 'activity', 'quiz', 'conversation'].includes(value.source)) return null
+  return { source: value.source, explanation: text(value.explanation, 900), recovery: true,
+    details: (Array.isArray(value.details) ? value.details.slice(0, 4) : [])
+      .filter((entry) => text(entry?.label, 100) && text(entry?.detail, 240))
+      .map((entry) => item(text(entry.label, 100), entry.detail)),
+  }
+}
+
+// Bounded teaching context captured on a deliberate click, also safe for resume.
 export function createStudyVisualRequest(state) {
   if (state.activeInteraction === 'visual' && state.requestedVisual) return state.requestedVisual
   const { courseName, lesson } = state
@@ -46,7 +59,9 @@ export function createStudyVisualRequest(state) {
   const context = current || state.recentVisualRecovery
   const recovery = current?.recovery ? current : current?.source === state.recentVisualRecovery?.source ? null : state.recentVisualRecovery
   const automatic = lessonImageRequest({ courseName, lesson, visual: lesson?.visual })
-  if (!context && automatic) return { request: automatic, explanation: lesson.content, recovery: false }
+  if (automatic && (!context || (context.source === 'lesson' && context.explanation === text(lesson?.content, 900)))) {
+    return { request: automatic, explanation: context?.explanation || lesson.content, recovery: Boolean(recovery) }
+  }
   const explanation = context?.explanation || text(lesson?.content, 900)
   const recoveryContext = recovery ? [
     ...learnerDetails(recovery).map((entry) => `${entry.label}: ${text(entry.detail, 120)}`),

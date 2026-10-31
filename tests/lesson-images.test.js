@@ -5,9 +5,9 @@ import { readFile } from 'node:fs/promises'
 import handler from '../api/generate-lesson-image.js'
 import lessonHandler from '../api/generate-study-lesson.js'
 import { generateLessonImage, createLessonImageCache } from '../src/services/lessonImages.js'
-import { lessonImageRequest, lessonImageUrl } from '../src/services/lessonImageRequest.js'
+import { lessonImageRequest, lessonImageUrl, MAX_SAVED_VISUALS, savedLessonImages } from '../src/services/lessonImageRequest.js'
 import { generatedLessonVisual } from '../src/services/learningPath.js'
-import { compactThreadResume } from '../src/services/learnerMemory.js'
+import { compactThreadResume, LEARNER_MEMORY_KEY, saveLearnerMemory, loadLearnerMemory } from '../src/services/learnerMemory.js'
 
 const lesson = { topic: 'State', concept: 'Updating a component', content: 'Updating state asks React to render the component again.' }
 const visual = { type: 'generated_image', composition: 'process', purpose: 'Connect a state update to rendering.', focus: 'State',
@@ -130,7 +130,7 @@ test('normalization preserves relationships and recovery, adapts legacy data, an
   assert.deepEqual(normalized.visual.links, visual.links)
   const saved = compactThreadResume({ lesson: { ...lesson, visual: dirty, image: imageUrl }, conversationVisual: dirty })
   assert.equal(saved.lesson.visual.type, 'generated_image')
-  assert.doesNotMatch(JSON.stringify(saved), /https:|b64_json|conversationVisual/)
+  assert.doesNotMatch(JSON.stringify(saved), /https:|b64_json/)
   const old = { ...visual, type: 'process', composition: undefined }
   assert.deepEqual(generatedLessonVisual(old), visual)
   for (const url of ['http://example.test/image', 'data:image/png;base64,abc', 'javascript:alert(1)', 'https://user:secret@example.test/x', 'bad', 'x'.repeat(8193)]) assert.equal(lessonImageUrl(url), null)
@@ -164,4 +164,54 @@ test('client visual modules cannot import server credentials or the legacy rende
     const source = await readFile(new URL(`../${path}`, import.meta.url), 'utf8')
     assert.doesNotMatch(source, /MODEL_API_KEY|Authorization|api\.meta\.ai|LegacyLessonVisual|localStorage|sessionStorage/)
   }
+})
+
+test('bounded visual metadata survives localStorage without bytes, secrets or persisted pending state', () => {
+  const storage = new Map()
+  const browser = { setItem: (key, value) => storage.set(key, value), getItem: (key) => storage.get(key) }
+  const images = Array.from({ length: MAX_SAVED_VISUALS + 3 }, (_, index) => ({
+    request: { ...context, lesson: { ...lesson, concept: `Concept ${index}` }, token: 'SECRET_SENTINEL' },
+    status: 'ready', url: `${imageUrl}&index=${index}`, b64_json: 'BINARY_SENTINEL', bytes: new Uint8Array([1, 2]),
+  }))
+  images.at(-2).status = 'pending'
+  images.at(-1).url = 'data:image/webp;base64,BINARY_SENTINEL'
+  saveLearnerMemory({ courses: [{ name: 'React' }], threads: [{ id: 'one', courseName: 'React',
+    createdAt: '2026-10-30T10:00:00Z', startRequested: true,
+    resume: { lesson, images, loadingLesson: 'lesson', loadingConversation: true, pendingTurn: 'UNFINISHED_SENTINEL' },
+  }], activeId: 'one' }, browser)
+  const serialized = storage.get(LEARNER_MEMORY_KEY)
+  assert.doesNotMatch(serialized, /BINARY_SENTINEL|SECRET_SENTINEL|UNFINISHED_SENTINEL|b64_json|bytes|base64|data:image|pending|startRequested|loading/)
+  const restored = loadLearnerMemory(browser).threads[0].resume.images
+  assert.equal(restored.length, MAX_SAVED_VISUALS)
+  assert.equal(restored[0].request.lesson.concept, 'Concept 3')
+  assert.equal(restored.at(-2).status, 'error')
+  assert.equal(restored.at(-1).status, 'error')
+  assert.equal(restored.at(-1).url, undefined)
+  assert.deepEqual(savedLessonImages([null, {}, { request: {} }]), [])
+})
+
+test('cache hydration is free, stable across serialization and scoped to its owning thread', async (t) => {
+  const calls = t.mock.method(globalThis, 'fetch', async () => ({ ok: true, json: async () => ({ url: imageUrl }) }))
+  const key = JSON.stringify(lessonImageRequest(context))
+  const first = createLessonImageCache()
+  await first.load(key)
+  const restored = createLessonImageCache(JSON.parse(JSON.stringify(first.getSaved())))
+  await restored.load(key)
+  assert.equal(restored.get(key).url, imageUrl)
+  assert.equal(calls.mock.callCount(), 1)
+  const otherThread = createLessonImageCache()
+  assert.equal(otherThread.get(key).status, 'idle')
+  await otherThread.load(key)
+  assert.equal(calls.mock.callCount(), 2)
+})
+
+test('legacy visual request identities stay canonical after repeated normalization and persistence', () => {
+  const legacy = { ...context, visual: { ...visual, type: 'diagram', composition: undefined } }
+  const request = lessonImageRequest(legacy)
+  const key = JSON.stringify(request)
+  const restored = compactThreadResume({ lesson: { ...lesson, visual: legacy.visual },
+    images: [{ request, status: 'ready', url: imageUrl }] })
+  assert.equal(JSON.stringify(lessonImageRequest(request)), key)
+  assert.equal(JSON.stringify(lessonImageRequest({ ...context, lesson: restored.lesson, visual: restored.lesson.visual })), key)
+  assert.equal(createLessonImageCache(restored.images).get(key).url, imageUrl)
 })

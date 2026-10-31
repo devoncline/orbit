@@ -6,6 +6,7 @@ import { createServer } from 'vite'
 import { Window } from 'happy-dom'
 import { acceptPathLesson, learningPathContextKey, generatedLessonVisual, nativeLessonVisual, normalizeLessonVisual, recommendStudyAction } from '../src/services/learningPath.js'
 import { compactThreadResume } from '../src/services/learnerMemory.js'
+import { lessonImageRequest } from '../src/services/lessonImageRequest.js'
 import handler from '../api/generate-study-lesson.js'
 import { lessonVisualComposition, visualConnector } from '../src/services/lessonVisualComposition.js'
 import { lessonVisuals } from './fixtures/lessonVisuals.js'
@@ -115,7 +116,9 @@ test('multiple visual instances have independent SVG references and accessible c
 
 test('StudySession places context and path before the lesson, visuals before tools, and guidance last', () => {
   const learningPath = acceptPathLesson({ ...lesson, nextLessons: [{ topic: 'Events', concept: 'Responding to a click' }] }, undefined, undefined, learningPathContextKey(course))
-  const body = render(StudySession, { course, mastery: 40, initialThread: { resume: { lesson: { ...lesson, visual }, learningPath } } })
+  const body = render(StudySession, { course, mastery: 40, initialThread: { resume: { lesson: { ...lesson, visual }, learningPath,
+    images: [{ request: lessonImageRequest({ courseName: course.name, lesson, visual }), status: 'ready', url: 'https://images.example.test/saved.webp' }],
+  } } })
   assert.match(body.querySelector('.study-subject').textContent, /ReactLesson 1/)
   assert.ok(body.querySelector('.study-session-illustrated'))
   assert.equal(body.querySelector('.study-path').parentElement.className, 'study-context')

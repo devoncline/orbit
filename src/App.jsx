@@ -13,11 +13,7 @@ import { applyPositionOverride, inferCoursePosition, localDate, mergeCourseAnaly
 import { createStudyThread, resolveLearningSpace, studyThreadsReducer } from './services/studyThreads'
 import { clearLearnerMemory, learnerPositionKey, loadLearnerMemory, saveLearnerMemory } from './services/learnerMemory'
 import { retainLearningAnchors } from './services/studyLearningContext'
-import {
-  analyzeCourseFile,
-  recommendCourse,
-  recommendationCourses,
-} from './services/meta'
+import { analyzeCourseFile } from './services/meta'
 import { useCallback, useEffect, useReducer, useState } from 'react'
 import './App.css'
 
@@ -33,11 +29,9 @@ export default function App() {
   const [newSpaceIntent, setNewSpaceIntent] = useState('topic')
 
   const [recommendation, setRecommendation] = useState(restored.recommendation)
-  const [loadingRecommendation, setLoadingRecommendation] = useState(false)
   const [today, setToday] = useState(localDate)
   const [{ threads, activeId }, dispatchThreads] = useReducer(studyThreadsReducer, { threads: restored.threads, activeId: restored.activeId })
   const activeThread = threads.find((thread) => thread.id === activeId)
-  const recommendationInput = JSON.stringify(recommendationCourses(courses))
 
   const recommendedCourse =
     courses.find(
@@ -63,29 +57,6 @@ export default function App() {
     return () => { current = false }
   }, [courses, threads, activeId, recommendation, learningPreferences])
 
-  useEffect(() => {
-    const context = JSON.parse(recommendationInput)
-    if (!context.length) return
-    let active = true
-    const controller = new AbortController()
-    async function loadRecommendation() {
-      try {
-        setLoadingRecommendation(true)
-
-        const result = await recommendCourse(context, { currentDate: today, signal: controller.signal })
-
-        if (active && context.some((course) => course.name === result?.courseName)) setRecommendation(result)
-      } catch {
-        // Keep the previous recommendation and local position-based action available.
-      } finally {
-        if (active) setLoadingRecommendation(false)
-      }
-    }
-
-    loadRecommendation()
-    return () => { active = false; controller.abort() }
-  }, [recommendationInput, today])
-
   function resetLearningData() {
     if (!clearLearnerMemory()) {
       setResetMessage('Orbit could not clear browser storage. Check your browser storage settings and try again.')
@@ -95,7 +66,6 @@ export default function App() {
     setLearningPreferences(normalizeLearningPreferences())
     dispatchThreads({ type: 'reset' })
     setRecommendation(null)
-    setLoadingRecommendation(false)
     setSelectedSpace(null)
     setResetPending(false)
     setResetMessage('Local Orbit learning data cleared.')
@@ -263,7 +233,8 @@ export default function App() {
       selectSpace(course.name)
       return
     }
-    dispatchThreads({ type: 'create', thread: createStudyThread(course, topic) })
+    // Intent belongs to this click only; learner-memory's projection never saves it.
+    dispatchThreads({ type: 'create', thread: { ...createStudyThread(course, topic), startRequested: true } })
     setDestination('study')
   }
 
@@ -311,7 +282,6 @@ export default function App() {
           courses={courses}
           recommendedCourse={recommendedCourse}
           recommendation={currentRecommendation}
-          loadingRecommendation={loadingRecommendation}
           onContinue={startSession}
           onSelectSpace={selectSpace}
           onNewSpace={newSpace}

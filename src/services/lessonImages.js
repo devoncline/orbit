@@ -1,4 +1,4 @@
-import { lessonImageRequest, lessonImageUrl } from './lessonImageRequest.js'
+import { lessonImageRequest, lessonImageUrl, savedLessonImages } from './lessonImageRequest.js'
 
 export async function generateLessonImage(context) {
   const request = lessonImageRequest(context)
@@ -17,13 +17,18 @@ export const EMPTY_IMAGE = Object.freeze({ status: 'idle' })
 
 // Owned by the mounted StudySession, outside conditional lesson/conversation views.
 // Pending promises AND failures survive tool switches/StrictMode; retry is explicit.
-// URLs live only in memory. No generated asset is part of lesson/resume persistence.
-export function createLessonImageCache() {
-  const entries = new Map()
+// Resume stores only bounded metadata. Hydration is read-only, including failures.
+export function createLessonImageCache(saved) {
+  let snapshot = savedLessonImages(saved)
+  const entries = new Map(snapshot.map(({ request, ...image }) => [JSON.stringify(request), { snapshot: image }]))
   const listeners = new Set()
-  const notify = () => listeners.forEach((listener) => listener())
+  const notify = () => {
+    snapshot = savedLessonImages([...entries].map(([key, entry]) => ({ request: JSON.parse(key), ...entry.snapshot })))
+    listeners.forEach((listener) => listener())
+  }
   return {
     get: (key) => entries.get(key)?.snapshot || EMPTY_IMAGE,
+    getSaved: () => snapshot,
     subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener) },
     fail(key) {
       const entry = entries.get(key)

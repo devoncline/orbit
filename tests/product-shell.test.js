@@ -72,11 +72,11 @@ test('visible content does not end thinking and visual slots remain accessible',
   assert.match(html, /Orbit is preparing a short lesson/)
 })
 
-test('initial Study loading uses the shared status and Home keeps its action available while thinking', () => {
+test('initial Study has no thinking state before a request and Home keeps its action available while thinking', () => {
   const html = renderToStaticMarkup(createElement(StudySession, { course: courses[0], mastery: 40 }))
-  assert.equal((html.match(/Orbit is preparing a short lesson/g) || []).length, 1)
-  assert.match(html, /orbit-teaching-tilt-transparent.png/)
-  assert.match(html, /finding the next idea/)
+  assert.equal((html.match(/Orbit is preparing a short lesson/g) || []).length, 0)
+  assert.match(html, /Start lesson/)
+  assert.doesNotMatch(html, /orbit-teaching-tilt-transparent.png|finding the next idea/)
   assert.doesNotMatch(html, /<p role="status">Orbit/)
   const home = renderToStaticMarkup(createElement(HomeScreen, { courses: [courses[0]], recommendedCourse: courses[0], loadingRecommendation: true }))
   assert.equal((home.match(/role="status"/g) || []).length, 1)

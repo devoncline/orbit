@@ -24,6 +24,15 @@ test('unchanged automatic briefs use the exact existing cache key', () => {
   assert.deepEqual(createStudyVisualRequest(current).request, lessonImageRequest({ ...current, visual }))
 })
 
+test('automatic recovery images also serve Show me before and after acknowledging recovery', () => {
+  const visual = { type: 'generated_image', purpose: 'Explain the curved path.', data: [{ label: 'Orbit', detail: clarification }] }
+  const current = { ...state, lesson: { ...lesson, content: clarification, visual }, recoveringLesson: true }
+  const recentVisualRecovery = studyVisualContext(current)
+  const automatic = lessonImageRequest({ ...current, visual })
+  assert.deepEqual(createStudyVisualRequest({ ...current, recentVisualRecovery }).request, automatic)
+  assert.deepEqual(createStudyVisualRequest({ ...current, recoveringLesson: false, recentVisualRecovery }).request, automatic)
+})
+
 test('I lost you context survives leaving or acknowledging recovery without changing its request', () => {
   const recovering = { ...state, lesson: { ...lesson, content: clarification }, recoveringLesson: true }
   const recentVisualRecovery = studyVisualContext(recovering)
@@ -100,7 +109,8 @@ test('request allowlist and bounds exclude arbitrary learner state and keep rece
 test('explicit visuals use the existing visual presentation throughout pending and ready, even after quiz recovery', () => {
   const requestedVisual = createStudyVisualRequest(state)
   const current = { ...state, activeInteraction: 'visual', requestedVisual, answerResult: 'incorrect', showAdaptedLesson: true, evaluation: {} }
-  for (const status of ['idle', 'pending', 'ready']) assert.equal(selectStudyPresentation(current, status).mode, 'visual')
+  for (const status of ['pending', 'ready']) assert.equal(selectStudyPresentation(current, status).mode, 'visual')
+  assert.equal(selectStudyPresentation(current, 'idle').mode, 'focus')
   assert.equal(selectStudyPresentation(current, 'error').mode, 'focus')
   assert.equal(createStudyVisualRequest(current), requestedVisual)
   assert.notDeepEqual(createStudyVisualRequest({ ...state, lesson: { ...lesson, content: 'A materially changed lesson.' } }).request, requestedVisual.request)

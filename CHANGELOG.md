@@ -4,6 +4,7 @@
 
 ### Improvements
 
+- Opening Orbit or returning to saved lessons no longer starts AI requests automatically. Generated visuals are saved with recent threads and reused after refresh; unavailable images require **Retry visual** instead of regenerating when reopened.
 - Study controls now have clearer visual hierarchy: quiet section disclosures, a current-thread selector, softer selected states, and distinct keyboard focus. The lesson path puts the current lesson and next idea first, while mobile navigation and New thread use compact, unboxed controls.
 - Learning preferences now produce clearer differences in explanation length and example order. Choosing visuals only on request reliably keeps new lessons text-only until the learner asks.
 - Instructional images favor fewer, larger labels and clearer process arrows. Return recaps remove formatting marks and avoid clipped words, image descriptions are shorter, and request failures keep technical details private.
@@ -77,7 +78,7 @@ Show me (automated checks and live recovery-to-visual walkthrough completed; pro
 5. In the full app with the existing server runtime and Muse Image access, repeat with a specific confusion (for example, why forward velocity prevents a straight fall toward the Sun). Request Show me after Talk It Through or misconception/incorrect-answer feedback. Inspect the actual generated image for that precise relationship and accurate labels. The mock preview always returns a reference image and cannot validate model relevance.
 6. Open **Quiz me**, choose the wrong answer, then **Show me**. Check the adapted explanation stays visible. Return to the quiz; the answer/follow-up must still be there and Show me must not change the score. Repeat from activity misconception feedback and confirm the response draft is retained.
 7. Restart the preview's **focus** scenario (choose another scenario and then focus), click **Fail next image**, then **Show me**. Confirm a short failure, intact lesson/tools, no broken image/native fallback, and no further image attempts while idle or navigating through Lesson and Talk it through.
-8. Return using Show me to intentionally retry, or use **Retry visual** while the failure is visible. Confirm exactly one extra request and a usable visual.
+8. Return using Show me; confirm the unavailable state reopens with no extra request. Use **Retry visual** while the failure is visible. Confirm exactly one extra request and a usable visual that remains saved after refresh.
 9. Choose **Continue to next lesson**. Confirm the new concept starts without the previous explicit image. Choose Show me and confirm a fresh request for the new lesson. Also delay an old image request in the full app and verify its late completion cannot replace the new image.
 10. Resize the same browser for **768px**, then use the preview's **390px** button for a phone-width content area. Check stacked image/text, wrapping tools/captions, full image containment, and no horizontal overflow. Repeat with a keyboard, reduced motion, a screen reader, and a physical phone when available.
 

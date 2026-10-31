@@ -19,7 +19,7 @@ export function selectStudyPresentation(state = {}, imageStatus = 'idle') {
   const choiceDensity = profile.guidance === 'focused' ? 'low' : profile.guidance === 'explore' ? 'expanded' : 'normal'
   const interaction = interactions.includes(state.activeInteraction) ? state.activeInteraction : 'lesson'
   const visualKey = studyPresentationImageKey({ ...state, activeInteraction: interaction })
-  const hasVisual = Boolean(visualKey) && ['idle', 'pending', 'ready'].includes(imageStatus)
+  const hasVisual = Boolean(visualKey) && ['pending', 'ready'].includes(imageStatus)
   const feedbackCurrent = Boolean(state.activityFeedback?.feedback) && state.activityFeedback.learnerResponse === (state.activityResponse || '').trim()
   let mode = 'focus', reason = interaction === 'conversation' ? 'conversation' : 'lesson', primary = 'recommendation', guidance = ''
 
@@ -50,7 +50,7 @@ export function selectStudyPresentation(state = {}, imageStatus = 'idle') {
     guidance = primary === 'activity' ? 'Try the task, then share what you notice. Your lesson is available below.' : ''
   } else if (hasVisual) {
     mode = 'visual'; reason = interaction === 'conversation' ? 'conversation_visual' : 'lesson_visual'
-  } else if (visualKey && imageStatus === 'error') {
+  } else if (visualKey && ['idle', 'error'].includes(imageStatus)) {
     reason = 'visual_unavailable'
   }
   if (interaction === 'conversation') primary = 'conversation'

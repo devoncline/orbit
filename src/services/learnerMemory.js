@@ -1,7 +1,9 @@
 import { inferCoursePosition, normalizeLearnerPosition, normalizeSyllabusItems } from './coursePosition.js'
 import { retainLearningAnchors } from './studyLearningContext.js'
-import { normalizeLearningPath, normalizeLessonVisual } from './learningPath.js'
+import { generatedLessonVisual, normalizeLearningPath, normalizeLessonVisual } from './learningPath.js'
 import { normalizeLearningPreferences } from './learningProfile.js'
+import { savedLessonImages } from './lessonImageRequest.js'
+import { savedStudyVisual, savedVisualRecovery } from './studyVisualRequest.js'
 
 export const LEARNER_MEMORY_KEY = 'orbit.learner-memory'
 export const LEARNER_MEMORY_VERSION = 2
@@ -28,8 +30,16 @@ export function compactThreadResume(value) {
     learningPath: normalizeLearningPath(value?.learningPath),
     conversation: list(value?.conversation, MAX_SAVED_EXCHANGES)
       .filter((exchange) => text(exchange?.message, 600) && text(exchange?.response, 900))
-      .map((exchange) => ({ message: text(exchange.message, 600), response: text(exchange.response, 900) })),
+      .map((exchange) => ({ message: text(exchange.message, 600), response: text(exchange.response, 900),
+        ...(exchange.signal === 'confusion' ? { signal: 'confusion' } : {}) })),
     learningAnchors: retainLearningAnchors(value?.learningAnchors),
+    images: savedLessonImages(value?.images),
+    requestedVisual: savedStudyVisual(value?.requestedVisual),
+    recentVisualRecovery: savedVisualRecovery(value?.recentVisualRecovery),
+    conversationVisual: generatedLessonVisual(value?.conversationVisual),
+    recoveringLesson: value?.recoveringLesson === true,
+    activeInteraction: value?.activeInteraction === 'visual' && savedStudyVisual(value?.requestedVisual) ? 'visual'
+      : value?.activeInteraction === 'conversation' ? 'conversation' : 'lesson',
   }
 }
 

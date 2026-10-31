@@ -228,17 +228,20 @@ test('I lost you enters recover while pending, retains it after completion, and 
   assert.equal(mode(), 'recover')
   assert.equal(container.querySelectorAll('.study-primary-action').length, 1)
   assert.equal(button('That helps').className, 'study-primary-action')
-  const savedBefore = JSON.stringify(saved)
+  const savedBefore = saved.at(-1)
   await click('That helps')
   assert.equal(mode(), 'focus')
   assert.equal(dom.document.activeElement, container.querySelector('.study-active-panel'))
-  assert.equal(JSON.stringify(saved), savedBefore, 'A presentation acknowledgment must not change saved learning')
+  assert.deepEqual(saved.at(-1), { resume: { ...savedBefore.resume, recoveringLesson: false } },
+    'A presentation acknowledgment saves only resume, without learning metadata or recency')
 })
 
 test('visual loading, decode, failure and retry keep requests deduplicated and never move keyboard focus', async (t) => {
   let complete
   const calls = t.mock.method(globalThis, 'fetch', () => new Promise((resolve) => { complete = resolve }))
   await mount(t, { initialThread: { resume: { lesson: { ...lesson, visual } } } })
+  assert.equal(calls.mock.callCount(), 0)
+  await click('Show me')
   assert.equal(mode(), 'visual')
   assert.ok(container.querySelector('.lesson-image-surface'))
   button('I lost you').focus()

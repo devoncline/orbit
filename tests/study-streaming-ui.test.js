@@ -119,6 +119,8 @@ test('generated visuals follow the active lesson across tool switches without du
     return new Response(JSON.stringify(nextLesson), { headers: { 'Content-Type': 'application/json' } })
   })
   await act(async () => root.render(createElement(StudySession, { ...props, initialThread: { resume: { lesson: { ...lesson, visual } } } })))
+  assert.equal(requests.length, 0)
+  await click('Show me')
   assert.ok(container.querySelector('.lesson-visual-generated_image'))
   assert.equal(requests.length, 1)
   await click('Talk it through')
@@ -138,7 +140,8 @@ test('generated visuals follow the active lesson across tool switches without du
 
 test('an illustrated lesson keeps one stable presenter through recovery and replacement', async (t) => {
   let complete
-  t.mock.method(globalThis, 'fetch', (_url, options) => {
+  t.mock.method(globalThis, 'fetch', (url, options) => {
+    if (url === '/api/generate-lesson-image') return Promise.resolve(new Response(JSON.stringify({ url: 'https://images.example.test/recovery.webp' })))
     assert.equal(JSON.parse(options.body).action, 'simplify')
     return new Promise((resolve) => { complete = resolve })
   })
@@ -155,7 +158,7 @@ test('an illustrated lesson keeps one stable presenter through recovery and repl
   assert.ok(container.querySelector('.study-session > .orbit-stage'))
 })
 
-test('conversation installs one visual only after completion, reuses current context, and keeps it out of resume', async (t) => {
+test('conversation installs one visual only after completion and saves its bounded reference for resume', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] })
   const requests = mockRequests(t)
   const updates = []
@@ -180,7 +183,8 @@ test('conversation installs one visual only after completion, reuses current con
   assert.equal(container.querySelector('.study-path').textContent, pathBefore)
   assert.equal(container.querySelector('.study-mastery').textContent, 'Mastery · 40%')
   assert.deepEqual(updates.at(-1).resume.lesson, visualLesson)
-  assert.equal(updates.at(-1).resume.conversationVisual, undefined)
+  assert.deepEqual(updates.at(-1).resume.conversationVisual, generatedLessonVisual(nativeVisual))
+  assert.equal(updates.at(-1).resume.images[0].url, 'https://images.example.test/lesson.webp')
   assert.ok(updates.every((update) => update.resume.conversation.every((exchange) => !exchange.visual)))
 
   const alternate = { ...nativeVisual, type: 'comparison', purpose: 'Compare who supplies and receives.', links: undefined }
@@ -207,7 +211,7 @@ test('conversation installs one visual only after completion, reuses current con
   await act(async () => root.render(createElement(StudySession, { ...props, initialThread: { resume: savedResume } })))
   assert.ok(container.querySelector('.lesson-visual-generated_image'))
   await click('Talk it through')
-  assert.equal(container.querySelector('.lesson-visual'), null, 'Refresh restores text and original lesson, not supplemental visuals')
+  assert.ok(container.querySelector('.lesson-visual'), 'Refresh reuses the saved supplemental visual without another request')
   assert.ok(container.querySelector('.study-message-orbit .study-content'))
 })
 
@@ -483,6 +487,8 @@ async function complete(request, result, status = 200) {
 test('initial lesson, simplification, examples and next lesson replace the local Signal and retain earlier work', async (t) => {
   const requests = structuredRequests(t)
   await act(async () => root.render(createElement(StudySession, { ...props, initialThread: undefined })))
+  assert.equal(requests.length, 0)
+  await click('Start lesson')
   const first = checkSignal('lesson')
   assert.equal(requests[0].body.action, 'lesson')
   await complete(requests[0], lesson)

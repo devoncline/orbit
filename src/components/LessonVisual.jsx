@@ -1,6 +1,5 @@
-import { useEffect, useId, useState, useSyncExternalStore } from 'react'
+import { useId, useState, useSyncExternalStore } from 'react'
 import { lessonImageRequest } from '../services/lessonImageRequest'
-import { EMPTY_IMAGE } from '../services/lessonImages'
 import './LessonVisual.css'
 
 function ImageLoading({ decoding = false }) {
@@ -24,15 +23,12 @@ function ImageContent({ url, alt, onError }) {
   </>
 }
 
-function GeneratedLessonImage({ requestKey, cache, active }) {
+function GeneratedLessonImage({ requestKey, cache }) {
   const id = useId()
-  const image = useSyncExternalStore(cache.subscribe, () => cache.get(requestKey), () => EMPTY_IMAGE)
+  const image = useSyncExternalStore(cache.subscribe, () => cache.get(requestKey), () => cache.get(requestKey))
   const { visual } = JSON.parse(requestKey)
-  useEffect(() => {
-    if (active) cache.load(requestKey)
-  }, [cache, requestKey, active])
-
-  if (image.status === 'error') return <div className="lesson-image-retry">
+  // Rendering/restoring an instruction never authorizes a paid image request.
+  if (image.status === 'idle' || image.status === 'error') return <div className="lesson-image-retry">
     <span>Visual unavailable.</span> <button type="button" onClick={() => cache.load(requestKey, true)}>Retry visual</button>
   </div>
 
@@ -50,10 +46,10 @@ function GeneratedLessonImage({ requestKey, cache, active }) {
   </figure>
 }
 
-export default function LessonVisual({ visual, lesson, courseName, cache, active = true }) {
+export default function LessonVisual({ visual, lesson, courseName, cache }) {
   const request = lessonImageRequest({ visual, lesson, courseName })
   if (!request || !cache) return null
   const requestKey = JSON.stringify(request)
   // Keying also resets image decode state immediately when teaching context changes.
-  return <GeneratedLessonImage key={requestKey} requestKey={requestKey} cache={cache} active={active} />
+  return <GeneratedLessonImage key={requestKey} requestKey={requestKey} cache={cache} />
 }

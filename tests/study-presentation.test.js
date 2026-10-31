@@ -18,9 +18,9 @@ test('a normal lesson defaults to focus and authored metadata ignores model layo
   assert.equal(selectStudyPresentation().mode, 'focus')
 })
 
-test('valid image requests select visual throughout idle, pending and ready without intermediate focus', () => {
-  assert.deepEqual(['idle', 'pending', 'ready'].map((status) => selectStudyPresentation(illustrated, status).mode), ['visual', 'visual', 'visual'])
-  assert.equal(selectStudyPresentation(illustrated).splitVisual, true)
+test('saved instructions without an image stay in focus; only pending and ready images select visual', () => {
+  assert.deepEqual(['idle', 'pending', 'ready'].map((status) => selectStudyPresentation(illustrated, status).mode), ['focus', 'visual', 'visual'])
+  assert.equal(selectStudyPresentation(illustrated, 'ready').splitVisual, true)
   assert.equal(selectStudyPresentation({ ...base, lesson: { ...lesson, visual: { type: 'none' } } }, 'ready').mode, 'focus')
   assert.equal(selectStudyPresentation({ ...base, lesson: { ...lesson, visual: { type: 'generated_image' } } }, 'ready').mode, 'focus')
 })
@@ -101,6 +101,6 @@ test('a new lesson selects its own presentation and image key without mutating l
   const key = studyPresentationImageKey(state)
   assert.notEqual(studyPresentationImageKey({ ...state, lesson: { ...state.lesson, content: 'Now render the next state.' } }), key)
   assert.equal(selectStudyPresentation({ ...base, lesson: { ...lesson, concept: 'Events' } }).mode, 'focus')
-  assert.equal(selectStudyPresentation(state).mode, 'visual', 'Inactive quiz recovery cannot leak into a new lesson')
+  assert.equal(selectStudyPresentation(state, 'ready').mode, 'visual', 'Inactive quiz recovery cannot leak into a new lesson')
   assert.equal(JSON.stringify(state), before)
 })

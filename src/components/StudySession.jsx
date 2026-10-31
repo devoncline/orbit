@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import {
     generateStudyLesson,
     generateNextStudyLesson,
@@ -17,6 +17,7 @@ import { applyPositionOverride, readPositionStatement } from '../services/course
 import { selectStudyInteraction, studyThreadMetadata } from '../services/studyThreads'
 import { acceptPathLesson, learningPathContextKey, generatedLessonVisual, normalizeLearningPath, recommendStudyAction, studyPathView } from '../services/learningPath'
 import { createLessonImageCache } from '../services/lessonImages'
+import { lessonImageRequest } from '../services/lessonImageRequest'
 import { createStudyVisualRequest, studyVisualContext } from '../services/studyVisualRequest'
 import { learningResumeGuidance, normalizeLearningProfile } from '../services/learningProfile'
 import CoursePosition from './CoursePosition'
@@ -31,6 +32,13 @@ import LessonVisual from './LessonVisual'
 import useStudyPresentation from './useStudyPresentation'
 import { logVisualRouting } from '../services/visualDiagnostics'
 import './StudySession.css'
+
+// Called only when accepting new teaching from an intentional learner request.
+// Mounting a saved lesson or visual never calls this function.
+function loadLessonVisual(cache, courseName, lesson, visual = lesson?.visual) {
+    const request = lessonImageRequest({ courseName, lesson, visual })
+    if (request) cache.load(JSON.stringify(request))
+}
 
 export default function StudySession({
     course,
@@ -59,7 +67,7 @@ export default function StudySession({
     const resumeSummary = resumeNotice ? learningResumeGuidance(profile, resumeNotice) : ''
     const wasActive = useRef(active)
     const hasBeenActive = useRef(active)
-    const [activeInteraction, setActiveInteraction] = useState('lesson')
+    const [activeInteraction, setActiveInteraction] = useState(resume.activeInteraction)
     const stage = activeInteraction === 'quiz' ? 'quiz' : 'learn'
     const [answerResult, setAnswerResult] = useState('')
     const [showAdaptedLesson, setShowAdaptedLesson] = useState(false)
@@ -73,7 +81,7 @@ export default function StudySession({
     const studyTools = useRef(null)
     const id = useId()
     const [lesson, setLesson] = useState(resume.lesson)
-    const [recoveringLesson, setRecoveringLesson] = useState(false)
+    const [recoveringLesson, setRecoveringLesson] = useState(resume.recoveringLesson)
     const [learningPath, setLearningPath] = useState(() => normalizeLearningPath(resume.learningPath))
     const [progressionError, setProgressionError] = useState('')
     const nextLessonRequest = useRef(null)
@@ -81,18 +89,18 @@ export default function StudySession({
     const latestContextKey = useRef(contextKey)
     const pathView = studyPathView(learningPath, lesson, contextKey)
     const lessonVisual = generatedLessonVisual(lesson?.visual)
-    const [lessonImageCache] = useState(createLessonImageCache)
-    const [requestedVisual, setRequestedVisual] = useState(null)
-    const [recentVisualRecovery, setRecentVisualRecovery] = useState(null)
+    const [lessonImageCache] = useState(() => createLessonImageCache(resume.images))
+    const savedImages = useSyncExternalStore(lessonImageCache.subscribe, lessonImageCache.getSaved, lessonImageCache.getSaved)
+    const [requestedVisual, setRequestedVisual] = useState(resume.requestedVisual)
+    const [recentVisualRecovery, setRecentVisualRecovery] = useState(resume.recentVisualRecovery)
     const displayedVisual = activeInteraction === 'visual' ? requestedVisual?.request.visual : lessonVisual
     const visualLesson = activeInteraction === 'visual' ? requestedVisual?.request.lesson : lesson
     const [example, setExample] = useState('')
-    const [loadingLesson, setLoadingLesson] = useState(resume.lesson ? '' : 'lesson')
+    const [loadingLesson, setLoadingLesson] = useState('')
     const [lessonError, setLessonError] = useState('')
-    const [lessonAttempt, setLessonAttempt] = useState(0)
+    const [lessonAttempt, setLessonAttempt] = useState(initialThread?.startRequested ? 1 : 0)
     const [conversation, setConversation] = useState(resume.conversation)
-    // One supplemental visual per mounted lesson. It is not part of saved exchanges or resume.
-    const [conversationVisual, setConversationVisual] = useState(null)
+    const [conversationVisual, setConversationVisual] = useState(resume.conversationVisual)
     const [turnOffset, setTurnOffset] = useState(0)
     const [learningAnchors, setLearningAnchors] = useState(() => retainLearningAnchors([...(course.learningAnchors || []), ...resume.learningAnchors]))
     const [learnerMessage, setLearnerMessage] = useState('')
@@ -141,6 +149,7 @@ export default function StudySession({
     const showRecommendationAction = presentation.primary === 'recommendation'
     const inlineCompanion = presentation.splitVisual && !loadingLesson
     const lastPublished = useRef('')
+    const lastLearningPublished = useRef('')
     const companion = <OrbitStage thinking={busy} expression={active && activeInteraction === 'quiz' && celebrating && (answerResult === 'correct' || followUpResult === 'correct') ? 'celebrating' : 'rest'} thinkingContext={studyThinkingContext({ loadingLesson, loadingConversation, loadingActivity, loadingQuestion, loadingEvaluation })} />
 
     useEffect(() => {
@@ -169,18 +178,40 @@ export default function StudySession({
 
     useEffect(() => {
         if (!lesson) return
-        const snapshot = compactThreadResume({ lesson, conversation, learningAnchors, learningPath })
+        // Keep the current lesson/Show me/discussion references even when older
+        // than the recent-image window. Other entries remain bounded by resume.
+        const images = [...savedImages]
+        for (const context of [{ courseName: course.name, lesson, visual: lesson.visual },
+            requestedVisual?.request, { courseName: course.name, lesson, visual: conversationVisual }]) {
+            const request = lessonImageRequest(context)
+            if (!request) continue
+            const key = JSON.stringify(request)
+            const image = lessonImageCache.get(key)
+            if (image.status === 'idle') continue
+            const previous = images.findIndex((entry) => JSON.stringify(entry.request) === key)
+            if (previous !== -1) images.splice(previous, 1)
+            images.push({ request, ...image })
+        }
+        const snapshot = compactThreadResume({ lesson, conversation, learningAnchors, learningPath,
+            images, requestedVisual, recentVisualRecovery, conversationVisual,
+            recoveringLesson: recoveringLesson && loadingLesson !== 'simplify', activeInteraction })
         const metadata = studyThreadMetadata({ lesson, activeInteraction: activeInteraction === 'visual' ? 'lesson' : activeInteraction,
             conversation, activity, activityFeedback, questionNumber, answerResult, followUpResult })
         const signature = JSON.stringify({ snapshot, metadata })
         if (lastPublished.current === signature) return
         const firstPublish = !lastPublished.current
+        const learningSignature = JSON.stringify({ metadata, lesson: snapshot.lesson, conversation: snapshot.conversation,
+            learningAnchors: snapshot.learningAnchors, learningPath: snapshot.learningPath })
+        const resumeOnly = lastLearningPublished.current === learningSignature
         lastPublished.current = signature
+        lastLearningPublished.current = learningSignature
         // Restoring a lesson is not new learning evidence and must not replace its saved summary.
         if (firstPublish && resume.lesson) return
+        // Saving an image or presentation state must not refresh learning recency.
+        if (resumeOnly) { onThreadUpdate?.(threadId, { resume: snapshot }); return }
         onThreadUpdate?.(threadId, { ...metadata, resume: snapshot, courseName: initialContext.course.name,
             ...threadContext, updatedAt: new Date().toISOString() })
-    }, [threadId, onThreadUpdate, lesson, activeInteraction, conversation, activity, activityFeedback, questionNumber, answerResult, followUpResult, learningAnchors, learningPath, resume, initialContext, threadContext])
+    }, [threadId, onThreadUpdate, lesson, activeInteraction, conversation, activity, activityFeedback, questionNumber, answerResult, followUpResult, learningAnchors, learningPath, resume, initialContext, threadContext, savedImages, requestedVisual, recentVisualRecovery, conversationVisual, recoveringLesson, loadingLesson, course.name, lessonImageCache])
 
     useEffect(() => {
         if (active) panel.current?.focus({ preventScroll: false })
@@ -220,9 +251,8 @@ export default function StudySession({
             studyQuestion, selectedAnswer, answerResult, followUpResult, followUpAnswer, evaluation, conversation })
         if (!snapshot) return
         setRequestedVisual(snapshot)
-        // Even failed automatic images can be retried by this intentional action.
-        // Remounts/tool switches use the same cache entry without retrying errors.
-        lessonImageCache.load(JSON.stringify(snapshot.request), true)
+        // Reopen ready/unavailable entries. Only Retry visual replaces failures.
+        lessonImageCache.load(JSON.stringify(snapshot.request))
         openInteraction('visual')
     }
 
@@ -243,25 +273,32 @@ export default function StudySession({
     }
 
     useEffect(() => {
-        if (!active || initialLessonLoaded.current) return
+        if (!lessonAttempt || initialLessonLoaded.current) return
         let current = true
 
+        // Once explicitly started, finish into this thread even while hidden.
+        // Returning later must not become the trigger for its lesson/image work.
         // Reuse the request when StrictMode repeats effect setup on mount.
         if (!initialLessonRequest.current) {
-            initialLessonRequest.current = generateStudyLesson(
+            const request = { pending: true }
+            request.promise = generateStudyLesson(
                 initialContext.course,
                 initialContext.mastery,
                 { anchors: initialContext.course.learningAnchors || [], path: normalizeLearningPath(), learningProfile: profile }
-            )
+            ).finally(() => { request.pending = false })
+            initialLessonRequest.current = request
         }
+        const request = initialLessonRequest.current
+        queueMicrotask(() => { if (current && request.pending) setLoadingLesson('lesson') })
 
-        initialLessonRequest.current
+        request.promise
             .then(async (result) => {
                 if (current) await showResult('lesson', result.content)
                 if (current) {
                     initialLessonLoaded.current = true
                     setLesson(result)
                     setLearningPath(acceptPathLesson(result, undefined, undefined, learningPathContextKey(initialContext.course)))
+                    loadLessonVisual(lessonImageCache, initialContext.course.name, result)
                 }
             })
             .catch(() => {
@@ -272,7 +309,7 @@ export default function StudySession({
             })
 
         return () => { current = false }
-    }, [initialContext, lessonAttempt, active, resume, showResult, profile])
+    }, [initialContext, lessonAttempt, resume, showResult, profile, lessonImageCache])
 
     useEffect(() => {
         return () => {
@@ -331,7 +368,10 @@ export default function StudySession({
             if (controller.signal.aborted || conversationRequest.current !== controller) return
 
             const visual = generatedLessonVisual(result.visual)
-            if (visual) setConversationVisual(visual)
+            if (visual) {
+                setConversationVisual(visual)
+                loadLessonVisual(lessonImageCache, course.name, lesson, visual)
+            }
             rememberVisualRecovery({ activeInteraction: 'conversation', conversation: [{ message, response: result.response, signal: result.signal }] })
             rememberAnchor(result.anchor)
             if (conversation.length === MAX_STUDY_EXCHANGES) {
@@ -440,6 +480,7 @@ export default function StudySession({
             if (action === 'simplify') {
                 rememberInteraction('lesson', lesson.concept, lesson.content)
                 setLesson(result)
+                loadLessonVisual(lessonImageCache, course.name, result)
                 setConversationVisual(null)
                 setRequestedVisual(null)
                 rememberVisualRecovery({ activeInteraction: 'lesson', lesson: result, recoveringLesson: true })
@@ -482,6 +523,7 @@ export default function StudySession({
             setThreadContext((current) => ({ positionKey, requestedTopic: current.positionKey === positionKey ? current.requestedTopic : '' }))
             setLearningPath(acceptPathLesson(result, learningPath, lesson, requestedContextKey))
             setLesson(result)
+            loadLessonVisual(lessonImageCache, course.name, result)
             setConversationVisual(null)
             setRequestedVisual(null)
             setRecentVisualRecovery(null)
@@ -644,7 +686,7 @@ export default function StudySession({
                                     {inlineCompanion && companion}
                                 </div>
                                 {displayedVisual && <div className="study-visual-presentation">
-                                    <LessonVisual visual={displayedVisual} lesson={visualLesson} courseName={course.name} cache={lessonImageCache} active={active} />
+                                    <LessonVisual visual={displayedVisual} lesson={visualLesson} courseName={course.name} cache={lessonImageCache} />
                                 </div>}
                             </div>
                             <div className="study-lesson-support">
@@ -660,7 +702,7 @@ export default function StudySession({
 
                     {lessonError && <p role="alert">{lessonError}</p>}
                     {!lesson && !loadingLesson && (
-                        <button onClick={retryLesson}>Try again</button>
+                        <button onClick={retryLesson}>{lessonError ? 'Try again' : 'Start lesson'}</button>
                     )}
 
                     {activeInteraction === 'activity' && (activity || loadingActivity || activityError) && (
@@ -743,7 +785,7 @@ export default function StudySession({
                                 ))}
                             </div>
 
-                            <LessonVisual visual={conversationVisual} lesson={lesson} courseName={course.name} cache={lessonImageCache} active={active} />
+                            <LessonVisual visual={conversationVisual} lesson={lesson} courseName={course.name} cache={lessonImageCache} />
                             <form className="study-composer" onSubmit={sendMessage} aria-busy={loadingConversation}>
                                 <label className="study-composer-label" htmlFor={`study-message-${id}`}>Ask about this idea or share a connection</label>
                                 <textarea

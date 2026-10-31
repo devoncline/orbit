@@ -80,8 +80,9 @@ test('Show me is a secondary Study tool, works without an automatic image, and n
     assert.equal(update.resume.learningPath.step, 1)
     assert.equal(update.resume.learningPath.understood, false)
     assert.deepEqual(update.resume.learningPath.visited, [])
-    assert.doesNotMatch(JSON.stringify(update), /images\.example|requestedVisual/)
+    assert.doesNotMatch(JSON.stringify(update), /b64_json|data:image/)
   }
+  assert.equal(updates.at(-1).resume.images[0].url, url)
 })
 
 test('explicit image failure retains text and tools, does not retry on renders, and has no native fallback', async (t) => {
@@ -98,22 +99,26 @@ test('explicit image failure retains text and tools, does not retry on renders, 
   await click('Talk it through')
   await click('Lesson')
   assert.equal(calls.mock.callCount(), 1)
-  // Returning via Show me is itself an explicit retry; ordinary navigation isn't.
+  // Reopening an unavailable image is free; only Retry visual retries.
   await click('Show me')
-  assert.equal(calls.mock.callCount(), 2)
+  assert.equal(calls.mock.callCount(), 1)
   fail = false
   await click('Retry visual')
-  assert.equal(calls.mock.callCount(), 3)
+  assert.equal(calls.mock.callCount(), 2)
   await imageEvent()
   assert.equal(image().hidden, false)
 })
 
-test('Show me intentionally retries a failed automatic image using its original cache entry', async (t) => {
+test('Show me reopens a failed automatic brief; Retry visual uses its original cache entry', async (t) => {
   let fail = true
   const calls = t.mock.method(globalThis, 'fetch', async () => fail ? new Response('{}', { status: 503 }) : imageResponse())
   await mountStudy()
+  assert.equal(calls.mock.callCount(), 0)
+  await click('Show me')
   fail = false
   await click('Show me')
+  assert.equal(calls.mock.callCount(), 1)
+  await click('Retry visual')
   assert.equal(calls.mock.callCount(), 2)
   assert.equal(calls.mock.calls[0].arguments[1].body, calls.mock.calls[1].arguments[1].body)
   await click('Lesson')
@@ -133,7 +138,7 @@ test('lessons without visual requests use no image path and retain the lesson co
   }
 })
 
-test('a generated lesson requests the server once across StrictMode, rerenders, pending navigation and loaded navigation', async (t) => {
+test('a restored brief waits for Show me then requests once across StrictMode, rerenders and navigation', async (t) => {
   let complete
   const mock = t.mock.method(globalThis, 'fetch', (path, options) => {
     assert.equal(path, '/api/generate-lesson-image')
@@ -141,11 +146,14 @@ test('a generated lesson requests the server once across StrictMode, rerenders, 
     return new Promise((resolve) => { complete = resolve })
   })
   await mountStudy()
+  assert.equal(mock.mock.callCount(), 0)
+  assert.doesNotMatch(container.textContent, /Preparing a lesson image/)
+  await click('Show me')
   assert.equal(mock.mock.callCount(), 1)
   assert.match(container.textContent, /Preparing a lesson image/)
   assert.ok(container.textContent.includes(lesson.content))
   for (const label of ['I lost you', 'Talk it through', 'Quiz me', 'Continue to next lesson']) assert.equal(button(label).disabled, false)
-  assert.equal(container.querySelector('.lesson-visual svg'), null)
+  assert.equal(container.querySelector('.lesson-visual-object'), null)
   await mountStudy()
   await click('Talk it through')
   await click('Lesson')
@@ -167,6 +175,7 @@ test('generation failure omits the image and legacy fallback, survives remounts,
   let fail = true
   const mock = t.mock.method(globalThis, 'fetch', async () => fail ? new Response('{}', { status: 503 }) : imageResponse())
   await mountStudy({ ...visual, type: 'diagram' })
+  await click('Show me')
   assert.equal(image(), null)
   assert.equal(container.querySelector('.lesson-visual svg, .lesson-visual-object, .lesson-symbol-anchor'), null)
   assert.ok(container.textContent.includes(lesson.content))
@@ -186,6 +195,7 @@ test('generation failure omits the image and legacy fallback, survives remounts,
 test('expired or broken URLs remove the img and never trigger automatic paid regeneration', async (t) => {
   const mock = t.mock.method(globalThis, 'fetch', async () => imageResponse())
   await mountStudy()
+  await click('Show me')
   await imageEvent('error')
   assert.equal(image(), null)
   assert.equal(container.querySelector('.lesson-visual'), null)
@@ -202,8 +212,10 @@ test('meaningful lesson changes clear old images immediately and late old respon
   const cache = createLessonImageCache()
   const render = async (currentLesson, value = visual) => act(async () => root.render(createElement(LessonVisual, { lesson: currentLesson, visual: value, courseName: 'React', cache })))
   await render(lesson)
+  await click('Retry visual')
   const next = { ...lesson, content: 'A different explanation using function arguments.' }
   await render(next)
+  await click('Retry visual')
   assert.equal(image(), null)
   assert.equal(requests.length, 2)
   assert.equal(requests[1].body.lesson.content, next.content)
@@ -217,16 +229,19 @@ test('meaningful lesson changes clear old images immediately and late old respon
   assert.equal(requests.length, 2)
 })
 
-test('hidden resumed threads defer generation until activated and saved resume contains no generated URL', async (t) => {
+test('hidden resumed threads never generate on activation and deliberate images enter resume metadata', async (t) => {
   const updates = []
   const mock = t.mock.method(globalThis, 'fetch', async () => imageResponse())
   const onThreadUpdate = (_id, update) => updates.push(update)
   await mountStudy(visual, { active: false, onThreadUpdate })
   assert.equal(mock.mock.callCount(), 0)
   await mountStudy(visual, { active: true, onThreadUpdate })
+  assert.equal(mock.mock.callCount(), 0)
+  await click('Show me')
   assert.equal(mock.mock.callCount(), 1)
   await imageEvent()
   await click('Talk it through')
   assert.ok(updates.length)
-  for (const update of updates) assert.doesNotMatch(JSON.stringify(update.resume), /images\.example|b64_json|data:image/)
+  for (const update of updates) assert.doesNotMatch(JSON.stringify(update.resume), /b64_json|data:image/)
+  assert.equal(updates.at(-1).resume.images[0].url, url)
 })
