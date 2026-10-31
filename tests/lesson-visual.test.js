@@ -142,7 +142,7 @@ test('lessons without usable visuals preserve content, tools, and recommendation
     const body = render(StudySession, { course, mastery: 40, initialThread: { resume: { lesson: { ...lesson, visual: value } } } })
     assert.equal(body.querySelector('.lesson-visual, .study-session-illustrated'), null)
     assert.ok(body.textContent.includes(lesson.content))
-    assert.equal(body.querySelectorAll('.study-lesson-actions button').length, 5)
+    assert.equal(body.querySelectorAll('.study-lesson-actions button').length, 6)
     assert.equal(body.querySelector('.study-primary-action').textContent, 'Give me an example')
   }
   assert.equal(render(StudyPath, {}).innerHTML, '')

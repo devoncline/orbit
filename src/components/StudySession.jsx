@@ -17,6 +17,7 @@ import { applyPositionOverride, readPositionStatement } from '../services/course
 import { selectStudyInteraction, studyThreadMetadata } from '../services/studyThreads'
 import { acceptPathLesson, learningPathContextKey, generatedLessonVisual, normalizeLearningPath, recommendStudyAction, studyPathView } from '../services/learningPath'
 import { createLessonImageCache } from '../services/lessonImages'
+import { createStudyVisualRequest, studyVisualContext } from '../services/studyVisualRequest'
 import CoursePosition from './CoursePosition'
 import OrbitStage from './OrbitStage'
 import { OrbitResponse } from './OrbitSignal'
@@ -54,6 +55,7 @@ export default function StudySession({
     const [answerResult, setAnswerResult] = useState('')
     const [showAdaptedLesson, setShowAdaptedLesson] = useState(false)
     const [followUpResult, setFollowUpResult] = useState('')
+    const [followUpAnswer, setFollowUpAnswer] = useState(null)
     const [history, setHistory] = useState([])
     const [positionChanged, setPositionChanged] = useState(false)
     const [evaluationError, setEvaluationError] = useState('')
@@ -71,6 +73,10 @@ export default function StudySession({
     const pathView = studyPathView(learningPath, lesson, contextKey)
     const lessonVisual = generatedLessonVisual(lesson?.visual)
     const [lessonImageCache] = useState(createLessonImageCache)
+    const [requestedVisual, setRequestedVisual] = useState(null)
+    const [recentVisualRecovery, setRecentVisualRecovery] = useState(null)
+    const displayedVisual = activeInteraction === 'visual' ? requestedVisual?.request.visual : lessonVisual
+    const visualLesson = activeInteraction === 'visual' ? requestedVisual?.request.lesson : lesson
     const [example, setExample] = useState('')
     const [loadingLesson, setLoadingLesson] = useState(resume.lesson ? '' : 'lesson')
     const [lessonError, setLessonError] = useState('')
@@ -112,7 +118,7 @@ export default function StudySession({
     const busy = Boolean(loadingLesson || loadingConversation || loadingActivity || loadingQuestion || loadingEvaluation)
     const recommendation = recommendStudyAction({ lesson, activeInteraction, learningPath, example, lessonError, conversation,
         activity, activityError, activityFeedback, activityResponse, answerResult, followUpResult, evaluation, evaluationError, questionError })
-    const presentation = useStudyPresentation({ courseName: course.name, activeInteraction, lesson, conversationVisual,
+    const presentation = useStudyPresentation({ courseName: course.name, activeInteraction, lesson, conversationVisual, requestedVisual,
         recoveringLesson, loadingLesson, loadingQuestion, loadingEvaluation, loadingActivity, answerResult, followUpResult,
         showAdaptedLesson, evaluation, evaluationError, questionError, activityFeedback, activityResponse, activityError, conversation }, lessonImageCache)
     const showRecommendationAction = presentation.primary === 'recommendation'
@@ -133,7 +139,8 @@ export default function StudySession({
     useEffect(() => {
         if (!lesson) return
         const snapshot = compactThreadResume({ lesson, conversation, learningAnchors, learningPath })
-        const metadata = studyThreadMetadata({ lesson, activeInteraction, conversation, activity, activityFeedback, questionNumber, answerResult, followUpResult })
+        const metadata = studyThreadMetadata({ lesson, activeInteraction: activeInteraction === 'visual' ? 'lesson' : activeInteraction,
+            conversation, activity, activityFeedback, questionNumber, answerResult, followUpResult })
         const signature = JSON.stringify({ snapshot, metadata })
         if (lastPublished.current === signature) return
         const firstPublish = !lastPublished.current
@@ -159,7 +166,7 @@ export default function StudySession({
     }, [pendingTurn])
 
     function openInteraction(next) {
-        if (next !== 'lesson') setRecoveringLesson(false)
+        if (next !== 'lesson' && next !== 'visual') setRecoveringLesson(false)
         if (next !== 'conversation') {
             if (conversationRequest.current && pendingTurn) setLearnerMessage(pendingTurn.message)
             conversationRequest.current?.abort()
@@ -173,6 +180,26 @@ export default function StudySession({
         if (next === activeInteraction) panel.current?.focus()
         setResumeSummary('')
         setActiveInteraction((current) => selectStudyInteraction(current, next))
+    }
+
+    function showVisual() {
+        if (!lesson || busy) return
+        const snapshot = createStudyVisualRequest({ courseName: course.name, lesson, activeInteraction, requestedVisual,
+            recentVisualRecovery, recoveringLesson, example, activity, activityResponse, activityFeedback,
+            studyQuestion, selectedAnswer, answerResult, followUpResult, followUpAnswer, evaluation, conversation })
+        if (!snapshot) return
+        setRequestedVisual(snapshot)
+        // Even failed automatic images can be retried by this intentional action.
+        // Remounts/tool switches use the same cache entry without retrying errors.
+        lessonImageCache.load(JSON.stringify(snapshot.request), true)
+        openInteraction('visual')
+    }
+
+    function rememberVisualRecovery(state) {
+        setRecentVisualRecovery((current) => {
+            const context = studyVisualContext({ ...state, recentVisualRecovery: current })
+            return context?.recovery ? context : current?.source === state.activeInteraction ? null : current
+        })
     }
 
     function rememberInteraction(type, title, content, response = '') {
@@ -273,6 +300,7 @@ export default function StudySession({
 
             const visual = generatedLessonVisual(result.visual)
             if (visual) setConversationVisual(visual)
+            rememberVisualRecovery({ activeInteraction: 'conversation', conversation: [{ message, response: result.response, signal: result.signal }] })
             rememberAnchor(result.anchor)
             if (conversation.length === MAX_STUDY_EXCHANGES) {
                 const oldest = conversation[0]
@@ -332,6 +360,7 @@ export default function StudySession({
             } else {
                 rememberAnchor(result.anchor)
                 setActivityFeedback({ ...result, learnerResponse: response })
+                rememberVisualRecovery({ activeInteraction: 'activity', activity, activityResponse: response, activityFeedback: { ...result, learnerResponse: response } })
             }
         } catch {
             if (!controller.signal.aborted) {
@@ -380,6 +409,8 @@ export default function StudySession({
                 rememberInteraction('lesson', lesson.concept, lesson.content)
                 setLesson(result)
                 setConversationVisual(null)
+                setRequestedVisual(null)
+                rememberVisualRecovery({ activeInteraction: 'lesson', lesson: result, recoveringLesson: true })
             } else {
                 if (example) rememberInteraction('example', lesson.concept, example)
                 setExample(result.content)
@@ -420,6 +451,8 @@ export default function StudySession({
             setLearningPath(acceptPathLesson(result, learningPath, lesson, requestedContextKey))
             setLesson(result)
             setConversationVisual(null)
+            setRequestedVisual(null)
+            setRecentVisualRecovery(null)
             setRecoveringLesson(false)
             // Clear only lesson-specific interactions after a successful transition.
             // Learning anchors, thread history, and course mastery continue independently.
@@ -437,6 +470,7 @@ export default function StudySession({
             setQuestionNumber(0)
             setAnswerResult('')
             setFollowUpResult('')
+            setFollowUpAnswer(null)
             setShowAdaptedLesson(false)
             setEvaluation(null)
             setEvaluationError('')
@@ -482,6 +516,7 @@ export default function StudySession({
             setStudyQuestion(question)
             setAnswerResult('')
             setFollowUpResult('')
+            setFollowUpAnswer(null)
             setShowAdaptedLesson(false)
             setEvaluation(null)
             setSelectedAnswer(null)
@@ -519,8 +554,10 @@ export default function StudySession({
         setAnswerResult(answer.correct ? 'correct' : 'incorrect')
         setShowAdaptedLesson(!answer.correct)
         setFollowUpResult('')
+        setFollowUpAnswer(null)
         setEvaluation(null)
         setEvaluationError('')
+        rememberVisualRecovery({ activeInteraction: 'quiz', lesson, studyQuestion, selectedAnswer: answer, answerResult: answer.correct ? 'correct' : 'incorrect' })
         if (!retry) {
             if (studyQuestion.topic) updateTopicMastery(studyQuestion.topic, answer.correct ? 80 : 40)
             else setMastery(answer.correct ? 80 : 40)
@@ -531,6 +568,7 @@ export default function StudySession({
             const result = await evaluateStudyAnswer(course, studyQuestion, answer, mastery, { anchors: learningAnchors })
             await showResult('evaluation', `${result.feedback}\n\n${result.adaptedExplanation}\n\n${result.followUpQuestion}`)
             setEvaluation(result)
+            rememberVisualRecovery({ activeInteraction: 'quiz', lesson, studyQuestion, selectedAnswer: answer, answerResult: 'incorrect', evaluation: result })
             rememberAnchor(result.anchor)
         } catch {
             setEvaluationError('Orbit could not prepare a different explanation. Your answer is saved; try again.')
@@ -564,14 +602,14 @@ export default function StudySession({
             </div>}
             {stage === 'learn' && (
                 <div className="study-lesson">
-                    {activeInteraction === 'lesson' && (
+                    {['lesson', 'visual'].includes(activeInteraction) && (
                         <OrbitResponse pending={loadingLesson === 'lesson' || loadingLesson === 'simplify'} context={loadingLesson === 'simplify' ? 'simplify' : 'lesson'} reveal={resultReveal}>
                         <div>
                             {lesson && <>
                             <div className={`study-lesson-composition${presentation.splitVisual ? ' study-lesson-composition-visual' : ''}`}>
-                                <StudyContent content={lesson.content} />
-                                {lessonVisual && <div className="study-visual-presentation">
-                                    <LessonVisual visual={lessonVisual} lesson={lesson} courseName={course.name} cache={lessonImageCache} active={active} />
+                                <StudyContent content={activeInteraction === 'visual' ? requestedVisual?.explanation : lesson.content} />
+                                {displayedVisual && <div className="study-visual-presentation">
+                                    <LessonVisual visual={displayedVisual} lesson={visualLesson} courseName={course.name} cache={lessonImageCache} active={active} />
                                 </div>}
                             </div>
                             <div className="study-lesson-support">
@@ -760,6 +798,9 @@ export default function StudySession({
                                     key={answer.text}
                                     disabled={busy}
                                     onClick={() => {
+                                        setFollowUpAnswer(answer)
+                                        rememberVisualRecovery({ activeInteraction: 'quiz', lesson, studyQuestion, evaluation,
+                                            answerResult, followUpResult: answer.correct ? 'correct' : 'incorrect', followUpAnswer: answer })
                                         rememberAnchor(anchorAfterFollowUp(evaluation.anchor, answer.correct))
                                         if (answer.correct) {
                                             setFollowUpResult('correct')
@@ -811,9 +852,10 @@ export default function StudySession({
                 <StudyContent content={lesson.content} />
             </details>}
             {lesson && <details className="study-tools" ref={studyTools}>
-                <summary>Study tools <span>· {{ lesson: 'Lesson', example: 'Example', activity: 'Activity', conversation: 'Talk it through', quiz: 'Quiz', history: 'Earlier work' }[activeInteraction]}</span></summary>
+                <summary>Study tools <span>· {{ lesson: 'Lesson', visual: 'Show me', example: 'Example', activity: 'Activity', conversation: 'Talk it through', quiz: 'Quiz', history: 'Earlier work' }[activeInteraction]}</span></summary>
                 <div className="study-lesson-actions" role="group" aria-label="Choose a study interaction">
                 <button disabled={busy} aria-pressed={activeInteraction === 'lesson'} onClick={() => openInteraction('lesson')}>Lesson</button>
+                <button disabled={busy} aria-pressed={activeInteraction === 'visual'} onClick={showVisual}>Show me</button>
                 <button disabled={busy} aria-pressed={activeInteraction === 'example'} onClick={() => example ? openInteraction('example') : changeLesson('example')}>Give me an example</button>
                 <button disabled={busy} aria-pressed={activeInteraction === 'activity'} onClick={() => activity ? openInteraction('activity') : runActivity('generate')}>Let me try it</button>
                 <button disabled={busy} aria-pressed={activeInteraction === 'conversation'} onClick={() => openInteraction('conversation')}>Talk it through</button>

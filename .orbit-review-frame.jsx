@@ -12,7 +12,12 @@ window.fetch = async (url, options = {}) => {
   const body = options.body ? JSON.parse(options.body) : {}
   await new Promise(resolve => setTimeout(resolve, 600))
   if (url === '/api/generate-lesson-image') {
-    if (scenario === 'failure' && !imageAttempts++) return new Response('{}', { status: 503 })
+    imageAttempts += 1
+    document.documentElement.dataset.imageRequests = imageAttempts
+    if ((scenario === 'failure' && imageAttempts === 1) || document.documentElement.dataset.failNextImage === 'true') {
+      delete document.documentElement.dataset.failNextImage
+      return new Response('{}', { status: 503 })
+    }
     return json({ url: 'https://react.dev/images/docs/illustrations/i_render-and-commit1.png' })
   }
   if (url === '/api/generate-study-lesson') return json(body.action === 'simplify'

@@ -49,6 +49,78 @@ async function mountStudy(value = visual, extra = {}) {
 }
 async function imageEvent(event = 'load') { await act(async () => image().dispatchEvent(new dom.Event(event))) }
 
+test('Show me is a secondary Study tool, works without an automatic image, and never writes mastery or path progress', async (t) => {
+  let complete
+  const calls = t.mock.method(globalThis, 'fetch', () => new Promise((resolve) => { complete = resolve }))
+  const updates = []
+  const extra = { onThreadUpdate: (_id, value) => updates.push(value) }
+  await mountStudy(null, extra)
+  assert.equal(calls.mock.callCount(), 0)
+  assert.ok(button('Show me').closest('.study-tools'))
+  assert.equal(button('Show me').classList.contains('study-primary-action'), false)
+  await click('Show me')
+  assert.equal(container.querySelector('.study-session').dataset.presentationMode, 'visual')
+  assert.ok(container.querySelector('.lesson-image-surface'))
+  assert.ok(container.textContent.includes(lesson.content))
+  const focused = dom.document.activeElement
+  for (const label of ['I lost you', 'Talk it through', 'Quiz me', 'Continue to next lesson']) assert.equal(button(label).disabled, false)
+  await mountStudy(null, extra)
+  await click('Talk it through')
+  await click('Show me')
+  assert.equal(calls.mock.callCount(), 1, 'Pending request survives StrictMode/rerenders/navigation')
+  await act(async () => { complete(imageResponse()); await setImmediate() })
+  await imageEvent()
+  assert.equal(dom.document.activeElement, focused)
+  assert.equal(container.querySelector('.study-session').dataset.presentationMode, 'visual')
+  assert.match(image().alt, /Inputs|Props/)
+  await click('Lesson')
+  await click('Show me')
+  assert.equal(calls.mock.callCount(), 1, 'Ready request is reusable')
+  for (const update of updates) {
+    assert.equal(update.resume.learningPath.step, 1)
+    assert.equal(update.resume.learningPath.understood, false)
+    assert.deepEqual(update.resume.learningPath.visited, [])
+    assert.doesNotMatch(JSON.stringify(update), /images\.example|requestedVisual/)
+  }
+})
+
+test('explicit image failure retains text and tools, does not retry on renders, and has no native fallback', async (t) => {
+  let fail = true
+  const calls = t.mock.method(globalThis, 'fetch', async () => fail ? new Response('{}', { status: 503 }) : imageResponse())
+  await mountStudy(null)
+  await click('Show me')
+  assert.ok(container.textContent.includes(lesson.content))
+  assert.equal(image(), null)
+  assert.equal(container.querySelector('.lesson-visual svg, .lesson-visual-object'), null)
+  assert.ok(button('Retry visual'))
+  assert.equal(button('Lesson').disabled, false)
+  await mountStudy(null)
+  await click('Talk it through')
+  await click('Lesson')
+  assert.equal(calls.mock.callCount(), 1)
+  // Returning via Show me is itself an explicit retry; ordinary navigation isn't.
+  await click('Show me')
+  assert.equal(calls.mock.callCount(), 2)
+  fail = false
+  await click('Retry visual')
+  assert.equal(calls.mock.callCount(), 3)
+  await imageEvent()
+  assert.equal(image().hidden, false)
+})
+
+test('Show me intentionally retries a failed automatic image using its original cache entry', async (t) => {
+  let fail = true
+  const calls = t.mock.method(globalThis, 'fetch', async () => fail ? new Response('{}', { status: 503 }) : imageResponse())
+  await mountStudy()
+  fail = false
+  await click('Show me')
+  assert.equal(calls.mock.callCount(), 2)
+  assert.equal(calls.mock.calls[0].arguments[1].body, calls.mock.calls[1].arguments[1].body)
+  await click('Lesson')
+  await click('Show me')
+  assert.equal(calls.mock.callCount(), 2)
+})
+
 test('lessons without visual requests use no image path and retain the lesson controls', async (t) => {
   t.mock.method(globalThis, 'fetch', () => assert.fail('No image generation expected'))
   for (const value of [null, { type: 'none' }, { type: 'generated_image' }]) {

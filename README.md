@@ -603,7 +603,17 @@ A valid current image brief selects visual immediately and retains it through ge
 
 Wide screens keep the shared sidebar and use the split visual composition above 1100px. At tablet widths the image stacks at full content width and focus uses a compact companion column to leave more reading space. At 760px and below every mode uses one column: focus retains a compact full mascot; task layouts hide the artwork while keeping its accessible request status. Existing focus indicators, controls, live regions, and reduced-motion behavior remain; no layout animation is added. Automatic mode changes do not move focus. Existing explicit tool/lesson navigation still focuses the active panel.
 
-Selector and mounted React tests cover all five modes, pending/error transitions, recovery exits, preserved history/drafts, keyboard focus, next-lesson reset, image request reuse, and unchanged mastery writes. See the ordered adaptive-presentation checklist in CHANGELOG.md for browser review. The Learning Profile questionnaire, Show me, new AI APIs, and legacy-renderer removal are outside this change.
+Selector and mounted React tests cover all five modes, pending/error transitions, recovery exits, preserved history/drafts, keyboard focus, next-lesson reset, image request reuse, and unchanged mastery writes. See the ordered adaptive-presentation checklist in CHANGELOG.md for browser review. The Learning Profile questionnaire, new AI APIs, and legacy-renderer removal remain deferred.
+
+### Show me
+
+**Study tools → Show me**, immediately after Lesson, lets the learner request an instructional image even when the lesson has no automatic visual. It opens the existing Visual composition with the current explanation still visible. Lesson context, earlier work, quiz answers, and activity drafts remain available through the existing tools. Selecting it does not change readiness, mastery, scores, or path progress.
+
+`studyVisualRequest.js` captures a bounded snapshot on the click: course/topic/concept, the lesson, the active example/task or latest completed discussion, and matching feedback or the current quiz/follow-up answer. Active and recent recovery explanations get priority over generic lesson text. Attempts are labelled as potentially incorrect, and the server instructs Muse Image to use corrective teaching context. No new API, image client, visual schema, layout, or learner-memory storage is introduced.
+
+Recovery deliberately transitions to Visual while preserving the simpler/corrective explanation beside the image. Returning to the original tool restores its task and recovery state. The existing normalized request key/cache reuses pending and ready images across rerenders, tool changes, and mounted-thread navigation. An unchanged automatic brief uses the same key. Failed images stay failed until **Retry visual** or another deliberate **Show me** click; no background regeneration occurs. A changed context is captured only on another click. Successful simplification or continuation clears the explicit snapshot, and late responses cannot install an old image in the new lesson.
+
+The snapshot and recent recovery context are memory-only. Existing image loading announcements, image framing, alt text, focus behavior, and reduced-motion rules are reused. Mocked unit and mounted React tests cover the new flow; its Chrome visual walkthrough remains pending because native browser control could not verify the current URL. The earlier five-mode browser review predates Show me. The isolated review now includes an image-request counter and **Fail next image** control; it still uses mock responses and a reference image, so live Muse relevance/accuracy requires separate inspection. See CHANGELOG.md for the exact manual sequence.
 
 ---
 

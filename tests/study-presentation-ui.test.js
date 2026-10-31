@@ -57,6 +57,111 @@ async function type(value) {
   })
 }
 
+test('Show me retains I lost you explanation and its request after That helps and tool switches', async (t) => {
+  const images = []
+  const explanation = 'Think of state as a notebook. A click changes the notebook before React updates the screen.'
+  t.mock.method(globalThis, 'fetch', async (path, options) => {
+    if (path === '/api/generate-lesson-image') { images.push(JSON.parse(options.body)); return json({ url: 'https://images.example.test/recovery.webp' }) }
+    return json({ ...lesson, content: explanation })
+  })
+  await mount(t)
+  await click('I lost you')
+  assert.equal(mode(), 'recover')
+  await click('Show me')
+  assert.equal(mode(), 'visual')
+  assert.ok(container.querySelector('.study-active-panel').textContent.includes(explanation))
+  assert.match(images[0].visual.recoveryContext, /notebook before React updates/)
+  await click('Lesson')
+  await click('That helps')
+  await click('Talk it through')
+  await click('Show me')
+  assert.equal(images.length, 1)
+})
+
+test('Show me from incorrect quiz answers preserves adapted explanation, selected answers and original scoring', async (t) => {
+  const images = [], scores = []
+  t.mock.method(globalThis, 'fetch', async (path, options) => {
+    if (path === '/api/generate-lesson-image') { images.push(JSON.parse(options.body)); return json({ url: 'https://images.example.test/quiz.webp' }) }
+    return json(path === '/api/generate-study-question' ? question : evaluation)
+  })
+  await mount(t, { updateTopicMastery: (...args) => scores.push(args) })
+  await click('Quiz me')
+  await click('A prop')
+  assert.deepEqual(scores, [['State', 40]])
+  await click('Show me')
+  assert.equal(mode(), 'visual')
+  assert.ok(container.querySelector('.study-active-panel').textContent.includes(evaluation.adaptedExplanation))
+  assert.match(images[0].visual.recoveryContext, /A prop/)
+  assert.match(images[0].lesson.content, /component.*own memory/)
+  assert.deepEqual(scores, [['State', 40]])
+  await click('Quiz me')
+  assert.equal(mode(), 'recover')
+  assert.match(container.textContent, /Your answer: A prop/)
+  await click('Show me')
+  assert.equal(images.length, 1)
+  await click('Quiz me')
+  await click(evaluation.followUpAnswers[1].text)
+  await click('Show me')
+  assert.equal(images.length, 2)
+  assert.ok(images[1].visual.recoveryContext.includes(evaluation.followUpAnswers[1].text))
+  assert.deepEqual(scores, [['State', 40], ['State', 40]])
+  await click('Quiz me')
+  await click('In state')
+  assert.deepEqual(scores, [['State', 40], ['State', 40], ['State', 70]])
+})
+
+test('activity misconception is preserved in Show me and the unchanged draft returns without being completed', async (t) => {
+  const images = []
+  const feedback = { feedback: 'State stores the new value; rendering displays it.', signal: 'misconception' }
+  t.mock.method(globalThis, 'fetch', async (path, options) => {
+    const body = JSON.parse(options.body)
+    if (path === '/api/generate-lesson-image') { images.push(body); return json({ url: 'https://images.example.test/activity.webp' }) }
+    return json(body.action === 'generate' ? activity : feedback)
+  })
+  await mount(t)
+  await click('Let me try it')
+  await type('The text stores the count.')
+  await act(async () => container.querySelector('form').dispatchEvent(new dom.Event('submit', { bubbles: true, cancelable: true })))
+  await click('Show me')
+  assert.equal(mode(), 'visual')
+  assert.match(images[0].visual.recoveryContext, /text stores the count/)
+  assert.match(images[0].visual.recoveryContext, /State stores the new value/)
+  await click('Let me try it')
+  assert.equal(mode(), 'recover')
+  assert.equal(container.querySelector('textarea').value, 'The text stores the count.')
+  await click('Show me')
+  assert.equal(images.length, 1)
+})
+
+test('continuing clears explicit image and recovery state; a late previous image cannot replace the new lesson', async (t) => {
+  const images = []
+  let failNext = true
+  t.mock.method(globalThis, 'fetch', async (path, options) => {
+    const body = JSON.parse(options.body)
+    if (path === '/api/generate-lesson-image') return new Promise((resolve) => images.push({ body, resolve }))
+    if (body.action === 'simplify') return json({ ...lesson, content: 'A simpler notebook explanation.' })
+    return failNext ? new Response('{}', { status: 503 }) : json({ ...lesson, concept: 'Event handlers', content: 'A handler responds to a click.' })
+  })
+  await mount(t)
+  await click('I lost you')
+  await click('Show me')
+  await click('Continue to next lesson')
+  assert.equal(mode(), 'visual', 'Failed continuation keeps the current explicit visual')
+  assert.match(container.querySelector('.study-active-panel').textContent, /simpler notebook/)
+  failNext = false
+  await click('Try next lesson again')
+  assert.equal(mode(), 'focus')
+  assert.equal(image(), null)
+  assert.match(container.querySelector('.study-active-panel').textContent, /handler responds/)
+  await click('Show me')
+  assert.equal(images.length, 2)
+  assert.equal(images[1].body.lesson.concept, 'Event handlers')
+  assert.equal(images[1].body.visual.recoveryContext, undefined)
+  await act(async () => { images[1].resolve(json({ url: 'https://images.example.test/new.webp' })); await setImmediate() })
+  await act(async () => { images[0].resolve(json({ url: 'https://images.example.test/old.webp' })); await setImmediate() })
+  assert.equal(image().src, 'https://images.example.test/new.webp')
+})
+
 test('I lost you enters recover while pending, retains it after completion, and That helps changes only presentation', async (t) => {
   let complete
   t.mock.method(globalThis, 'fetch', () => new Promise((resolve) => { complete = resolve }))

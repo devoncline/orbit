@@ -1,12 +1,12 @@
 import { lessonImageRequest } from './lessonImageRequest.js'
 
-const interactions = ['lesson', 'example', 'activity', 'quiz', 'conversation', 'history']
+const interactions = ['lesson', 'visual', 'example', 'activity', 'quiz', 'conversation', 'history']
 const labels = { focus: 'Explore the idea', visual: 'See how it works', practice: 'Your turn', check: 'Check your understanding', recover: 'One part at a time' }
 
 // Read the same bounded request as LessonVisual without starting or changing a request.
-export function studyPresentationImageKey({ activeInteraction = 'lesson', courseName, lesson, conversationVisual } = {}) {
+export function studyPresentationImageKey({ activeInteraction = 'lesson', courseName, lesson, conversationVisual, requestedVisual } = {}) {
   const visual = activeInteraction === 'lesson' ? lesson?.visual : activeInteraction === 'conversation' ? conversationVisual : null
-  const request = lessonImageRequest({ courseName, lesson, visual })
+  const request = lessonImageRequest(activeInteraction === 'visual' ? requestedVisual?.request : { courseName, lesson, visual })
   return request ? JSON.stringify(request) : ''
 }
 
@@ -20,7 +20,10 @@ export function selectStudyPresentation(state = {}, imageStatus = 'idle') {
   const feedbackCurrent = Boolean(state.activityFeedback?.feedback) && state.activityFeedback.learnerResponse === (state.activityResponse || '').trim()
   let mode = 'focus', reason = interaction === 'conversation' ? 'conversation' : 'lesson', primary = 'recommendation', guidance = ''
 
-  if (interaction === 'lesson' && (state.recoveringLesson || state.loadingLesson === 'simplify')) {
+  if (interaction === 'visual' && visualKey) {
+    mode = hasVisual ? 'visual' : 'focus'; reason = hasVisual ? 'requested_visual' : 'visual_unavailable'
+    if (state.requestedVisual.recovery) guidance = 'Stay with this explanation and visual. Your earlier work is still in Study tools.'
+  } else if (interaction === 'lesson' && (state.recoveringLesson || state.loadingLesson === 'simplify')) {
     mode = 'recover'; reason = 'lesson_recovery'; primary = 'recovery_done'
     guidance = 'Stay with this explanation. When it makes sense, choose “That helps” to keep exploring.'
   } else if (interaction === 'quiz' && !state.loadingQuestion && state.answerResult === 'incorrect' &&

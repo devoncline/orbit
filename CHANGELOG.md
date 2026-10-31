@@ -4,6 +4,7 @@
 
 ### Improvements
 
+- Study tools now include **Show me**: request a visual for the current idea, example, or point of confusion without changing progress. Recovery explanations stay visible, images are reused when returning to the same context, and failed visuals can be retried deliberately.
 - Study now adapts its composition to the current task: calm explanations, prominent instructional images, focused activities and questions, and a simpler recovery view when something is unclear. Lesson context and earlier work remain accessible. “That helps” returns from a simpler explanation without changing mastery.
 - Lessons now include generated instructional images when they help explain the concept. Text and Study controls stay usable while images load; repeated navigation reuses the same visual, and unavailable images offer a quiet retry without decorative fallbacks. Talk It Through can reuse or adapt a visual.
 - Study now shows a compact Orbit Signal where each new lesson, example, activity, question, or explanation will appear. New text reveals smoothly without reserving a large empty area; reduced motion shows completed results promptly.
@@ -38,6 +39,19 @@
 - Study answers now update mastery for the question's topic, with overall course mastery calculated as the rounded average of topic scores. Questions without a topic retain the existing course mastery behavior.
 
 ### Manual test checklist
+
+Show me (automated checks completed; browser walkthrough of this addition still pending):
+
+1. At about **1440px**, open `http://localhost:5173/.orbit-review.html`, choose **focus**, and confirm the text-only lesson has **images 0**. Open **Study tools** and choose **Show me**.
+2. Confirm **See how it works**, a reserved loading frame, usable lesson/tools, then the uncropped reference image. Check that mastery stays 40% and the lesson stays at step 1.
+3. Switch to **Talk it through**, then **Show me**; repeat through **Lesson**. The image counter should remain 1. Check keyboard focus reaches the current panel and does not move when the image finishes loading.
+4. Choose **I lost you**, wait for the notebook explanation, then **Show me**. Confirm the simpler explanation remains beside the image, Visual presentation is active, and only one new image request occurs. Returning to Lesson should retain **That helps**; acknowledging it and choosing Show me should reuse the recovery image.
+5. In the full app with the existing server runtime and Muse Image access, repeat with a specific confusion (for example, why forward velocity prevents a straight fall toward the Sun). Request Show me after Talk It Through or misconception/incorrect-answer feedback. Inspect the actual generated image for that precise relationship and accurate labels. The mock preview always returns a reference image and cannot validate model relevance.
+6. Open **Quiz me**, choose the wrong answer, then **Show me**. Check the adapted explanation stays visible. Return to the quiz; the answer/follow-up must still be there and Show me must not change the score. Repeat from activity misconception feedback and confirm the response draft is retained.
+7. Restart the preview's **focus** scenario (choose another scenario and then focus), click **Fail next image**, then **Show me**. Confirm a short failure, intact lesson/tools, no broken image/native fallback, and no further image attempts while idle or navigating through Lesson and Talk it through.
+8. Return using Show me to intentionally retry, or use **Retry visual** while the failure is visible. Confirm exactly one extra request and a usable visual.
+9. Choose **Continue to next lesson**. Confirm the new concept starts without the previous explicit image. Choose Show me and confirm a fresh request for the new lesson. Also delay an old image request in the full app and verify its late completion cannot replace the new image.
+10. Resize the same browser for **768px**, then use the preview's **390px** button for a phone-width content area. Check stacked image/text, wrapping tools/captions, full image containment, and no horizontal overflow. Repeat with a keyboard, reduced motion, a screen reader, and a physical phone when available.
 
 Adaptive presentation review (mock Chrome review completed at 1440px, 768px, and 390px; live-image, physical-device, screen-reader, and reduced-motion walkthroughs remain pending):
 

@@ -728,6 +728,17 @@ The goal is for Orbit to move with the learner instead of waiting passively for 
 
 ---
 
+## October 30, 2026 - Learner-controlled Show me
+
+- Added Show me immediately after Lesson in the existing Study tools. It captures the current teaching context and opens the existing Visual composition, including for lessons without an automatic image or after automatic image failure. Lesson context, original quiz/activity state, earlier work, and recommended actions remain accessible. No mastery, readiness, score, path-advancement, navigation, or learner-memory behavior was changed.
+- Added a pure bounded context builder using the existing lesson-image allowlist. Requests include the course/topic/concept and prioritize the active example, activity feedback, quiz/follow-up explanation and attempted answer, or latest completed conversation. Recent recovery survives tool changes and acknowledgment. A known learner confusion is retained when I lost you supplies a simpler explanation. Attempts are labelled as potentially incorrect; the existing server prompt directs Muse Image to clarify them using corrective teaching context. No extra model/API call or inferred visual topology is introduced.
+- Explicit visuals use the existing server-only Muse Image service and mounted-session cache. Unchanged automatic briefs reuse their original key. Pending/ready entries survive rerenders and tool navigation; failed entries retry only on Retry visual or a deliberate Show me click. Successful simplification/continuation clears the explicit snapshot, with late old responses isolated by request keys. Snapshots and recent recovery stay memory-only; no image URL or new resume schema is persisted.
+- Validation: all 252 tests pass (17 added), full lint and production build pass. Coverage includes no-auto-image requests, unchanged mastery/path/readiness, exact recovery/follow-up context, context bounds, retained quiz answers/activity drafts, original scoring, StrictMode/rerender/navigation reuse, failed auto-image retry, safe failure without native fallback, stable focus, and new-lesson stale response isolation. Two initial unused-assignment lint errors were corrected. Existing parallel Vite tests still emit a non-failing HMR port warning.
+- Browser validation of this addition remains pending. Selected the existing Chrome window, but the direct address-bar navigation attempt was stopped because Computer Use could not verify the current URL on Windows. No new tab or alternate automation workaround was attempted, and no rendered Show me flow was inspected. The earlier five-mode browser review predates this feature. The tracked isolated preview now includes an image-request counter and Fail next image control for a repeatable manual walkthrough; responses and the reference image remain mocked.
+- Updated README, the product-focused Unreleased changelog, and the exact desktop/recovery/failure/retry/new-lesson/mobile manual sequence. Live image relevance/accuracy, responsive visual inspection of this addition, physical-device behavior, screen-reader announcements, and reduced-motion walkthrough remain manual. No new dependencies, database changes, migrations, historical migration edits, or SQL steps. Learning Profile/ADHD questionnaire, additional APIs, and legacy-renderer removal remain deferred.
+
+---
+
 # Next
 
 The next major development steps are:

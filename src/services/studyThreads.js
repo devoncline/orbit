@@ -38,5 +38,5 @@ export function studyThreadMetadata({ lesson, activeInteraction, conversation, a
 }
 
 export function selectStudyInteraction(current, next) {
-  return ['lesson', 'example', 'activity', 'conversation', 'quiz'].includes(next) ? next : current
+  return ['lesson', 'visual', 'example', 'activity', 'conversation', 'quiz'].includes(next) ? next : current
 }
