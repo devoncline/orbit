@@ -54,6 +54,14 @@
   .orbit-stage-artwork { animation: orbit-stage-drift 10s ease-in-out infinite; }
   .orbit-thought-fragment { animation: orbit-thought-drift 7s ease-in-out infinite; }
   .orbit-thought-fragment:nth-child(2) { animation-delay: -3.5s; }
+  .orbit-stage[data-expression='thinking'] .orbit-stage-artwork { animation: none; }
+  .orbit-stage[data-expression='celebrating'] .orbit-stage-artwork { animation: orbit-celebrate 1.2s ease-in-out 1; }
+}
+
+@keyframes orbit-celebrate {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  35% { transform: translateY(-14px) rotate(-6deg) scale(1.035); }
+  68% { transform: translateY(-4px) rotate(4deg); }
 }
 
 @media (max-width: 760px) {

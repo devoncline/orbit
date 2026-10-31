@@ -1,5 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 
+const contextLabels = { lesson: 'Lesson', visual: 'Visual explanation', example: 'Example', activity: 'Activity', conversation: 'Discussion', quiz: 'Quiz' }
+
 export default function StudyThreads({ threads, activeId, courses, onSwitch, onCreate }) {
   const active = threads.find((thread) => thread.id === activeId)
   const [creating, setCreating] = useState(false)
@@ -31,11 +33,11 @@ export default function StudyThreads({ threads, activeId, courses, onSwitch, onC
     }}>
       <summary><span className="study-thread-context"><span>Study threads <small>{threads.length}</small></span><strong>{active?.title || 'Choose a thread'}</strong></span></summary>
       <div className="thread-menu">
-      <p className="orbit-muted">This browser keeps up to 20 recent threads, their summaries, and a little context to continue.</p>
+      <p className="orbit-muted">Return to a recent lesson or discussion. Up to 20 threads are saved in this browser.</p>
       <ul className="thread-list">{[...threads].reverse().map((thread) => <li key={thread.id}>
         <button aria-current={thread.id === activeId ? 'true' : undefined} onClick={() => { closeSelector(); onSwitch(thread.id) }}>
           <span className="thread-option-heading"><strong>{thread.title}</strong>{thread.id === activeId && <small className="thread-current">Current</small>}</span>
-          <small>{thread.courseName} · {thread.context} · {thread.status === 'practiced' ? 'Practiced' : 'In progress'} · <time dateTime={thread.createdAt}>{new Date(thread.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</time></small>
+          <small>{thread.courseName} · {contextLabels[thread.context] || 'Study'} · {thread.status === 'practiced' ? 'Practiced' : 'In progress'} · <time dateTime={thread.createdAt}>{new Date(thread.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</time></small>
           <span className="thread-option-summary">{thread.summary}</span>
         </button>
       </li>)}</ul>

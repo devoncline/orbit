@@ -12,8 +12,8 @@ export default function StudyPath({ path }) {
             <li aria-current="step"><small>Lesson {path.step} · Current lesson</small><strong>{path.current.concept}</strong></li>
             {path.upcoming.map((item, index) => <li key={`next-${index}`}><small>Suggested next</small><span>{item.concept}</span></li>)}
         </ol>
-        <p className="orbit-muted">A flexible path, not a checklist. Visited lessons are separate from mastery.</p>
-        {!path.isCurrent && <p className="orbit-muted">Orbit will use your latest course context to choose what comes next.</p>}
+        <p className="orbit-muted">These suggestions can change as you learn. Visiting a lesson does not change your mastery.</p>
+        {!path.isCurrent && <p className="orbit-muted">Orbit will use your updated starting point to suggest the next lesson.</p>}
         </div>
     </details>
 }

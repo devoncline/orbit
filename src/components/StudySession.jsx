@@ -118,6 +118,14 @@ export default function StudySession({
     const [evaluation, setEvaluation] = useState(null)
     const [loadingEvaluation, setLoadingEvaluation] = useState(false)
     const [questionNumber, setQuestionNumber] = useState(0)
+    const [celebrating, setCelebrating] = useState(false)
+    const celebrationTimer = useRef(null)
+    useEffect(() => () => clearTimeout(celebrationTimer.current), [])
+    function celebrate() {
+        clearTimeout(celebrationTimer.current)
+        setCelebrating(true)
+        celebrationTimer.current = setTimeout(() => setCelebrating(false), 2400)
+    }
     const { resultReveal, showResult } = useResultReveal()
     const activityContext = activity ? {
         activity,
@@ -131,8 +139,9 @@ export default function StudySession({
         recoveringLesson, loadingLesson, loadingQuestion, loadingEvaluation, loadingActivity, answerResult, followUpResult,
         showAdaptedLesson, evaluation, evaluationError, questionError, activityFeedback, activityResponse, activityError, conversation }, lessonImageCache)
     const showRecommendationAction = presentation.primary === 'recommendation'
+    const inlineCompanion = presentation.splitVisual && !loadingLesson
     const lastPublished = useRef('')
-    const companion = <OrbitStage thinking={busy} thinkingContext={studyThinkingContext({ loadingLesson, loadingConversation, loadingActivity, loadingQuestion, loadingEvaluation })} />
+    const companion = <OrbitStage thinking={busy} expression={active && activeInteraction === 'quiz' && celebrating && (answerResult === 'correct' || followUpResult === 'correct') ? 'celebrating' : 'rest'} thinkingContext={studyThinkingContext({ loadingLesson, loadingConversation, loadingActivity, loadingQuestion, loadingEvaluation })} />
 
     useEffect(() => {
         if (!import.meta.env.DEV || !active || !lesson || !['lesson', 'conversation'].includes(activeInteraction)) return
@@ -585,7 +594,7 @@ export default function StudySession({
             if (studyQuestion.topic) updateTopicMastery(studyQuestion.topic, answer.correct ? 80 : 40)
             else setMastery(answer.correct ? 80 : 40)
         }
-        if (answer.correct) return
+        if (answer.correct) { if (!retry) celebrate(); return }
         setLoadingEvaluation(true)
         try {
             const result = await evaluateStudyAnswer(course, studyQuestion, answer, mastery, { anchors: learningAnchors, learningProfile: profile })
@@ -609,7 +618,7 @@ export default function StudySession({
                 <h1>{lesson?.concept || course.nextTask || course.name}</h1>
                 {lesson && <StudyPath path={pathView} />}
             </header>
-            {companion}
+            {!inlineCompanion && companion}
             <div className="study-body">
             <section className="study-active-panel" data-study-interaction={activeInteraction} ref={panel} tabIndex={-1} aria-label="Current study interaction">
             {resumeSummary && <p className="orbit-muted study-resume-note" role="status">{resumeSummary}</p>}
@@ -630,7 +639,10 @@ export default function StudySession({
                         <div>
                             {lesson && <>
                             <div className={`study-lesson-composition${presentation.splitVisual ? ' study-lesson-composition-visual' : ''}`}>
-                                <StudyContent content={activeInteraction === 'visual' ? requestedVisual?.explanation : lesson.content} />
+                                <div className="study-lesson-narrative">
+                                    <StudyContent content={activeInteraction === 'visual' ? requestedVisual?.explanation : lesson.content} />
+                                    {inlineCompanion && companion}
+                                </div>
                                 {displayedVisual && <div className="study-visual-presentation">
                                     <LessonVisual visual={displayedVisual} lesson={visualLesson} courseName={course.name} cache={lessonImageCache} active={active} />
                                 </div>}
@@ -657,7 +669,7 @@ export default function StudySession({
                             {activity && (
                                 <>
                                     <div className="study-activity-brief">
-                                    <div className="study-panel-heading"><h2>{activity.title}</h2><button disabled={busy} onClick={() => runActivity('generate')}>Another activity</button></div>
+                                    <div className="study-panel-heading"><h2>{activity.title}</h2><button disabled={busy} onClick={() => runActivity('generate')}>Try another activity</button></div>
                                     <p className="study-task-instruction">{activity.instruction}</p>
                                     </div>
                                     <form onSubmit={submitActivity}>
@@ -756,6 +768,7 @@ export default function StudySession({
                                     {conversationError ? 'Try again' : 'Send'}
                                 </button>
                             </form>
+                            {inlineCompanion && companion}
                         </div>
                     )}
                 </div>
@@ -826,6 +839,7 @@ export default function StudySession({
                                             answerResult, followUpResult: answer.correct ? 'correct' : 'incorrect', followUpAnswer: answer })
                                         rememberAnchor(anchorAfterFollowUp(evaluation.anchor, answer.correct))
                                         if (answer.correct) {
+                                            if (followUpResult !== 'correct') celebrate()
                                             setFollowUpResult('correct')
                                             if (studyQuestion.topic) {
                                                 updateTopicMastery(studyQuestion.topic, 70)

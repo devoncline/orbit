@@ -83,9 +83,9 @@ test('finishing at an arbitrary sway angle settles from that pose; a quick retry
   const stopThinking = startThinkingMotion(element, true)
   assert.equal(animations.length, 1)
   assert.equal(animations[0].options.iterations, Infinity)
-  assert.ok(animations[0].options.duration >= 8000)
-  assert.match(animations[0].frames[1].transform, /rotate\(-4deg\)/)
-  assert.match(animations[0].frames[2].transform, /rotate\(3deg\)/)
+  assert.ok(animations[0].options.duration >= 4000)
+  assert.match(animations[0].frames[1].transform, /rotate\(-12deg\) scale\(\.94\)/)
+  assert.match(animations[0].frames[2].transform, /rotate\(7deg\)/)
   const midway = 'matrix(0.999, -0.04, 0.04, 0.999, 0, -2)'
   animations[0].pose = midway
   stopThinking()

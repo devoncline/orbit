@@ -22,7 +22,7 @@ export default function LearningPreferences({ value, onChange }) {
     heading.current?.focus({ preventScroll: true })
   }
   return <section className="learning-preferences" aria-labelledby={`${id}-heading`}>
-    <h2 id={`${id}-heading`} tabIndex={-1} ref={heading}>{editing ? 'Help Orbit learn how you learn' : preferences.status === 'saved' ? 'Your Orbit setup' : 'Learning preferences'}</h2>
+    <h2 id={`${id}-heading`} tabIndex={-1} ref={heading}>{editing ? 'How do you like to learn?' : 'Learning preferences'}</h2>
     {editing ? <form onSubmit={(event) => { event.preventDefault(); finish({ status: 'saved', profile: normalizeLearningProfile(draft) }, 'Preferences saved. They will guide your next explanation.') }}>
       <p>Tell Orbit what tends to help you learn. Five quick choices, about a minute. You can change them any time.</p>
       {PROFILE_QUESTIONS.map(({ key, question, options }, index) => <fieldset key={key}>

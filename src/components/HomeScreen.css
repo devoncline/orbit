@@ -10,6 +10,8 @@
 .home-support { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: var(--orbit-page-gap); padding: var(--orbit-page-utility-gap) 0 40px; }
 .home-support .space-links button { padding-block: 14px; }
 .home-support .upcoming-list li { padding-block: 8px; }
+.home-learning-preferences { max-width: 720px; margin-top: 24px; }
+.home-learning-preferences > .learning-preferences { margin-top: 12px; padding-top: 8px; border-top: 0; }
 @media (max-width: 760px) {
   .home-copy { grid-area: header; }
   .home-recommendation::before { display: none; }

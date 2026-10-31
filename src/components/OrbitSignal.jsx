@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import orbitMark from '../assets/brand/orbit-mark-accent.svg'
+import orbitThinking from '../assets/mascot/orbit-teaching-tilt-transparent.png'
 import { getThinkingCopy, nextThinkingRequest } from './orbitThinking'
 import StudyContent from './StudyContent'
 import './OrbitSignal.css'
@@ -7,11 +7,8 @@ import './OrbitSignal.css'
 // OrbitStage owns the single request announcement. This local cue is visual.
 export default function OrbitSignal({ context, sequence = 0 }) {
   return <div className="orbit-signal" aria-hidden="true" data-thinking-context={context}>
-    <div className="orbit-signal-label">
-      <img src={orbitMark} alt="" width="22" height="22" />
-      <span>{getThinkingCopy(context, sequence).fragments[0]}</span>
-    </div>
-    <div className="orbit-signal-line" />
+    <img className="orbit-signal-mascot" src={orbitThinking} alt="" width="1600" height="1600" />
+    <span>{getThinkingCopy(context, sequence).fragments[0]}</span>
   </div>
 }
 

@@ -12,7 +12,7 @@ export default function LearnScreen({ courses, recommendedCourse, onStart }) {
   return (
     <section className="orbit-page orbit-page-layout" aria-labelledby="learn-heading">
       <header className="orbit-page-header"><h1 id="learn-heading">What do you want to learn?</h1></header>
-      <OrbitStage variant="page" />
+      <OrbitStage variant="page" expression={!topic.trim() ? 'shy' : 'rest'} />
       <div className="orbit-page-content">
         <form className="orbit-form" onSubmit={(event) => {
           event.preventDefault()

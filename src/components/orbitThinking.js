@@ -53,14 +53,14 @@ export function startThinkingMotion(element, thinking) {
     const rest = 'translateY(0px) rotate(0deg)'
     const frames = thinking ? [
       { transform: from, offset: 0, easing: 'ease-in-out' },
-      { transform: 'translateY(-3px) rotate(-4deg)', offset: 0.28, easing: 'ease-in-out' },
-      { transform: 'translateY(1px) rotate(3deg)', offset: 0.58, easing: 'ease-in-out' },
-      { transform: 'translateY(-1px) rotate(-1deg)', offset: 0.8, easing: 'ease-in-out' },
+      { transform: 'translateY(-12px) rotate(-12deg) scale(.94)', offset: 0.28, easing: 'ease-in-out' },
+      { transform: 'translateY(-5px) rotate(7deg) scale(.97)', offset: 0.58, easing: 'ease-in-out' },
+      { transform: 'translateY(-2px) rotate(-2deg)', offset: 0.8, easing: 'ease-in-out' },
       { transform: from, offset: 1 },
     ] : [{ transform: from }, { transform: rest }]
     animation = element.animate(frames, thinking
-      ? { duration: 8400, iterations: Infinity }
-      : { duration: 900, easing: 'ease-out' })
+      ? { duration: 5200, iterations: Infinity }
+      : { duration: 500, easing: 'ease-out' })
     // Cancellation on request changes/unmount is an expected animation outcome.
     animation.finished?.catch(() => {})
   }

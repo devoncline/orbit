@@ -335,7 +335,7 @@ export default function App() {
           <OrbitStage variant="page" />
           <div className="orbit-page-content">
             <AddCourse key={newSpaceIntent} onAddCourse={addCourse} intent={newSpaceIntent} courses={courses} />
-            <p className="orbit-session-note">Learning memory is saved in this browser. No account or cross-device sync.</p>
+            <p className="orbit-session-note">Your learning is saved in this browser. It won't appear on your other devices.</p>
           </div>
         </section>
       )}
@@ -380,7 +380,7 @@ export default function App() {
           <div className="orbit-page-actions"><button className="orbit-button" onClick={() => newSpace('topic')}>＋ New space</button></div>
           <div className="orbit-page-utility">
           <LearningPreferences value={learningPreferences} onChange={(value) => setLearningPreferences(normalizeLearningPreferences(value))} />
-          <p className="orbit-session-note">Orbit keeps compact learning memory in this browser, accessible to anyone using this browser profile. Clearing browser data removes it. Original uploads, drafts, and full conversation history are not saved; relevant context is used by Orbit's existing learning service.</p>
+          <p className="orbit-session-note">Your spaces, progress, and recent lessons are saved in this browser. Anyone using this browser profile can access them. Clearing browser data removes them. Original files, drafts, and full conversations aren't saved. Relevant learning context is sent to Orbit's AI to help with your lessons.</p>
           {resetPending ? <div>
             <p>Clear all local Orbit spaces, progress, learning preferences, and learning memory? This cannot be undone.</p>
             <div className="orbit-page-actions">

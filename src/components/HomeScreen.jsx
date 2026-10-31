@@ -43,7 +43,6 @@ export default function HomeScreen({
         </div>
         <OrbitStage variant="home" thinking={loadingRecommendation} thinkingContext="recommendation" />
       </section>
-      {onPreferencesChange && <LearningPreferences value={learningPreferences} onChange={onPreferencesChange} />}
       {!empty && (
         <div className="home-support">
           <section aria-labelledby="other-spaces-heading">
@@ -60,6 +59,10 @@ export default function HomeScreen({
           </section>
         </div>
       )}
+      {onPreferencesChange && <details className="home-learning-preferences">
+        <summary>Learning preferences</summary>
+        <LearningPreferences value={learningPreferences} onChange={onPreferencesChange} />
+      </details>}
     </div>
   )
 }

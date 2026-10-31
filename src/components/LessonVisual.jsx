@@ -3,10 +3,22 @@ import { lessonImageRequest } from '../services/lessonImageRequest'
 import { EMPTY_IMAGE } from '../services/lessonImages'
 import './LessonVisual.css'
 
+function ImageLoading({ decoding = false }) {
+  return <div className="lesson-image-loading" role="status">
+    <svg className="lesson-image-orbit" viewBox="0 0 240 120" fill="none" aria-hidden="true">
+      <ellipse cx="120" cy="60" rx="91" ry="32" transform="rotate(-18 120 60)" />
+      <ellipse cx="120" cy="60" rx="64" ry="23" transform="rotate(24 120 60)" />
+      <circle className="lesson-image-core" cx="120" cy="60" r="7" />
+      <g className="lesson-image-stars"><circle cx="35" cy="85" r="3" /><circle cx="196" cy="25" r="2" /><circle cx="79" cy="23" r="1.5" /><circle cx="176" cy="94" r="1.5" /></g>
+    </svg>
+    <span>{decoding ? 'Loading lesson image…' : 'Preparing a lesson image…'}</span>
+  </div>
+}
+
 function ImageContent({ url, alt, onError }) {
   const [loaded, setLoaded] = useState(false)
   return <>
-    {!loaded && <p className="lesson-image-status" role="status">Loading lesson image…</p>}
+    {!loaded && <ImageLoading decoding />}
     <img className="lesson-generated-image" src={url} alt={alt} hidden={!loaded}
       referrerPolicy="no-referrer" onLoad={() => setLoaded(true)} onError={onError} />
   </>
@@ -33,7 +45,7 @@ function GeneratedLessonImage({ requestKey, cache, active }) {
       {image.status === 'ready'
         ? <ImageContent key={image.url} url={image.url} alt={`${visual.purpose} ${visual.data.map((item) => item.label).join(', ')}.`}
           onError={() => cache.fail(requestKey)} />
-        : <p className="lesson-image-status" role="status">Preparing a lesson image…</p>}
+        : <ImageLoading />}
     </div>
   </figure>
 }

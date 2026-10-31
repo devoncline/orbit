@@ -264,7 +264,7 @@ test('a resumed path shows visited, current and tentative next concepts without 
   assert.match(html, /<li><small>Visited<\/small><span>Explaining behavior/)
   assert.match(html, /Lesson 2 · Current lesson<\/small><strong>Testing an idea/)
   assert.match(html, /Next idea<\/small><span>Comparing groups/)
-  assert.match(html, /Visited lessons are separate from mastery/)
+  assert.match(html, /Visiting a lesson does not change your mastery/)
   assert.doesNotMatch(html, /<details[^>]*open|Completed|Mastered/)
 })
 

@@ -4,6 +4,8 @@ import AppShell from './src/components/AppShell.jsx'
 import StudySession from './src/components/StudySession.jsx'
 import StudyThreads from './src/components/StudyThreads.jsx'
 import LearningPreferences from './src/components/LearningPreferences.jsx'
+import HomeScreen from './src/components/HomeScreen.jsx'
+import LearnScreen from './src/components/LearnScreen.jsx'
 import { normalizeLearningPreferences } from './src/services/learningProfile.js'
 import { learningPathContextKey } from './src/services/learningPath.js'
 import './src/index.css'
@@ -14,12 +16,15 @@ const profiles = {
 }
 const course = { name: 'React', mastery: { overall: 40, topics: {} } }
 const visual = { type: 'generated_image', purpose: 'A render is requested, prepared, then committed to the screen.', focus: 'Rendering', data: [{ label: 'Trigger', detail: 'Request an update.' }, { label: 'Render', detail: 'Prepare the result.' }, { label: 'Commit', detail: 'Update the screen.' }] }
-const lesson = { topic: 'State', concept: 'From a click to a new screen', content: '**State is component memory.** It keeps a value between renders.\n\nWhen you click a counter, its event handler requests a state update. React renders the component again using the new value, then updates the screen.\n\nFor example, clicking a counter showing **2** can update its state to **3**. The next render shows 3.', ...(!['focus', 'guided'].includes(scenario) ? { visual } : {}) }
+const lesson = { topic: 'State', concept: 'From a click to a new screen', content: '**State is component memory.** It keeps a value between renders.\n\nWhen you click a counter, its event handler requests a state update. React renders the component again using the new value, then updates the screen.\n\nFor example, clicking a counter showing **2** can update its state to **3**. The next render shows 3.', ...(['visual', 'failure', 'explore', 'image-wait'].includes(scenario) ? { visual } : {}) }
 const json = (value) => new Response(JSON.stringify(value), { headers: { 'Content-Type': 'application/json' } })
 let imageAttempts = 0
 window.fetch = async (url, options = {}) => {
   const body = options.body ? JSON.parse(options.body) : {}
   await new Promise(resolve => setTimeout(resolve, 600))
+  if (scenario === 'thinking' || (scenario === 'image-wait' && url === '/api/generate-lesson-image')) {
+    await new Promise(resolve => { window.releaseReviewRequest = resolve })
+  }
   if (url === '/api/generate-lesson-image') {
     imageAttempts += 1
     document.documentElement.dataset.imageRequests = imageAttempts
@@ -49,6 +54,10 @@ export default function Review() {
   const [activeId, setActiveId] = useState('review')
   const activeThread = threads.find(thread => thread.id === activeId)
   const learningPath = { step: 3, visited: [{ topic: 'State', concept: 'Remembering a value', understood: true }], upcoming: [{ topic: 'Events', concept: 'Responding to a click and updating the value on screen' }, { topic: 'State', concept: 'Sharing state between components' }], contextKey: learningPathContextKey(course) }
+  if (['home', 'learn'].includes(scenario)) return <AppShell courses={[course]} destination={scenario} onNavigate={()=>{}} onSelectSpace={()=>{}} onNewSpace={()=>{}}>
+    {scenario === 'home' ? <HomeScreen courses={[course]} recommendedCourse={course} onContinue={()=>{}} onSelectSpace={()=>{}} onNewSpace={()=>{}} onNavigate={()=>{}} learningPreferences={preferences} onPreferencesChange={setPreferences} />
+      : <LearnScreen courses={[]} onStart={()=>{}} />}
+  </AppShell>
   return <AppShell courses={[course]} destination="study" onNavigate={()=>{}} onSelectSpace={()=>{}} onNewSpace={()=>{}}>
     <div className="orbit-page study-page">
       <StudyThreads threads={threads} activeId={activeId} courses={[course]} onSwitch={setActiveId} onCreate={(_, topic) => {
