@@ -855,7 +855,7 @@ export default function StudySession({
             <footer className="study-progress">
                 <ol className="study-stages" aria-label="Session progress">
                     <li aria-current={stage === 'learn' ? 'step' : undefined}>Learn & try</li>
-                    <li aria-current={stage === 'quiz' ? 'step' : undefined}>Practice{stage === 'quiz' ? ` · Question ${questionNumber}` : ''}</li>
+                    <li aria-current={stage === 'quiz' ? 'step' : undefined}>Practice{stage === 'quiz' ? ` · Question ${questionNumber || 1}` : ''}</li>
                 </ol>
                 <p className="study-mastery">Mastery · {mastery}%</p>
             </footer>

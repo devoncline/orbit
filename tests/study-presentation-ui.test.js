@@ -130,10 +130,18 @@ test('activity becomes primary, misconception feedback enters recover, and editi
 
 test('quiz recovery is local, follow-up success returns to check, and existing score writes remain unchanged', async (t) => {
   const scores = []
-  t.mock.method(globalThis, 'fetch', async (url) => json(url === '/api/generate-study-question' ? question : evaluation))
+  let completeQuestion
+  let firstQuestion = true
+  t.mock.method(globalThis, 'fetch', async (url) => {
+    if (url !== '/api/generate-study-question') return json(evaluation)
+    return firstQuestion ? new Promise((resolve) => { completeQuestion = resolve }) : json(question)
+  })
   await mount(t, { updateTopicMastery: (...args) => scores.push(args) })
   await click('Quiz me')
   assert.equal(mode(), 'check')
+  assert.equal(container.querySelector('.study-question-number').textContent, 'Question 1')
+  assert.equal(container.querySelector('.study-stages [aria-current]').textContent, 'Practice · Question 1')
+  await act(async () => { firstQuestion = false; completeQuestion(json(question)); await setImmediate() })
   await click('A prop')
   assert.equal(mode(), 'recover')
   assert.ok(container.querySelector('.study-adapted'))

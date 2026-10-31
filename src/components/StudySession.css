@@ -47,6 +47,9 @@
   .study-lesson-composition-visual, .study-conversation-visual { grid-template-columns: minmax(0, 1fr); }
   .study-conversation-visual > .study-transcript, .study-conversation-visual > .lesson-visual, .study-conversation-visual > .study-composer { grid-column: 1; grid-row: auto; }
   .study-session { column-gap: 24px; }
+  .study-mode-focus { grid-template-columns: minmax(0, 1fr) 120px; }
+  .study-mode-focus > .orbit-stage { height: 160px; --orbit-page-companion-width: 120px; }
+  .study-mode-focus .orbit-thoughts { display: none; }
   .study-mode-practice, .study-mode-check { grid-template-columns: minmax(0, 1fr) 120px; }
   .study-mode-recover { grid-template-columns: minmax(0, 1fr) 100px; }
   .study-mode-recover > .orbit-stage { --orbit-page-companion-width: 100px; }

@@ -578,7 +578,7 @@ Only the compact lesson visual brief is saved by the existing resume projection.
 
 The old renderer remains in `src/components/LegacyLessonVisual.jsx`, with `src/services/lessonVisualComposition.js`, `nativeLessonVisual()`, its existing scene CSS, fixtures, and tests retained for rollback/reference. Learner-facing code never imports it. Older saved native specifications are translated into generated-image briefs, preserving their instructional purpose.
 
-Validation uses mocked provider responses and mounted React tests. Live Muse Image quality, credentials/model access, signed-URL loading, and desktop/mobile rendering still need the checks in CHANGELOG.md. Image editing, simulations, animated teaching scenes, and Save to notes remain deferred.
+Validation uses mocked provider responses and mounted React tests. All five presentation modes were also visually reviewed in Chrome at 1440px, 768px, and 390px using mock responses and a reference image. Live Muse Image quality, credentials/model access, signed-URL loading, physical-device behavior, and screen-reader use still need the checks in CHANGELOG.md. Image editing, simulations, animated teaching scenes, and Save to notes remain deferred.
 
 ## Controlled Study Presentation
 
@@ -601,7 +601,7 @@ Priority is **active recovery > active quiz > active activity > active usable/pe
 
 A valid current image brief selects visual immediately and retains it through generation and image decoding. Image errors return to focus unless recovery is active; only an explicit retry re-enters visual. The existing request key isolates late images from a different lesson. Successful continuation resets lesson-specific recovery, while failed continuation retains the current lesson and mode. Presentation state is not persisted and introduces no new learning evidence.
 
-Wide screens keep the shared sidebar and use the split visual composition above 1100px. At tablet widths the image stacks at full content width. At 760px and below every mode uses one column: focus retains a compact full mascot; task layouts hide the artwork while keeping its accessible request status. Existing focus indicators, controls, live regions, and reduced-motion behavior remain; no layout animation is added. Automatic mode changes do not move focus. Existing explicit tool/lesson navigation still focuses the active panel.
+Wide screens keep the shared sidebar and use the split visual composition above 1100px. At tablet widths the image stacks at full content width and focus uses a compact companion column to leave more reading space. At 760px and below every mode uses one column: focus retains a compact full mascot; task layouts hide the artwork while keeping its accessible request status. Existing focus indicators, controls, live regions, and reduced-motion behavior remain; no layout animation is added. Automatic mode changes do not move focus. Existing explicit tool/lesson navigation still focuses the active panel.
 
 Selector and mounted React tests cover all five modes, pending/error transitions, recovery exits, preserved history/drafts, keyboard focus, next-lesson reset, image request reuse, and unchanged mastery writes. See the ordered adaptive-presentation checklist in CHANGELOG.md for browser review. The Learning Profile questionnaire, Show me, new AI APIs, and legacy-renderer removal are outside this change.
 

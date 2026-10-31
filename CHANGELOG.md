@@ -39,7 +39,7 @@
 
 ### Manual test checklist
 
-Adaptive presentation review (in order; browser/live-image review is still pending):
+Adaptive presentation review (mock Chrome review completed at 1440px, 768px, and 390px; live-image, physical-device, screen-reader, and reduced-motion walkthroughs remain pending):
 
 1. At about **1440px**, start a text-only lesson. Check the calm explanation, complete companion, one emphasized recommendation, collapsed Study tools, and keyboard focus outlines.
 2. Open a lesson with a generated image. Check the wide split, stable image area while loading, full uncropped educational content, readable labels, and a usable lesson while waiting. Switch tools and return; confirm the image request is reused.
