@@ -1,4 +1,5 @@
 import process from 'node:process'
+import { formatLearningProfile } from '../src/services/learningProfile.js'
 import { formatCoursePosition } from '../src/services/coursePosition.js'
 import { formatLearningAnchors } from '../src/services/studyLearningContext.js'
 
@@ -32,6 +33,7 @@ export default async function handler(req, res) {
 You are Orbit, an adaptive learning agent.
 
 Generate ONE multiple-choice study question for this student.
+${formatLearningProfile(req.body.learningProfile)}
 
 Course: ${courseName}
 Recommended task: ${nextTask}

@@ -36,7 +36,7 @@ export function studyPathView(value, lesson, contextKey) {
 export function recommendStudyAction({
   lesson, activeInteraction = 'lesson', learningPath, example, lessonError, conversation = [],
   activity, activityError, activityFeedback, activityResponse = '', answerResult, followUpResult,
-  evaluation, evaluationError, questionError,
+  evaluation, evaluationError, questionError, learningProfile,
 } = {}) {
   if (!lesson) return null
   if (answerResult === 'incorrect' && followUpResult !== 'correct') {
@@ -81,6 +81,9 @@ export function recommendStudyAction({
   }
   if (example || conversation.length) return {
     action: 'activity', label: 'Let me try it', hint: 'Try applying this idea in a short activity.',
+  }
+  if (learningProfile?.guidance === 'focused') return {
+    action: 'quiz', label: 'Quiz me', hint: 'When you feel ready, one short question can help you check this idea. You can also keep exploring with Study tools.',
   }
   return { action: 'example', label: 'Give me an example', hint: 'Start with the lesson above. When you are ready, see the idea in action.' }
 }

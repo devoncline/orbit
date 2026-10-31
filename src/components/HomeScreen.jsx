@@ -2,13 +2,14 @@ import OrbitStage from './OrbitStage'
 import { learningAction } from './learningAction'
 import UpcomingWork from './UpcomingWork'
 import CoursePosition from './CoursePosition'
+import LearningPreferences from './LearningPreferences'
 import { continuationReason, inferCoursePosition, positionAction } from '../services/coursePosition'
 import './HomeScreen.css'
 
 export default function HomeScreen({
   courses, recommendedCourse, recommendation, loadingRecommendation,
   onContinue, onSelectSpace, onNewSpace, onNavigate, resuming = false,
-  today, onPositionChange,
+  today, onPositionChange, learningPreferences, onPreferencesChange,
 }) {
   const empty = courses.length === 0
   const position = recommendedCourse ? inferCoursePosition(recommendedCourse, today) : null
@@ -42,6 +43,7 @@ export default function HomeScreen({
         </div>
         <OrbitStage variant="home" thinking={loadingRecommendation} thinkingContext="recommendation" />
       </section>
+      {onPreferencesChange && <LearningPreferences value={learningPreferences} onChange={onPreferencesChange} />}
       {!empty && (
         <div className="home-support">
           <section aria-labelledby="other-spaces-heading">

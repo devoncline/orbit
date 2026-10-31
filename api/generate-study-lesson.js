@@ -1,4 +1,5 @@
 import process from 'node:process'
+import { formatLearningProfile } from '../src/services/learningProfile.js'
 import { lessonVisualPrompt } from './_lib/lessonVisualPrompt.js'
 import { logVisualRouting } from '../src/services/visualDiagnostics.js'
 import { formatCoursePosition, inferCoursePosition, isPositionTopicAllowed } from '../src/services/coursePosition.js'
@@ -107,7 +108,7 @@ Current lesson: ${action === 'lesson' ? 'None' : JSON.stringify(lesson)}
 Current example: ${JSON.stringify(example || '')}
 ${formatLearningAnchors(learningAnchors, { topic: lesson?.topic || position.currentTopic, concept: lesson?.concept, text: lesson?.content || nextTask })}
 
-Keep content concise, ideally 60-90 words, explaining one useful idea with a concrete example nearby.
+Keep content concise, explaining one useful idea with a concrete example nearby. Normally aim for 60-90 words; for short chunks aim for 35-60, or for fuller explanations 80-100, while preserving correctness and all hard limits below.
 Never exceed 100 words or 900 characters. Stay focused on one concept.
 Use one or two meaningful Markdown section headings (##), short paragraphs, occasional bullets (-), and **bold** for key concepts only.
 Do not use HTML, links, images, tables, or code fences. No long lists or quiz questions.
@@ -118,6 +119,7 @@ Prefer an instructional image for processes, flows, sequences, cause and effect,
 Photosynthesis, cellular respiration, gravity/orbits, React state flow, API request/response flow, arrays, scope, props vs state, SQL vs NoSQL, mitosis, and the water cycle should usually receive an instructional image when teaching those mechanisms or relationships.
 Short factual recall, pure vocabulary, simple definitions, or concepts where a visual adds no meaningful value may use none.
 ${lessonVisualPrompt}
+${formatLearningProfile(req.body.learningProfile, { visuals: true })}
 Do not tell the learner a visual is visible; the complete lesson text must stand alone.
 Return ONLY valid JSON with topic, concept, content${advances ? ', nextLessons (one or two objects with topic and concept)' : ''}, and visual. Select visual using the teaching rules above, including a full generated_image specification when useful or {"type":"none"} otherwise.
         `,

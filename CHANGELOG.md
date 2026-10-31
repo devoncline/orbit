@@ -4,6 +4,7 @@
 
 ### Improvements
 
+- Optional learning preferences on Home and in Library let Orbit tailor explanation length, example timing, useful visuals, next-step guidance, and return recaps. Five quick choices can be skipped, edited, or reset without changing learning progress. Explicit Study actions remain available.
 - Study tools now include **Show me**: request a visual for the current idea, example, or point of confusion without changing progress. Recovery explanations stay visible, images are reused when returning to the same context, and failed visuals can be retried deliberately.
 - Study now adapts its composition to the current task: calm explanations, prominent instructional images, focused activities and questions, and a simpler recovery view when something is unclear. Lesson context and earlier work remain accessible. “That helps” returns from a simpler explanation without changing mastery.
 - Lessons now include generated instructional images when they help explain the concept. Text and Study controls stay usable while images load; repeated navigation reuses the same visual, and unavailable images offer a quiet retry without decorative fallbacks. Talk It Through can reuse or adapt a visual.
@@ -39,6 +40,21 @@
 - Study answers now update mastery for the question's topic, with overall course mastery calculated as the rounded average of topic scores. Questions without a topic retain the existing course mastery behavior.
 
 ### Manual test checklist
+
+Learning preferences (automated checks completed; live teaching and desktop/mobile browser inspection remain manual):
+
+1. In a fresh browser profile at about **1440px**, open Home. Confirm learning entry still works without setup. Choose **Set up my preferences**; check five questions with native radio choices and readable selected states. Save and confirm the five-item **Your Orbit setup** summary. Refresh before creating a space; the choices should remain.
+2. In another fresh session, choose **Not now**, refresh, and start learning normally. Confirm the invitation stays dismissed and **Choose learning preferences** remains available. Open setup and choose **Skip setup**; no draft answers should be saved.
+3. Open **Library → Edit preferences**, change one choice, and save. Return Home and check the updated summary. Edit again and cancel; the saved choices should remain.
+4. Select **Reset preferences**. Confirm Orbit returns to balanced explanations/example timing, helpful visuals, a suggested step with checks when needed, and a short return recap. Existing spaces, mastery and lesson progress must remain. Reset should not repeatedly reopen setup.
+5. In the API-enabled app, select **Short and focused**, then request a new explanation with **I lost you**. Check smaller, concise steps with the necessary facts intact. Switch to **A little more detail** and request another explanation; the current lesson must not reload merely from editing preferences.
+6. Select **With a concrete example**, then request a new lesson or explanation. Check that the example comes early and connects to the idea. Compare **Explain the idea, then give an example**. Quiz/activity prompts must not give away their solutions.
+7. Choose **Often, when a picture helps explain** and study a process such as React state flow. Check useful image selection and the existing Visual layout. A simple definition should still be allowed to omit imagery. Model choices are not deterministic; judge relevance and correctness rather than requiring an image every time.
+8. Choose **One clear step, with quick understanding checks**. Confirm one emphasized suggestion and quieter collapsed Study tools; all six tools remain accessible. Check-ins should be optional, with no repeated interruption. Compare **Keep the tools in view so I can choose**; tools should initially be expanded without changing the active task or recovery mode.
+9. Choose **Remind me where I left off**. Leave Study for Home/Library and return; check the current lesson/tool recap and retained draft/answers. Refresh and resume: the saved recap should explain that quizzes/activities start fresh. Compare **Give me a short recap** and **Just let me continue**; no new lesson requests or progress changes should result from the recap itself.
+10. Choose **Let me ask for it** for visuals. In a text-only lesson, click **Study tools → Show me**. Confirm it still generates through the existing image path, preserves the lesson, and reuses the image across tool changes. Editing preferences must not regenerate existing images.
+11. Open `http://localhost:5173/.orbit-review.html` and compare **guided profile** with **explore profile** at desktop width. Each includes editable preferences below Study. Check the form, summary, next-action emphasis, recap, and existing image composition. These fixtures use fixed responses; use the full app for steps 5–7.
+12. Resize the same browser, check **768px**, then the preview's **390px** content width. Check wrapping legends/options, visible selected radio indicators, large targets, no horizontal overflow, and image containment. Use Tab/Shift+Tab, arrow keys within radio groups, Enter/Space for actions, and a screen reader for labels/status. Check save/cancel/reset focus and reduced motion; repeat on a physical phone when available.
 
 Show me (automated checks completed; browser walkthrough of this addition still pending):
 

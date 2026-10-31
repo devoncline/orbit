@@ -1,11 +1,18 @@
 import { createRoot } from 'react-dom/client'
+import { useState } from 'react'
 import AppShell from './src/components/AppShell.jsx'
 import StudySession from './src/components/StudySession.jsx'
+import LearningPreferences from './src/components/LearningPreferences.jsx'
+import { normalizeLearningPreferences } from './src/services/learningProfile.js'
 import './src/index.css'
 const scenario = new URLSearchParams(location.search).get('scenario')
+const profiles = {
+  guided: { chunkSize: 'short', exampleTiming: 'early', visualPreference: 'on_request', guidance: 'focused', reentrySupport: 'where_left_off' },
+  explore: { chunkSize: 'detailed', exampleTiming: 'after', visualPreference: 'often', guidance: 'explore', reentrySupport: 'continue' },
+}
 const course = { name: 'React', mastery: { overall: 40, topics: {} } }
 const visual = { type: 'generated_image', purpose: 'A render is requested, prepared, then committed to the screen.', focus: 'Rendering', data: [{ label: 'Trigger', detail: 'Request an update.' }, { label: 'Render', detail: 'Prepare the result.' }, { label: 'Commit', detail: 'Update the screen.' }] }
-const lesson = { topic: 'State', concept: 'From a click to a new screen', content: '**State is component memory.** It keeps a value between renders.\n\nWhen you click a counter, its event handler requests a state update. React renders the component again using the new value, then updates the screen.\n\nFor example, clicking a counter showing **2** can update its state to **3**. The next render shows 3.', ...(scenario !== 'focus' ? { visual } : {}) }
+const lesson = { topic: 'State', concept: 'From a click to a new screen', content: '**State is component memory.** It keeps a value between renders.\n\nWhen you click a counter, its event handler requests a state update. React renders the component again using the new value, then updates the screen.\n\nFor example, clicking a counter showing **2** can update its state to **3**. The next render shows 3.', ...(!['focus', 'guided'].includes(scenario) ? { visual } : {}) }
 const json = (value) => new Response(JSON.stringify(value), { headers: { 'Content-Type': 'application/json' } })
 let imageAttempts = 0
 window.fetch = async (url, options = {}) => {
@@ -31,4 +38,13 @@ window.fetch = async (url, options = {}) => {
   if (url === '/api/respond-to-study-message') return new Response(JSON.stringify({ type: 'delta', text: 'State stores the value. Rendering shows it.' })+'\n'+JSON.stringify({ type: 'complete', response: 'State stores the value. Rendering shows it.', signal: 'confusion' })+'\n', { headers: { 'Content-Type': 'application/x-ndjson' } })
   throw Error('Unexpected mock route: '+url)
 }
-createRoot(document.getElementById('root')).render(<AppShell courses={[course]} destination="study" onNavigate={()=>{}} onSelectSpace={()=>{}} onNewSpace={()=>{}}><div className="orbit-page study-page"><div className="study-room"><StudySession course={course} threadId="review" initialThread={{ resume: { lesson } }} mastery={40} setMastery={()=>{}} updateTopicMastery={()=>{}} /></div></div></AppShell>)
+export default function Review() {
+  const [preferences, setPreferences] = useState(() => normalizeLearningPreferences({ status: 'saved', profile: profiles[scenario] }))
+  return <AppShell courses={[course]} destination="study" onNavigate={()=>{}} onSelectSpace={()=>{}} onNewSpace={()=>{}}>
+    <div className="orbit-page study-page"><div className="study-room">
+      <StudySession course={course} learningProfile={preferences.profile} threadId="review" initialThread={{ summary: 'You were comparing stored state with visible text.', context: 'quiz', resume: { lesson } }} mastery={40} setMastery={()=>{}} updateTopicMastery={()=>{}} />
+      {profiles[scenario] && <LearningPreferences value={preferences} onChange={(value) => setPreferences(normalizeLearningPreferences(value))} />}
+    </div></div>
+  </AppShell>
+}
+createRoot(document.getElementById('root')).render(<Review />)

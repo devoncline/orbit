@@ -1,4 +1,5 @@
 import { lessonImageRequest } from './lessonImageRequest.js'
+import { normalizeLearningProfile } from './learningProfile.js'
 
 const interactions = ['lesson', 'visual', 'example', 'activity', 'quiz', 'conversation', 'history']
 const labels = { focus: 'Explore the idea', visual: 'See how it works', practice: 'Your turn', check: 'Check your understanding', recover: 'One part at a time' }
@@ -14,6 +15,8 @@ export function studyPresentationImageKey({ activeInteraction = 'lesson', course
 // Recovery is scoped to the active interaction; stale quiz/activity results cannot
 // override a learner who has deliberately moved to another tool.
 export function selectStudyPresentation(state = {}, imageStatus = 'idle') {
+  const profile = normalizeLearningProfile(state.learningProfile)
+  const choiceDensity = profile.guidance === 'focused' ? 'low' : profile.guidance === 'explore' ? 'expanded' : 'normal'
   const interaction = interactions.includes(state.activeInteraction) ? state.activeInteraction : 'lesson'
   const visualKey = studyPresentationImageKey({ ...state, activeInteraction: interaction })
   const hasVisual = Boolean(visualKey) && ['idle', 'pending', 'ready'].includes(imageStatus)
@@ -51,6 +54,6 @@ export function selectStudyPresentation(state = {}, imageStatus = 'idle') {
     reason = 'visual_unavailable'
   }
   if (interaction === 'conversation') primary = 'conversation'
-  return { mode, reason, label: labels[mode], primary, guidance, visualKey, hasVisual,
+  return { mode, reason, label: labels[mode], primary, guidance, visualKey, hasVisual, choiceDensity,
     splitVisual: mode === 'visual', compactConversation: reason === 'conversation_recovery' }
 }

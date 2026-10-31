@@ -1,9 +1,10 @@
 import { inferCoursePosition, normalizeLearnerPosition, normalizeSyllabusItems } from './coursePosition.js'
 import { retainLearningAnchors } from './studyLearningContext.js'
 import { normalizeLearningPath, normalizeLessonVisual } from './learningPath.js'
+import { normalizeLearningPreferences } from './learningProfile.js'
 
 export const LEARNER_MEMORY_KEY = 'orbit.learner-memory'
-export const LEARNER_MEMORY_VERSION = 1
+export const LEARNER_MEMORY_VERSION = 2
 export const MAX_SAVED_THREADS = 20
 export const MAX_SAVED_EXCHANGES = 2
 const MAX_STORAGE_LENGTH = 1_000_000
@@ -14,7 +15,7 @@ const timestamp = (value) => typeof value === 'string' && Number.isFinite(Date.p
 export const learnerPositionKey = (course) => JSON.stringify(course.learnerPosition || null)
 
 export function emptyLearnerMemory() {
-  return { courses: [], threads: [], activeId: null, recommendation: null }
+  return { courses: [], threads: [], activeId: null, recommendation: null, learningPreferences: normalizeLearningPreferences() }
 }
 
 // Explicit projections are used on both read and write. Never serialize React state wholesale.
@@ -65,7 +66,7 @@ function cleanCourse(course) {
   }
 }
 
-export function createLearnerSnapshot({ courses, threads, activeId, recommendation }) {
+export function createLearnerSnapshot({ courses, threads, activeId, recommendation, learningPreferences }) {
   const spaces = courses.map(cleanCourse)
   const names = new Set(spaces.map((course) => course.name))
   const eligible = threads.filter((thread) => names.has(thread.courseName))
@@ -75,6 +76,7 @@ export function createLearnerSnapshot({ courses, threads, activeId, recommendati
   if (active) saved.push(active)
   return {
     version: LEARNER_MEMORY_VERSION,
+    learningPreferences: normalizeLearningPreferences(learningPreferences),
     spaces,
     threads: saved.map((thread) => ({
       id: text(thread.id), courseName: text(thread.courseName), positionKey: text(thread.positionKey, 5000),
@@ -97,15 +99,16 @@ export function loadLearnerMemory(storage) {
     const raw = (storage ?? globalThis.localStorage)?.getItem(LEARNER_MEMORY_KEY)
     if (!raw || raw.length > MAX_STORAGE_LENGTH) return emptyLearnerMemory()
     const value = JSON.parse(raw)
-    // This is the single version boundary for a future forward migration.
-    if (value?.version !== LEARNER_MEMORY_VERSION || !Array.isArray(value.spaces) || value.spaces.length > 100 ||
+    // Version 1 had no profile. Project it forward without discarding learning data.
+    if (![1, LEARNER_MEMORY_VERSION].includes(value?.version) || !Array.isArray(value.spaces) || value.spaces.length > 100 ||
       !Array.isArray(value.threads) || value.threads.length > MAX_SAVED_THREADS ||
       value.spaces.some((course) => !text(course?.name) || course.name !== text(course.name)) ||
       new Set(value.spaces.map((course) => course.name.toLowerCase())).size !== value.spaces.length ||
       value.threads.some((thread) => !text(thread?.id) || thread.id !== text(thread.id) || !text(thread?.courseName) || !timestamp(thread.createdAt)) ||
       new Set(value.threads.map((thread) => thread.id)).size !== value.threads.length) return emptyLearnerMemory()
-    const snapshot = createLearnerSnapshot({ courses: value.spaces, threads: value.threads, activeId: value.activeId, recommendation: value.recommendation })
-    return { courses: snapshot.spaces, threads: snapshot.threads, activeId: snapshot.activeId, recommendation: snapshot.recommendation }
+    const snapshot = createLearnerSnapshot({ courses: value.spaces, threads: value.threads, activeId: value.activeId, recommendation: value.recommendation,
+      learningPreferences: value.version === 1 ? undefined : value.learningPreferences })
+    return { courses: snapshot.spaces, threads: snapshot.threads, activeId: snapshot.activeId, recommendation: snapshot.recommendation, learningPreferences: snapshot.learningPreferences }
   } catch {
     return emptyLearnerMemory()
   }
@@ -124,7 +127,7 @@ export function clearLearnerMemory(storage) {
 
 export function saveLearnerMemory(state, storage) {
   try {
-    if (!state.courses.length) return clearLearnerMemory(storage)
+    if (!state.courses.length && normalizeLearningPreferences(state.learningPreferences).status === 'new') return clearLearnerMemory(storage)
     const target = storage ?? globalThis.localStorage
     if (!target || state.courses.length > 100) return false
     const serialized = JSON.stringify(createLearnerSnapshot(state))

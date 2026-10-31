@@ -90,6 +90,9 @@
 .study-composer textarea:focus-visible { outline: none; }
 .study-body .study-composer button { grid-column: 2; }
 .study-active-panel { position: relative; outline: none; min-width: 0; overflow-wrap: anywhere; }
+.study-choice-focused .study-recommendation { border-inline-start: 2px solid var(--orbit-accent); padding-inline-start: 14px; }
+.study-choice-focused .study-tools > summary { color: var(--orbit-muted); background: transparent; }
+.study-choice-focused .study-lesson-actions button { background: transparent; }
 .study-active-panel:focus-visible::before { content: ''; position: absolute; top: 2px; left: -9px; width: 2px; height: 24px; border-radius: 2px; background: var(--orbit-accent); }
 .study-panel-heading { display: flex; justify-content: space-between; gap: 12px; align-items: start; margin-bottom: 16px; }
 .study-panel-heading h4 { margin: 8px 0; }

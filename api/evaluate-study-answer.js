@@ -1,4 +1,5 @@
 import process from 'node:process'
+import { formatLearningProfile } from '../src/services/learningProfile.js'
 import {
     formatLearningAnchors,
     anchorSuggestionPrompt,
@@ -45,6 +46,7 @@ Current mastery: ${mastery}%
 ${formatLearningAnchors(learningAnchors, { topic, text: question })}
 
 Explain the concept in a simpler way based on the student's mistake.
+${formatLearningProfile(req.body.learningProfile)}
 
 Then generate ONE easier follow-up multiple-choice question that tests the same concept.
 

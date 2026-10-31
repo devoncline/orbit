@@ -7,6 +7,8 @@ import SpaceScreen from './components/SpaceScreen'
 import UpcomingWork from './components/UpcomingWork'
 import OrbitStage from './components/OrbitStage'
 import StudyThreads from './components/StudyThreads'
+import LearningPreferences from './components/LearningPreferences'
+import { normalizeLearningPreferences } from './services/learningProfile'
 import { applyPositionOverride, inferCoursePosition, localDate, mergeCourseAnalysis, positionAction } from './services/coursePosition'
 import { createStudyThread, resolveLearningSpace, studyThreadsReducer } from './services/studyThreads'
 import { clearLearnerMemory, learnerPositionKey, loadLearnerMemory, saveLearnerMemory } from './services/learnerMemory'
@@ -22,6 +24,7 @@ import './App.css'
 export default function App() {
   const [restored] = useState(loadLearnerMemory)
   const [courses, setCourses] = useState(restored.courses)
+  const [learningPreferences, setLearningPreferences] = useState(restored.learningPreferences)
   const [storageAvailable, setStorageAvailable] = useState(true)
   const [resetMessage, setResetMessage] = useState('')
   const [resetPending, setResetPending] = useState(false)
@@ -54,11 +57,11 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    const saved = saveLearnerMemory({ courses, threads, activeId, recommendation })
+    const saved = saveLearnerMemory({ courses, threads, activeId, recommendation, learningPreferences })
     let current = true
     queueMicrotask(() => { if (current) setStorageAvailable(saved) })
     return () => { current = false }
-  }, [courses, threads, activeId, recommendation])
+  }, [courses, threads, activeId, recommendation, learningPreferences])
 
   useEffect(() => {
     const context = JSON.parse(recommendationInput)
@@ -89,6 +92,7 @@ export default function App() {
       return
     }
     setCourses([])
+    setLearningPreferences(normalizeLearningPreferences())
     dispatchThreads({ type: 'reset' })
     setRecommendation(null)
     setLoadingRecommendation(false)
@@ -314,6 +318,8 @@ export default function App() {
           onNavigate={navigate}
           resuming={sessionStarted && recommendedCourse?.name === sessionCourseName && activeThread.positionKey === JSON.stringify(recommendedCourse.learnerPosition || null)}
           today={today}
+          learningPreferences={learningPreferences}
+          onPreferencesChange={(value) => setLearningPreferences(normalizeLearningPreferences(value))}
           onPositionChange={(update) => updatePosition(recommendedCourse.name, update)}
         />
       )}
@@ -373,9 +379,10 @@ export default function App() {
           ) : null}
           <div className="orbit-page-actions"><button className="orbit-button" onClick={() => newSpace('topic')}>＋ New space</button></div>
           <div className="orbit-page-utility">
+          <LearningPreferences value={learningPreferences} onChange={(value) => setLearningPreferences(normalizeLearningPreferences(value))} />
           <p className="orbit-session-note">Orbit keeps compact learning memory in this browser, accessible to anyone using this browser profile. Clearing browser data removes it. Original uploads, drafts, and full conversation history are not saved; relevant context is used by Orbit's existing learning service.</p>
           {resetPending ? <div>
-            <p>Clear all local Orbit spaces, progress, and learning memory? This cannot be undone.</p>
+            <p>Clear all local Orbit spaces, progress, learning preferences, and learning memory? This cannot be undone.</p>
             <div className="orbit-page-actions">
               <button className="orbit-text-button" onClick={() => setResetPending(false)}>Keep my data</button>
               <button className="orbit-text-button" onClick={resetLearningData}>Confirm clear learning data</button>
@@ -397,6 +404,7 @@ export default function App() {
             return <div className="study-room" key={thread.id} hidden={thread.id !== activeId}>
               <StudySession
                 course={course}
+                learningProfile={learningPreferences.profile}
                 threadId={thread.id}
                 initialThread={thread}
                 coursePositionKey={learnerPositionKey(originalCourse)}

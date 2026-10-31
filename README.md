@@ -522,6 +522,7 @@ The current focus is strengthening the core learning experience and preparing a 
 - [x] Library experience
 - [x] Resumable study sessions
 - [x] Local learning persistence
+- [x] Optional learning preferences
 - [x] Orbit visual identity
 - [x] Orbit companion artwork
 - [x] Atmospheric learning environment
@@ -603,7 +604,35 @@ A valid current image brief selects visual immediately and retains it through ge
 
 Wide screens keep the shared sidebar and use the split visual composition above 1100px. At tablet widths the image stacks at full content width and focus uses a compact companion column to leave more reading space. At 760px and below every mode uses one column: focus retains a compact full mascot; task layouts hide the artwork while keeping its accessible request status. Existing focus indicators, controls, live regions, and reduced-motion behavior remain; no layout animation is added. Automatic mode changes do not move focus. Existing explicit tool/lesson navigation still focuses the active panel.
 
-Selector and mounted React tests cover all five modes, pending/error transitions, recovery exits, preserved history/drafts, keyboard focus, next-lesson reset, image request reuse, and unchanged mastery writes. See the ordered adaptive-presentation checklist in CHANGELOG.md for browser review. The Learning Profile questionnaire, new AI APIs, and legacy-renderer removal remain deferred.
+Selector and mounted React tests cover all five modes, pending/error transitions, recovery exits, preserved history/drafts, keyboard focus, next-lesson reset, image request reuse, and unchanged mastery writes. See the ordered adaptive-presentation checklist in CHANGELOG.md for browser review. New AI APIs and legacy-renderer removal remain deferred.
+
+### Optional learning preferences
+
+Home offers **Help Orbit learn how you learn** below the main learning entry. Setup is optional: **Not now** dismisses the invitation, and **Skip setup** leaves the current defaults intact. Home and Library both provide an editable **Your Orbit setup** summary and **Reset preferences**. Reset affects only teaching preferences; clearing all local learning data also removes the profile. This is a short instructional-preference setup, with no screening, scores, or learner-type labels.
+
+Five questions cover six teaching concerns by pairing choice density with check-in frequency:
+
+| Question | Stored field and choices | Default |
+| --- | --- | --- |
+| How much information do you like at once? | `chunkSize`: `short`, `balanced`, `detailed` | `balanced` |
+| Where should an explanation start? | `exampleTiming`: `early`, `after`, `balanced` | `balanced` |
+| When would you like visual support? | `visualPreference`: `often`, `helpful`, `on_request` | `helpful` |
+| How should Orbit help with the next step? | `guidance`: `focused`, `balanced`, `explore` | `balanced` |
+| When you come back to a lesson, what helps? | `reentrySupport`: `where_left_off`, `recap`, `continue` | `recap` |
+
+The existing `orbit.learner-memory` localStorage record is now version 2. Its new allowlisted `learningPreferences` property contains `{ status: 'new' | 'saved' | 'dismissed', profile: { ...five fields above } }`. Version 1 snapshots migrate in memory with default preferences, then save as version 2; courses, mastery, corrections, lessons and thread state retain the existing projection. Missing/malformed fields fall back individually. A saved or dismissed setup persists even with no spaces. The same storage limit and unavailable-storage warning apply. No raw survey text, accounts, database, or additional persistence service is involved.
+
+Named Study services send only normalized `learningProfile` enums in existing requests. The lesson, conversation, activity, question and answer-explanation endpoints normalize again and convert those enums into authored guidance via `formatLearningProfile()`. Raw answers and arbitrary profile fields never enter model instructions. Guidance cannot override course facts, correctness, safety, grading, output limits or a current explicit learner request. Saving/editing a profile adds no model request and does not regenerate an existing lesson or image; the next teaching request uses the new choices.
+
+- Short explanations favor smaller steps (lesson target 35–60 words); fuller explanations favor a useful connection (80–100 words). The existing 100-word/900-character lesson limit and factual requirements remain.
+- Early examples lead teaching explanations with something concrete. They cannot reveal an unanswered quiz/activity solution.
+- More visual support lowers the image-selection threshold only for meaningful instructional value. On-request support asks Spark to avoid automatic visuals. **Show me** always works, regardless of preference; existing generated images and cache entries remain intact.
+- Focused guidance keeps secondary tools collapsed and quiet, highlights one recommendation, and may suggest an optional Quiz me earlier. Conversation/activity feedback may offer at most one natural, optional check. Existing active recovery, task, error and progression priorities win. Explore starts with Study tools expanded; all tools remain accessible in every setting.
+- Re-entry uses existing saved summaries or mounted session context. More support names the lesson/tool and next way to resume; a short recap is the default; continue hides the notice. Restored quiz/activity screens accurately say they start fresh. Returning to an already mounted session preserves its current work. Recaps add no progress records or model calls.
+
+The centralized presentation selector owns choice density and retains the five existing modes. Profile settings do not change mastery, scores, course-position inference, path-advancement rules, or global navigation. Model-produced style and visual choices are guidance-based, so live output still needs inspection.
+
+The isolated review has **guided profile** and **explore profile** scenarios with editable preferences below Study. These are layout fixtures using fixed teaching responses/reference imagery, not evidence of live Spark adaptation. New storage, prompt-boundary and mounted UI tests cover the feature. Browser rendering, physical-device, screen-reader and live-model walkthroughs remain manual; follow the Learning preferences checklist in CHANGELOG.md.
 
 ### Show me
 

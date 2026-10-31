@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import {
     generateStudyLesson,
     generateNextStudyLesson,
@@ -18,6 +18,7 @@ import { selectStudyInteraction, studyThreadMetadata } from '../services/studyTh
 import { acceptPathLesson, learningPathContextKey, generatedLessonVisual, normalizeLearningPath, recommendStudyAction, studyPathView } from '../services/learningPath'
 import { createLessonImageCache } from '../services/lessonImages'
 import { createStudyVisualRequest, studyVisualContext } from '../services/studyVisualRequest'
+import { learningResumeGuidance, normalizeLearningProfile } from '../services/learningProfile'
 import CoursePosition from './CoursePosition'
 import OrbitStage from './OrbitStage'
 import { OrbitResponse } from './OrbitSignal'
@@ -33,6 +34,7 @@ import './StudySession.css'
 
 export default function StudySession({
     course,
+    learningProfile,
     threadId,
     initialThread,
     coursePositionKey,
@@ -49,7 +51,14 @@ export default function StudySession({
     const [threadContext, setThreadContext] = useState(() => ({
         positionKey: initialThread?.positionKey || 'null', requestedTopic: initialThread?.requestedTopic || '',
     }))
-    const [resumeSummary, setResumeSummary] = useState(initialThread?.resume ? initialThread.summary : '')
+    const profile = useMemo(() => normalizeLearningProfile(learningProfile), [learningProfile])
+    const [resumeNotice, setResumeNotice] = useState(() => resume.lesson ? {
+        lesson: resume.lesson, summary: initialThread?.summary, context: initialThread?.context,
+        step: resume.learningPath.step, restored: true,
+    } : null)
+    const resumeSummary = resumeNotice ? learningResumeGuidance(profile, resumeNotice) : ''
+    const wasActive = useRef(active)
+    const hasBeenActive = useRef(active)
     const [activeInteraction, setActiveInteraction] = useState('lesson')
     const stage = activeInteraction === 'quiz' ? 'quiz' : 'learn'
     const [answerResult, setAnswerResult] = useState('')
@@ -117,8 +126,8 @@ export default function StudySession({
     } : undefined
     const busy = Boolean(loadingLesson || loadingConversation || loadingActivity || loadingQuestion || loadingEvaluation)
     const recommendation = recommendStudyAction({ lesson, activeInteraction, learningPath, example, lessonError, conversation,
-        activity, activityError, activityFeedback, activityResponse, answerResult, followUpResult, evaluation, evaluationError, questionError })
-    const presentation = useStudyPresentation({ courseName: course.name, activeInteraction, lesson, conversationVisual, requestedVisual,
+        activity, activityError, activityFeedback, activityResponse, answerResult, followUpResult, evaluation, evaluationError, questionError, learningProfile: profile })
+    const presentation = useStudyPresentation({ courseName: course.name, activeInteraction, lesson, conversationVisual, requestedVisual, learningProfile: profile,
         recoveringLesson, loadingLesson, loadingQuestion, loadingEvaluation, loadingActivity, answerResult, followUpResult,
         showAdaptedLesson, evaluation, evaluationError, questionError, activityFeedback, activityResponse, activityError, conversation }, lessonImageCache)
     const showRecommendationAction = presentation.primary === 'recommendation'
@@ -135,6 +144,19 @@ export default function StudySession({
     }, [active, activeInteraction, lesson, conversationVisual, loadingLesson])
 
     useEffect(() => { latestContextKey.current = contextKey }, [contextKey])
+
+    useEffect(() => {
+        const returning = active && !wasActive.current
+        wasActive.current = active
+        // A restored, unopened thread still needs its saved recap and the notice
+        // that unsaved quiz/activity screens start fresh on a full reload.
+        if (active && !hasBeenActive.current) { hasBeenActive.current = true; return }
+        if (!returning || !lesson) return
+        let current = true
+        // Reuse the mounted session's current work; this is a notice, not progress.
+        queueMicrotask(() => { if (current) setResumeNotice({ lesson, context: activeInteraction, step: learningPath.step }) })
+        return () => { current = false }
+    }, [active, lesson, activeInteraction, learningPath.step])
 
     useEffect(() => {
         if (!lesson) return
@@ -178,7 +200,7 @@ export default function StudySession({
         }
         if (studyTools.current) studyTools.current.open = false
         if (next === activeInteraction) panel.current?.focus()
-        setResumeSummary('')
+        setResumeNotice(null)
         setActiveInteraction((current) => selectStudyInteraction(current, next))
     }
 
@@ -220,7 +242,7 @@ export default function StudySession({
             initialLessonRequest.current = generateStudyLesson(
                 initialContext.course,
                 initialContext.mastery,
-                { anchors: initialContext.course.learningAnchors || [], path: normalizeLearningPath() }
+                { anchors: initialContext.course.learningAnchors || [], path: normalizeLearningPath(), learningProfile: profile }
             )
         }
 
@@ -241,7 +263,7 @@ export default function StudySession({
             })
 
         return () => { current = false }
-    }, [initialContext, lessonAttempt, active, resume, showResult])
+    }, [initialContext, lessonAttempt, active, resume, showResult, profile])
 
     useEffect(() => {
         return () => {
@@ -291,6 +313,7 @@ export default function StudySession({
                 example,
                 activityContext,
                 currentVisual: conversationVisual || lessonVisual,
+                learningProfile: profile,
                 anchors: learningAnchors,
                 signal: controller.signal,
                 onDelta: display.append,
@@ -344,7 +367,7 @@ export default function StudySession({
         setQuestionError('')
 
         try {
-            const options = { history: conversation, example, signal: controller.signal, anchors: learningAnchors }
+            const options = { history: conversation, example, signal: controller.signal, anchors: learningAnchors, learningProfile: profile }
             const result = action === 'generate'
                 ? await generateStudyActivity(course, lesson, { ...options, activityContext })
                 : await evaluateStudyActivity(course, lesson, activity, response, options)
@@ -401,8 +424,8 @@ export default function StudySession({
 
         try {
             const result = action === 'simplify'
-                ? await explainStudyLessonDifferently(course, lesson, example, { anchors: learningAnchors })
-                : await generateStudyExample(course, lesson, example, { anchors: learningAnchors })
+                ? await explainStudyLessonDifferently(course, lesson, example, { anchors: learningAnchors, learningProfile: profile })
+                : await generateStudyExample(course, lesson, example, { anchors: learningAnchors, learningProfile: profile })
             await showResult(action, result.content)
 
             if (action === 'simplify') {
@@ -431,7 +454,7 @@ export default function StudySession({
         setProgressionError('')
         try {
             const result = await generateNextStudyLesson(course, mastery, lesson, {
-                path: learningPath, anchors: learningAnchors, signal: controller.signal,
+                path: learningPath, anchors: learningAnchors, signal: controller.signal, learningProfile: profile,
             })
             if (!controller.signal.aborted && latestContextKey.current === requestedContextKey) {
                 await showResult('next', result.content, controller.signal)
@@ -511,7 +534,7 @@ export default function StudySession({
         setEvaluationError('')
 
         try {
-            const question = await generateStudyQuestion(course, mastery, lessonContext, { anchors: learningAnchors })
+            const question = await generateStudyQuestion(course, mastery, lessonContext, { anchors: learningAnchors, learningProfile: profile })
             await showResult('quiz', question.question)
             setStudyQuestion(question)
             setAnswerResult('')
@@ -565,7 +588,7 @@ export default function StudySession({
         if (answer.correct) return
         setLoadingEvaluation(true)
         try {
-            const result = await evaluateStudyAnswer(course, studyQuestion, answer, mastery, { anchors: learningAnchors })
+            const result = await evaluateStudyAnswer(course, studyQuestion, answer, mastery, { anchors: learningAnchors, learningProfile: profile })
             await showResult('evaluation', `${result.feedback}\n\n${result.adaptedExplanation}\n\n${result.followUpQuestion}`)
             setEvaluation(result)
             rememberVisualRecovery({ activeInteraction: 'quiz', lesson, studyQuestion, selectedAnswer: answer, answerResult: 'incorrect', evaluation: result })
@@ -578,8 +601,8 @@ export default function StudySession({
     }
 
     return (
-        <section className={`study-session study-mode-${presentation.mode}${presentation.splitVisual ? ' study-session-illustrated' : ''}`}
-            data-presentation-mode={presentation.mode} data-presentation-reason={presentation.reason}>
+        <section className={`study-session study-mode-${presentation.mode}${presentation.splitVisual ? ' study-session-illustrated' : ''}${presentation.choiceDensity === 'low' ? ' study-choice-focused' : ''}`}
+            data-presentation-mode={presentation.mode} data-presentation-reason={presentation.reason} data-choice-density={presentation.choiceDensity}>
             <header className="study-context">
                 <p className="study-subject"><span>{course.name}</span>{lesson && <span>Lesson {learningPath.step}</span>}</p>
                 {lesson && <StudyPath path={pathView} />}
@@ -589,7 +612,7 @@ export default function StudySession({
             {companion}
             <div className="study-body">
             <section className="study-active-panel" data-study-interaction={activeInteraction} ref={panel} tabIndex={-1} aria-label="Current study interaction">
-            {resumeSummary && <p className="orbit-muted">Last time: {resumeSummary} Your lesson is ready to revisit; activities and quizzes start fresh.</p>}
+            {resumeSummary && <p className="orbit-muted study-resume-note" role="status">{resumeSummary}</p>}
             {positionChanged && <div className="study-position-notice" role="status">Your course starting point is updated. Continue when you are ready to use it.
                 <button onClick={onNewThread}>Start a thread there</button>
             </div>}
@@ -851,7 +874,7 @@ export default function StudySession({
                 <summary>Lesson context</summary>
                 <StudyContent content={lesson.content} />
             </details>}
-            {lesson && <details className="study-tools" ref={studyTools}>
+            {lesson && <details className="study-tools" key={presentation.choiceDensity} open={presentation.choiceDensity === 'expanded'} ref={studyTools}>
                 <summary>Study tools <span>· {{ lesson: 'Lesson', visual: 'Show me', example: 'Example', activity: 'Activity', conversation: 'Talk it through', quiz: 'Quiz', history: 'Earlier work' }[activeInteraction]}</span></summary>
                 <div className="study-lesson-actions" role="group" aria-label="Choose a study interaction">
                 <button disabled={busy} aria-pressed={activeInteraction === 'lesson'} onClick={() => openInteraction('lesson')}>Lesson</button>

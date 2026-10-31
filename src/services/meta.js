@@ -3,6 +3,7 @@ import { readStudyConversationStream } from './studyConversationStream.js'
 import { learningAnchorRequest } from './studyLearningContext.js'
 import { coursePositionRequest, inferCoursePosition, localDate } from './coursePosition.js'
 import { learningPathContextKey, generatedLessonVisual, normalizeLearningPath } from './learningPath.js'
+import { learningProfileRequest } from './learningProfile.js'
 
 export async function analyzeCourseFile(file) {
     const base64File = await fileToBase64(file)
@@ -27,26 +28,26 @@ export async function analyzeCourseFile(file) {
     return response.json()
 }
 
-export function generateStudyLesson(course, mastery, { anchors = [], path, signal } = {}) {
-    return requestStudyLesson(course, mastery, 'lesson', undefined, undefined, anchors, path, signal)
+export function generateStudyLesson(course, mastery, options = {}) {
+    return requestStudyLesson(course, mastery, 'lesson', undefined, undefined, options)
 }
 
-export function generateNextStudyLesson(course, mastery, lesson, { anchors = [], path, signal } = {}) {
-    const currentPath = normalizeLearningPath(path)
+export function generateNextStudyLesson(course, mastery, lesson, options = {}) {
+    const currentPath = normalizeLearningPath(options.path)
     // Do not present outdated suggestions as the plan after new material or learner evidence.
     if (currentPath.contextKey !== learningPathContextKey(course)) currentPath.upcoming = []
-    return requestStudyLesson(course, mastery, 'next', lesson, undefined, anchors, currentPath, signal)
+    return requestStudyLesson(course, mastery, 'next', lesson, undefined, { ...options, path: currentPath })
 }
 
-export function explainStudyLessonDifferently(course, lesson, example = '', { anchors = [] } = {}) {
-    return requestStudyLesson(course, course.mastery?.overall ?? 40, 'simplify', lesson, example, anchors)
+export function explainStudyLessonDifferently(course, lesson, example = '', options = {}) {
+    return requestStudyLesson(course, course.mastery?.overall ?? 40, 'simplify', lesson, example, options)
 }
 
-export function generateStudyExample(course, lesson, example = '', { anchors = [] } = {}) {
-    return requestStudyLesson(course, course.mastery?.overall ?? 40, 'example', lesson, example, anchors)
+export function generateStudyExample(course, lesson, example = '', options = {}) {
+    return requestStudyLesson(course, course.mastery?.overall ?? 40, 'example', lesson, example, options)
 }
 
-async function requestStudyLesson(course, mastery, action, lesson, example, anchors, path, signal) {
+async function requestStudyLesson(course, mastery, action, lesson, example, { anchors = [], path, signal, learningProfile } = {}) {
     const response = await fetch('/api/generate-study-lesson', {
         method: 'POST',
         headers: {
@@ -55,6 +56,7 @@ async function requestStudyLesson(course, mastery, action, lesson, example, anch
         signal,
         body: JSON.stringify({
             courseName: course.name,
+            ...learningProfileRequest(learningProfile),
             nextTask: course.nextTask,
             importantTopics: course.importantTopics,
             upcomingWork: course.upcomingWork,
@@ -93,7 +95,7 @@ export async function respondToStudyMessageStream(course, lesson, options) {
 async function requestStudyConversation(
     course,
     lesson,
-    { message, history = [], example = '', activityContext, signal, anchors = [], currentVisual },
+    { message, history = [], example = '', activityContext, signal, anchors = [], currentVisual, learningProfile },
     streaming = false,
 ) {
     const visual = generatedLessonVisual(currentVisual)
@@ -106,6 +108,7 @@ async function requestStudyConversation(
         signal,
         body: JSON.stringify({
             ...(streaming ? { stream: true } : {}),
+            ...learningProfileRequest(learningProfile),
             courseName: course.name,
             nextTask: course.nextTask,
             importantTopics: course.importantTopics,
@@ -145,7 +148,7 @@ async function requestStudyActivity(
     course,
     lesson,
     action,
-    { history = [], example = '', activity, learnerResponse, activityContext, signal, anchors = [] }
+    { history = [], example = '', activity, learnerResponse, activityContext, signal, anchors = [], learningProfile }
 ) {
     const response = await fetch('/api/study-activity', {
         method: 'POST',
@@ -169,6 +172,7 @@ async function requestStudyActivity(
             })),
             action,
             activity,
+            ...learningProfileRequest(learningProfile),
             learnerResponse,
             activityContext,
             ...learningAnchorRequest(anchors, { topic: lesson.topic, concept: lesson.concept, text: lesson.content }),
@@ -182,7 +186,7 @@ async function requestStudyActivity(
     return response.json()
 }
 
-export async function generateStudyQuestion(course, mastery, lesson, { anchors = [] } = {}) {
+export async function generateStudyQuestion(course, mastery, lesson, { anchors = [], learningProfile } = {}) {
     const response = await fetch('/api/generate-study-question', {
         method: 'POST',
         headers: {
@@ -197,6 +201,7 @@ export async function generateStudyQuestion(course, mastery, lesson, { anchors =
             topicMastery: course.mastery?.topics || {},
             ...coursePositionRequest(course),
             ...(lesson ? { lesson } : {}),
+            ...learningProfileRequest(learningProfile),
             ...learningAnchorRequest(anchors, { topic: lesson?.topic, concept: lesson?.concept, text: lesson?.content || course.nextTask }),
         }),
     })
@@ -213,7 +218,7 @@ export async function evaluateStudyAnswer(
     studyQuestion,
     selectedAnswer,
     mastery,
-    { anchors } = {}
+    { anchors, learningProfile } = {}
 ) {
     const correctAnswer = studyQuestion.answers.find(
         (answer) => answer.correct
@@ -228,6 +233,7 @@ export async function evaluateStudyAnswer(
             courseName: course.name,
             question: studyQuestion.question,
             selectedAnswer: selectedAnswer.text,
+            ...learningProfileRequest(learningProfile),
             correctAnswer: correctAnswer.text,
             importantTopics: course.importantTopics,
             mastery: mastery,
