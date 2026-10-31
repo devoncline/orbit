@@ -66,11 +66,23 @@ export function formatLearningProfile(value, { visuals = false, checkIns = false
 }
 
 const text = (value, limit) => typeof value === 'string' ? value.trim().slice(0, limit) : ''
+function recapText(value) {
+  if (typeof value !== 'string') return ''
+  const plain = value.replace(/^\s*#{1,3}\s+.*$/gm, '')
+    .replace(/^\s*[-*]\s+/gm, '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim()
+  if (plain.length <= 160) return plain
+  const excerpt = plain.slice(0, 157)
+  const sentence = /^([\s\S]*[.!?])\s/.exec(excerpt)
+  return sentence ? sentence[1] : `${excerpt.replace(/\s+\S*$/, '').replace(/[,;:]$/, '')}…`
+}
 export function learningResumeGuidance(value, { lesson, summary, context = 'lesson', step = 1, restored = false } = {}) {
   const { reentrySupport } = normalizeLearningProfile(value)
   if (!lesson || reentrySupport === 'continue') return ''
   const concept = text(lesson.concept || lesson.topic, 120)
-  const recap = text(summary, 160) || text(lesson.content, 160)
+  // Use the full lesson only when the saved summary was a truncated excerpt of it.
+  // A summary of actual practice or discussion must keep that learning context.
+  const source = typeof summary === 'string' && lesson.content?.startsWith(summary.trim()) ? lesson.content : summary
+  const recap = recapText(source) || recapText(lesson.content)
   if (reentrySupport === 'recap') return `Last time: ${recap}${restored ? ' Your lesson is ready to revisit; activities and quizzes start fresh.' : ''}`
   const tool = { lesson: 'the lesson', visual: 'Show me', example: 'an example', activity: 'an activity', quiz: 'Quiz me', conversation: 'Talk it through' }[context] || 'the lesson'
   return `You left off with ${tool} on ${concept}, lesson ${Number.isInteger(step) && step > 0 ? Math.min(step, 10000) : 1}. ${recap} ${restored ? 'Your saved lesson is ready. Activities and quiz questions start fresh; choose their Study tool to begin again.' : 'Your current work is still here. Use Study tools whenever you want another approach.'}`

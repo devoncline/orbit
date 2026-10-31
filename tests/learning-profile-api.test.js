@@ -77,3 +77,15 @@ test('server re-normalizes hostile profile input and low visual preference still
   await call(lessonHandler, { courseName: 'React' })
   assert.match(prompts[1], /concise, balanced amount/)
 })
+
+test('on-request lessons suppress automatic imagery even when the model returns a valid image brief', async (t) => {
+  const visual = { type: 'generated_image', composition: 'diagram', purpose: 'Explain state flowing to the view', focus: 'State', data: [{ label: 'State', detail: 'A remembered count' }] }
+  t.mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({ output: [{ type: 'message', content: [{ type: 'output_text', text: JSON.stringify({ ...lesson, visual }) }] }] })))
+  for (const action of ['lesson', 'next', 'simplify', 'example']) {
+    // A next lesson must not repeat its predecessor.
+    const response = await call(lessonHandler, { courseName: 'React', action, lesson: action === 'next' ? { ...lesson, concept: 'An earlier concept' } : lesson, learningProfile: { visualPreference: 'on_request' } })
+    assert.deepEqual((await response.json()).visual, { type: 'none' })
+  }
+  const automatic = await call(lessonHandler, { courseName: 'React', learningProfile: { visualPreference: 'often' } })
+  assert.equal((await automatic.json()).visual.type, 'generated_image')
+})

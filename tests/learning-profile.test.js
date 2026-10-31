@@ -135,3 +135,14 @@ test('the centralized presentation selector applies choice density without overr
     assert.equal(selectStudyPresentation({ ...state, recoveringLesson: true }).mode, 'recover')
   }
 })
+
+test('lesson return recaps remove formatting and avoid saved mid-word truncation', () => {
+  const content = '## Think Like LEGO\n\nImagine building a **button** once like a LEGO brick.\n\nThen you reuse the same button in ten places. ' + 'Each instance receives its own label. '.repeat(8)
+  const result = learningResumeGuidance({}, { lesson: { ...lesson, content }, summary: content.slice(0, 160), restored: true })
+  assert.match(result, /Imagine building a button once like a LEGO brick\./)
+  assert.doesNotMatch(result, /##|\*\*|\n|LEGO\n/)
+  assert.match(result, /label\. Your lesson/)
+  const long = learningResumeGuidance({}, { lesson: { ...lesson, content: 'One continuous explanation '.repeat(15) } })
+  assert.ok(long.endsWith('…'))
+  assert.ok(long.length <= 171)
+})

@@ -31,7 +31,7 @@ function GeneratedLessonImage({ requestKey, cache, active }) {
     </figcaption>
     <div className="lesson-image-surface">
       {image.status === 'ready'
-        ? <ImageContent key={image.url} url={image.url} alt={`${visual.purpose} ${visual.data.map((item) => `${item.label}: ${item.detail}`).join(' ')}`}
+        ? <ImageContent key={image.url} url={image.url} alt={`${visual.purpose} ${visual.data.map((item) => item.label).join(', ')}.`}
           onError={() => cache.fail(requestKey)} />
         : <p className="lesson-image-status" role="status">Preparing a lesson image…</p>}
     </div>

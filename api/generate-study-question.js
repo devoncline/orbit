@@ -81,7 +81,7 @@ Return ONLY valid JSON in this exact shape:
     const data = await response.json()
 
     if (!response.ok) {
-      return res.status(response.status).json(data)
+      return res.status(response.status).json({ error: 'Failed to generate study question' })
     }
 
     const messageOutput = data.output.find(
@@ -99,9 +99,7 @@ Return ONLY valid JSON in this exact shape:
     }
 
     return res.status(200).json(question)
-  } catch (error) {
-    console.error(error)
-
+  } catch {
     return res.status(500).json({
       error: 'Failed to generate study question',
     })

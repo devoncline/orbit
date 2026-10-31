@@ -752,19 +752,20 @@ The goal is for Orbit to move with the learner instead of waiting passively for 
 
 ---
 
+## October 30, 2026 - Submission hardening and real-model rehearsal
+
+- Completed a real Chrome learning journey against the existing local serverless runtime: a new Orbital motion space, Spark lesson, Muse Image, I lost you, contextual Show me, a partially incorrect activity response with targeted feedback, wrong quiz answer and successful adapted follow-up, next lessons, and Home/Study return. Real Talk It Through requests cleared the composer and retained ordered, distinct exchanges. No mock output was substituted. This validates local model access, not a paid production request.
+- Compared two saved profiles in Chrome and real Spark output for the same photosynthesis concept. Found conflicting generic lesson instructions overriding example timing and on-request images. Made word targets/example order specific to the normalized profile and enforced on-request lesson visuals at the response boundary; Show me remains explicit and existing images remain cached. Rechecks produced roughly 45 versus 90 words, early versus late examples, and generated-image versus none. Preference changes did not change mastery rules or regenerate current content.
+- Inspected real orbital, photosynthesis and React props/state images. Several samples contained too much embedded text; some scientific arrows were ambiguous or reversed. Tightened server prompts for large short labels, explicit physical/logical arrow directions, input-left/output-right composition and no invented molecular bonds. The final photosynthesis sample was readable and correctly directed; React state-to-props was clear. Orbital imagery remains a reason to inspect every recorded image rather than promise factual correctness. Photosynthesis is the primary recording recommendation, React props/state the backup.
+- Fixed return recaps showing raw Markdown/truncated words while preserving custom practice/discussion summaries. Shortened image alt text to avoid repeating the whole lesson. Four older handlers now return safe errors without forwarding provider payloads or logging exceptions. Added six regression tests. No CSS redesign, new API, dependency, model, scoring change or persistent-data schema change.
+- Inspected all five real desktop modes, including text-only lesson and conversation Focus; tablet text-only Focus and conversation; phone lesson/activity/tools and image containment at 390/320px. The 320px navigation drawer and Home worked. No clipping or horizontal overflow was observed in the inspected views. Small image labels remain a mobile limitation. Native Chrome control succeeded; no new tab or replacement browser automation was needed. Keyboard save, focus, labels and radio indicators were checked. Full screen-reader, physical-device and browser reduced-motion walkthroughs remain manual.
+- Browser Network showed one image request for each changed recovery/explicit context, with no image regeneration during activity/quiz switches. Repeating unchanged Show me retained exactly one image request in the later Network log. Live malformed requests returned safe 400s. Offline simulation still allowed localhost requests; targeted Network menu control was unreliable, so failure UI was not falsely marked as validated. Automated tests cover provider failures, image decode/expiry, explicit retry, StrictMode reuse, stale responses, bounded persistence, interrupted streams and preserved drafts. Real signed-URL expiration and visually captured partial-stream cadence remain manual checks.
+- Validation: all 282 tests pass; full lint, production build, changed-module syntax checks and git diff --check pass. Fixed an initial recap regression that replaced a custom saved summary. Existing parallel Vite tests report a non-failing HMR port 24678 warning; Git reports Windows line-ending conversion warnings. No unresolved automated failure. Production output contains no server key name, local development URL or review entry.
+- Read-only production checks confirmed the existing Vercel project/configuration and sensitive MODEL_API_KEY coverage in Production/Preview/Development. The public alias returned 200 without login, the lesson API GET returned 405 and the review HTML returned 404. No deployment or commit was made. A real production model rehearsal after deploying these changes is still required.
+- Updated README and product-focused Unreleased notes; added SUBMISSION_CHECKLIST.md with precise evidence, remaining checks, recording data/profile, demo clicks and temporary-file disposition. Kept the three tracked isolated review fixtures as development-only regression infrastructure; real request/image artifacts and logs stayed in OS temporary storage. No database changes, migrations, historical migration edits or SQL steps.
+
+---
+
 # Next
 
-The next major development steps are:
-
-- Connect generated study questions to specific topic mastery values.
-- Update individual topic mastery based on student performance.
-- Use both deadline urgency and mastery when Muse chooses what the student should study next.
-- Let overall course mastery reflect topic-level performance more intelligently.
-- Replace the current prototype interface with the final Orbit visual system.
-- Design the main recommendation experience around the learning agent rather than a traditional education dashboard.
-- Add the Orbit companion character.
-- Make study sessions visually focused and remove prototype/debug information during learning.
-- Evaluate optional production persistence and sync after the local-first demo; original uploaded files are not currently retained across refreshes.
-- Explore proactive Muse-powered check-ins, reminders, and pop quizzes.
-- Add a future self-directed learning mode for subjects without a formal syllabus.
-- Prepare the final hackathon demo around Orbit's decision-making and adaptive behavior.
+Feature development is frozen for submission. Review and deploy the hardening commit, rehearse the production recording path in SUBMISSION_CHECKLIST.md, inspect the images used in the take, and record Orbit's adaptive teaching loop. Broader product expansion remains deferred until after the hackathon.

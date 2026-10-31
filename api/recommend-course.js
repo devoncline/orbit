@@ -59,7 +59,7 @@ The courseName MUST exactly match one of the course names provided.
     const data = await response.json()
 
     if (!response.ok) {
-      return res.status(response.status).json(data)
+      return res.status(response.status).json({ error: 'Failed to recommend course' })
     }
 
     const messageOutput = data.output.find(
@@ -73,9 +73,7 @@ The courseName MUST exactly match one of the course names provided.
     const recommendation = JSON.parse(text)
 
     return res.status(200).json(recommendation)
-  } catch (error) {
-    console.error(error)
-
+  } catch {
     return res.status(500).json({
       error: 'Failed to recommend course',
     })

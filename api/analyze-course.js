@@ -84,7 +84,7 @@ If something is unknown, use an empty string or empty array.
         const data = await response.json()
 
         if (!response.ok) {
-            return res.status(response.status).json(data)
+            return res.status(response.status).json({ error: 'Failed to analyze course file' })
         }
 
         const messageOutput = data.output.find(
@@ -98,9 +98,7 @@ If something is unknown, use an empty string or empty array.
         const analysis = JSON.parse(text)
 
         return res.status(200).json({ ...analysis, syllabusItems: normalizeSyllabusItems(analysis.syllabusItems) })
-    } catch (error) {
-        console.error(error)
-
+    } catch {
         return res.status(500).json({
             error: 'Failed to analyze course document',
         })

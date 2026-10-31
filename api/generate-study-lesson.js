@@ -1,5 +1,5 @@
 import process from 'node:process'
-import { formatLearningProfile } from '../src/services/learningProfile.js'
+import { formatLearningProfile, normalizeLearningProfile } from '../src/services/learningProfile.js'
 import { lessonVisualPrompt } from './_lib/lessonVisualPrompt.js'
 import { logVisualRouting } from '../src/services/visualDiagnostics.js'
 import { formatCoursePosition, inferCoursePosition, isPositionTopicAllowed } from '../src/services/coursePosition.js'
@@ -66,6 +66,7 @@ Use a specific situation and briefly explain how it illustrates the concept.
 If an example was already shown, use a different situation. Do not add a quiz or another concept.`
 
   const advances = action === 'lesson' || action === 'next'
+  const profile = normalizeLearningProfile(req.body.learningProfile)
   const guided = learningPath !== undefined || action === 'next'
   const course = { ...req.body, mastery: { topics: topicMastery } }
   const position = guided ? learningPathPosition(course, req.body.currentDate) : inferCoursePosition(course, req.body.currentDate)
@@ -108,7 +109,8 @@ Current lesson: ${action === 'lesson' ? 'None' : JSON.stringify(lesson)}
 Current example: ${JSON.stringify(example || '')}
 ${formatLearningAnchors(learningAnchors, { topic: lesson?.topic || position.currentTopic, concept: lesson?.concept, text: lesson?.content || nextTask })}
 
-Keep content concise, explaining one useful idea with a concrete example nearby. Normally aim for 60-90 words; for short chunks aim for 35-60, or for fuller explanations 80-100, while preserving correctness and all hard limits below.
+Explain one useful idea. For this learner, target ${{ short: '35-60', balanced: '60-90', detailed: '80-100' }[profile.chunkSize]} words TOTAL including headings and bullets. Count before returning; preserve correctness within that range.
+${action === 'example' ? 'This is an explicit worked-example request.' : profile.exampleTiming === 'after' ? 'Begin with the concept and why it works. Put the concrete example LAST, after the explanation; do not open with an analogy.' : profile.exampleTiming === 'early' ? 'Begin with a concrete example, then explain the concept it demonstrates.' : 'Place one brief example near the idea it clarifies.'}
 Never exceed 100 words or 900 characters. Stay focused on one concept.
 Use one or two meaningful Markdown section headings (##), short paragraphs, occasional bullets (-), and **bold** for key concepts only.
 Do not use HTML, links, images, tables, or code fences. No long lists or quiz questions.
@@ -116,7 +118,7 @@ Do not repeat the course/topic/concept title, mastery, path, or navigation instr
 Keep topic and concept labels under 120 characters.
 Actively evaluate whether an instructional image would materially improve understanding of this specific concept before selecting visual.type. Do not force visuals for every lesson.
 Prefer an instructional image for processes, flows, sequences, cause and effect, spatial relationships, system components, inputs/outputs, transformations, comparisons, physical structure, scientific mechanisms, programming data flow, nested structure, and mathematical structure that benefits from organization.
-Photosynthesis, cellular respiration, gravity/orbits, React state flow, API request/response flow, arrays, scope, props vs state, SQL vs NoSQL, mitosis, and the water cycle should usually receive an instructional image when teaching those mechanisms or relationships.
+${profile.visualPreference === 'on_request' ? 'This learner requests images only on demand. Return visual: {"type":"none"} for this lesson, even for visual subjects. The separate Show me tool remains available.' : 'Photosynthesis, cellular respiration, gravity/orbits, React state flow, API request/response flow, arrays, scope, props vs state, SQL vs NoSQL, mitosis, and the water cycle should usually receive an instructional image when teaching those mechanisms or relationships.'}
 Short factual recall, pure vocabulary, simple definitions, or concepts where a visual adds no meaningful value may use none.
 ${lessonVisualPrompt}
 ${formatLearningProfile(req.body.learningProfile, { visuals: true })}
@@ -148,7 +150,9 @@ Return ONLY valid JSON with topic, concept, content${advances ? ', nextLessons (
       result.nextLessons.some((item) => !isShortText(item?.topic, 120) || !isShortText(item?.concept, 120)))) {
       return res.status(502).json({ error: 'Invalid study lesson response' })
     }
-    const visual = generatedLessonVisual(result.visual) || (normalizeLessonVisual(result.visual)?.type === 'none' ? { type: 'none' } : null)
+    // Show me uses the separate image service. A model cannot override opt-in imagery here.
+    const visual = profile.visualPreference === 'on_request' ? { type: 'none' }
+      : generatedLessonVisual(result.visual) || (normalizeLessonVisual(result.visual)?.type === 'none' ? { type: 'none' } : null)
     logVisualRouting(process.env.NODE_ENV === 'development', { source: 'lesson', phase: 'response',
       concept: result.concept, requested: result.visual, normalized: visual, rendered: false })
     const nextSeen = new Set([...seen, lessonKey(result)])

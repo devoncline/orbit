@@ -4,6 +4,8 @@
 
 ### Improvements
 
+- Learning preferences now produce clearer differences in explanation length and example order. Choosing visuals only on request reliably keeps new lessons text-only until the learner asks.
+- Instructional images favor fewer, larger labels and clearer process arrows. Return recaps remove formatting marks and avoid clipped words, image descriptions are shorter, and request failures keep technical details private.
 - Optional learning preferences on Home and in Library let Orbit tailor explanation length, example timing, useful visuals, next-step guidance, and return recaps. Five quick choices can be skipped, edited, or reset without changing learning progress. Explicit Study actions remain available.
 - Study tools now include **Show me**: request a visual for the current idea, example, or point of confusion without changing progress. Recovery explanations stay visible, images are reused when returning to the same context, and failed visuals can be retried deliberately.
 - Study now adapts its composition to the current task: calm explanations, prominent instructional images, focused activities and questions, and a simpler recovery view when something is unclear. Lesson context and earlier work remain accessible. “That helps” returns from a simpler explanation without changing mastery.
@@ -41,7 +43,9 @@
 
 ### Manual test checklist
 
-Learning preferences (automated checks completed; live teaching and desktop/mobile browser inspection remain manual):
+Current submission evidence and remaining checks are recorded in [SUBMISSION_CHECKLIST.md](SUBMISSION_CHECKLIST.md). The sequences below remain reusable regression checklists, not claims that every step was manually completed.
+
+Learning preferences (automated checks and two contrasting live profiles completed; full reset/device/screen-reader coverage remains manual):
 
 1. In a fresh browser profile at about **1440px**, open Home. Confirm learning entry still works without setup. Choose **Set up my preferences**; check five questions with native radio choices and readable selected states. Save and confirm the five-item **Your Orbit setup** summary. Refresh before creating a space; the choices should remain.
 2. In another fresh session, choose **Not now**, refresh, and start learning normally. Confirm the invitation stays dismissed and **Choose learning preferences** remains available. Open setup and choose **Skip setup**; no draft answers should be saved.
@@ -56,7 +60,7 @@ Learning preferences (automated checks completed; live teaching and desktop/mobi
 11. Open `http://localhost:5173/.orbit-review.html` and compare **guided profile** with **explore profile** at desktop width. Each includes editable preferences below Study. Check the form, summary, next-action emphasis, recap, and existing image composition. These fixtures use fixed responses; use the full app for steps 5–7.
 12. Resize the same browser, check **768px**, then the preview's **390px** content width. Check wrapping legends/options, visible selected radio indicators, large targets, no horizontal overflow, and image containment. Use Tab/Shift+Tab, arrow keys within radio groups, Enter/Space for actions, and a screen reader for labels/status. Check save/cancel/reset focus and reduced motion; repeat on a physical phone when available.
 
-Show me (automated checks completed; browser walkthrough of this addition still pending):
+Show me (automated checks and live recovery-to-visual walkthrough completed; provider-outage and signed-URL expiry walkthroughs remain manual):
 
 1. At about **1440px**, open `http://localhost:5173/.orbit-review.html`, choose **focus**, and confirm the text-only lesson has **images 0**. Open **Study tools** and choose **Show me**.
 2. Confirm **See how it works**, a reserved loading frame, usable lesson/tools, then the uncropped reference image. Check that mastery stays 40% and the lesson stays at step 1.
