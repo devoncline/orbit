@@ -10,13 +10,26 @@ import { normalizeLearningPreferences } from './src/services/learningProfile.js'
 import { learningPathContextKey } from './src/services/learningPath.js'
 import './src/index.css'
 const scenario = new URLSearchParams(location.search).get('scenario')
+const syllabusReview = scenario?.startsWith('syllabus')
 const profiles = {
   guided: { chunkSize: 'short', exampleTiming: 'early', visualPreference: 'on_request', guidance: 'focused', reentrySupport: 'where_left_off' },
   explore: { chunkSize: 'detailed', exampleTiming: 'after', visualPreference: 'often', guidance: 'explore', reentrySupport: 'continue' },
 }
-const course = { name: 'React', mastery: { overall: 40, topics: {} } }
+const course = syllabusReview ? {
+  name: 'Biology 101', mastery: { overall: 40, topics: {} },
+  nextTask: 'Focus on Photosynthesis to prepare for the Nov 4 Photosynthesis Reading Check and Nov 5 Photosynthesis Quiz: review inputs, outputs, stored energy, common misconceptions, and limiting factors.',
+  learnerPosition: { currentTopic: 'Photosynthesis' },
+  upcomingWork: [
+    { title: 'Photosynthesis Reading Check', topic: 'Photosynthesis', date: '2026-11-04' },
+    { title: 'Photosynthesis Quiz', topic: 'Photosynthesis', date: '2026-11-05' },
+  ],
+} : { name: 'React', mastery: { overall: 40, topics: {} } }
 const visual = { type: 'generated_image', purpose: 'A render is requested, prepared, then committed to the screen.', focus: 'Rendering', data: [{ label: 'Trigger', detail: 'Request an update.' }, { label: 'Render', detail: 'Prepare the result.' }, { label: 'Commit', detail: 'Update the screen.' }] }
-const lesson = { topic: 'State', concept: 'From a click to a new screen', content: '**State is component memory.** It keeps a value between renders.\n\nWhen you click a counter, its event handler requests a state update. React renders the component again using the new value, then updates the screen.\n\nFor example, clicking a counter showing **2** can update its state to **3**. The next render shows 3.', ...(['visual', 'failure', 'explore', 'image-wait'].includes(scenario) ? { visual } : {}) }
+const lesson = syllabusReview ? {
+  topic: 'Photosynthesis', concept: 'Inputs, outputs, and stored energy',
+  lessonContext: { lessonTitle: 'Photosynthesis', reasonForLesson: '', focusAreas: ['Inputs and outputs', 'Stored energy', 'Limiting factors', 'Common misconceptions'] },
+  content: '## From light to stored energy\nPlants use **light**, water, and carbon dioxide to make sugar. Oxygen is released as an output. The light energy becomes chemical energy stored in sugar.\n\n## What limits the process?\nA plant needs all of these inputs. More light will not help if water or carbon dioxide is scarce. Soil supplies minerals, but most of the carbon in a plant comes from **carbon dioxide**, not soil.',
+} : { topic: 'State', concept: 'From a click to a new screen', content: '**State is component memory.** It keeps a value between renders.\n\nWhen you click a counter, its event handler requests a state update. React renders the component again using the new value, then updates the screen.\n\nFor example, clicking a counter showing **2** can update its state to **3**. The next render shows 3.', ...(['visual', 'failure', 'explore', 'image-wait'].includes(scenario) ? { visual } : {}) }
 const json = (value) => new Response(JSON.stringify(value), { headers: { 'Content-Type': 'application/json' } })
 let imageAttempts = 0
 window.fetch = async (url, options = {}) => {
@@ -36,7 +49,7 @@ window.fetch = async (url, options = {}) => {
   }
   if (url === '/api/generate-study-lesson') return json(body.action === 'simplify'
     ? { ...lesson, content: 'Think of state as a small notebook. A click writes **3** where **2** used to be.\n\nReact reads the notebook again and shows **3** on the screen.' }
-    : { ...lesson, concept: 'Responding to an event', content: 'An event handler connects a click to a state update.' })
+    : syllabusReview ? lesson : { ...lesson, concept: 'Responding to an event', content: 'An event handler connects a click to a state update.' })
   if (url === '/api/study-activity') return json(body.action === 'generate'
     ? { title: 'Predict the next count', instruction: 'A counter shows 2. Its click handler adds one to the state. What will the next render display, and why?', topic: 'State', type: 'prediction' }
     : { feedback: 'Separate the stored value from the rendered text. State changes first; the new render then displays that value.', signal: 'misconception' })
@@ -53,7 +66,8 @@ export default function Review() {
   ])
   const [activeId, setActiveId] = useState('review')
   const activeThread = threads.find(thread => thread.id === activeId)
-  const learningPath = { step: 3, visited: [{ topic: 'State', concept: 'Remembering a value', understood: true }], upcoming: [{ topic: 'Events', concept: 'Responding to a click and updating the value on screen' }, { topic: 'State', concept: 'Sharing state between components' }], contextKey: learningPathContextKey(course) }
+  const learningPath = syllabusReview ? { step: 1, upcoming: [{ topic: 'Photosynthesis', concept: 'Following energy through a food web' }], contextKey: learningPathContextKey(course, '2026-11-01') }
+    : { step: 3, visited: [{ topic: 'State', concept: 'Remembering a value', understood: true }], upcoming: [{ topic: 'Events', concept: 'Responding to a click and updating the value on screen' }, { topic: 'State', concept: 'Sharing state between components' }], contextKey: learningPathContextKey(course) }
   if (['home', 'learn'].includes(scenario)) return <AppShell courses={[course]} destination={scenario} onNavigate={()=>{}} onSelectSpace={()=>{}} onNewSpace={()=>{}}>
     {scenario === 'home' ? <HomeScreen courses={[course]} recommendedCourse={course} onContinue={()=>{}} onSelectSpace={()=>{}} onNewSpace={()=>{}} onNavigate={()=>{}} learningPreferences={preferences} onPreferencesChange={setPreferences} />
       : <LearnScreen courses={[]} onStart={()=>{}} />}
@@ -65,7 +79,7 @@ export default function Review() {
         setThreads([...threads, thread]); setActiveId(thread.id)
       }} />
       <div className="study-room">
-      <StudySession key={activeId} course={course} learningProfile={preferences.profile} threadId={activeId} initialThread={{ ...activeThread, resume: { lesson: { ...lesson, concept: activeThread.title }, learningPath } }} mastery={40} setMastery={()=>{}} updateTopicMastery={()=>{}} />
+      <StudySession key={activeId} course={course} today={syllabusReview ? '2026-11-01' : undefined} learningProfile={preferences.profile} threadId={activeId} initialThread={scenario === 'syllabus-pending' ? activeThread : { ...activeThread, resume: { lesson: { ...lesson, concept: activeThread.title }, learningPath } }} mastery={40} setMastery={()=>{}} updateTopicMastery={()=>{}} />
       {profiles[scenario] && <LearningPreferences value={preferences} onChange={(value) => setPreferences(normalizeLearningPreferences(value))} />}
     </div></div>
   </AppShell>

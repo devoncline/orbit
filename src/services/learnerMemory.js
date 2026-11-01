@@ -2,6 +2,7 @@ import { inferCoursePosition, normalizeLearnerPosition, normalizeSyllabusItems }
 import { retainLearningAnchors } from './studyLearningContext.js'
 import { generatedLessonVisual, normalizeLearningPath, normalizeLessonVisual } from './learningPath.js'
 import { normalizeLearningPreferences } from './learningProfile.js'
+import { normalizeLessonContext } from './lessonContext.js'
 import { savedLessonImages } from './lessonImageRequest.js'
 import { savedStudyVisual, savedVisualRecovery } from './studyVisualRequest.js'
 
@@ -23,9 +24,11 @@ export function emptyLearnerMemory() {
 // Explicit projections are used on both read and write. Never serialize React state wholesale.
 export function compactThreadResume(value) {
   const lesson = value?.lesson
+  const lessonContext = normalizeLessonContext(lesson?.lessonContext)
   return {
     lesson: text(lesson?.topic) && text(lesson?.concept) && text(lesson?.content, 900)
       ? { topic: text(lesson.topic), concept: text(lesson.concept), content: text(lesson.content, 900),
+        ...(lessonContext ? { lessonContext } : {}),
         ...(normalizeLessonVisual(lesson.visual) ? { visual: normalizeLessonVisual(lesson.visual) } : {}) } : null,
     learningPath: normalizeLearningPath(value?.learningPath),
     conversation: list(value?.conversation, MAX_SAVED_EXCHANGES)

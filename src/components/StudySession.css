@@ -1,6 +1,13 @@
-.study-session { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(180px, .8fr); grid-template-areas: 'context companion' 'body companion' 'progress progress'; gap: 0 48px; align-items: start; }
-.study-context { grid-area: context; }
-.study-subject { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 0 0 14px; color: var(--orbit-text); font-size: 14px; }
+.study-session { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(180px, .8fr); grid-template-rows: max-content auto auto; grid-template-areas: 'context companion' 'body companion' 'progress progress'; gap: 0 48px; align-items: start; }
+.study-context { grid-area: context; margin-bottom: 22px; }
+.orbit-shell .study-session .study-context h1 { max-width: 28ch; margin: 0 0 12px; font-size: clamp(30px, 3.2vw, 44px); line-height: 1.14; }
+.study-subject { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 0 0 10px; color: var(--orbit-text); font-size: 14px; }
+.study-lesson-reason, .study-lesson-focus, .study-deadlines { max-width: 64ch; color: var(--orbit-muted); font-size: 13px; line-height: 1.65; margin: 8px 0 0; }
+.study-lesson-focus > span { color: var(--orbit-text); margin-right: 6px; }
+.study-deadlines { display: flex; flex-wrap: wrap; gap: 2px 10px; }
+.study-deadlines ul { display: flex; flex-wrap: wrap; gap: 2px 16px; min-width: 0; padding: 0; margin: 0; list-style: none; }
+.study-deadlines li { min-width: 0; }
+.study-deadlines time { color: var(--orbit-accent); white-space: nowrap; }
 .study-subject > span + span { color: var(--orbit-accent); font-size: 12px; border-left: 1px solid var(--orbit-border); padding-left: 12px; }
 .study-session > .orbit-stage { grid-area: companion; width: 100%; height: 430px; --orbit-page-companion-width: min(100%, 440px); --orbit-page-companion-top: 12px; }
 .study-lesson-composition, .study-lesson-narrative, .study-visual-presentation { min-width: 0; }
@@ -59,7 +66,6 @@
   .study-mode-practice, .study-mode-check, .study-mode-recover:not(.study-session-illustrated) { grid-template-columns: minmax(0, 1fr) 180px; }
   .study-mode-practice > .orbit-stage, .study-mode-check > .orbit-stage, .study-mode-recover > .orbit-stage { height: 190px; --orbit-page-companion-width: 180px; }
 }
-.study-topic { margin: 0 0 10px; color: var(--orbit-accent); font-size: 14px; }
 .study-body { grid-area: body; min-width: 0; font-size: 16px; }
 .study-body p { margin: 0 0 22px; line-height: 1.85; white-space: pre-line; }
 .study-body h3 { font-size: 20px; font-weight: 500; margin: 0 0 20px; }
@@ -152,8 +158,8 @@
 .study-continue-actions button { white-space: normal; }
 .study-continue-actions button:hover:not(:disabled) { border-color: transparent; }
 .study-continuation p { font-size: 13px; margin-bottom: 12px; line-height: 1.6; }
-.study-path { font-size: 13px; margin: 0 0 22px; min-width: 0; }
-.study-context .study-path summary { gap: 16px; min-height: 64px; padding: 12px 2px; }
+.study-path { font-size: 13px; margin: 12px 0 0; min-width: 0; }
+.study-context .study-path summary { gap: 16px; min-height: 44px; padding: 8px 2px; }
 .study-path-label { flex-shrink: 0; font-size: 12px; }
 .study-path-next { display: grid; gap: 2px; flex: 1; min-width: 0; padding-left: 16px; border-left: 1px solid var(--orbit-border); color: var(--orbit-text); line-height: 1.5; }
 .study-path-next small { font-size: 11px; }
@@ -169,7 +175,9 @@
 .study-path [aria-current] { color: var(--orbit-accent); }
 .study-path [aria-current] small { color: inherit; }
 @media (max-width: 760px) {
-  .study-session, .study-mode-recover:not(.study-session-illustrated) { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'context' 'companion' 'body' 'progress'; gap: 0; }
+  .study-session, .study-mode-recover:not(.study-session-illustrated) { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'context' 'body' 'companion' 'progress'; gap: 0; }
+  .orbit-shell .study-session .study-context h1 { font-size: 30px; }
+  .study-context { margin-bottom: 18px; }
   .study-session > .orbit-stage { grid-area: companion; width: 100%; height: 130px; margin: 0; --orbit-page-companion-width: 150px; --orbit-page-companion-top: -10px; }
   .study-session > .orbit-stage .orbit-thoughts { display: none; }
   .study-session-illustrated { grid-template-areas: 'context' 'body' 'progress'; }

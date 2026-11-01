@@ -58,6 +58,62 @@ async function type(value) {
   })
 }
 
+test('pending syllabus lesson uses a concise topic and compact, semantic assignment context without fetching', async (t) => {
+  t.mock.method(globalThis, 'fetch', () => assert.fail('Rendering context must not request a lesson'))
+  const goal = 'Focus on Photosynthesis to prepare for the Nov 4 reading check and Nov 5 quiz: review inputs, outputs, stored energy, common misconceptions, and limiting factors.'
+  await mount(t, { initialThread: undefined, today: '2026-11-01', course: { name: 'Biology 101', nextTask: goal,
+    learnerPosition: { currentTopic: 'Photosynthesis' }, upcomingWork: [
+      { title: 'Reading Check', topic: 'Photosynthesis', date: '2026-11-04' },
+      { title: 'Quiz', topic: 'Photosynthesis', date: '2026-11-05' },
+    ] } })
+  assert.equal(container.querySelector('h1').textContent, 'Photosynthesis')
+  assert.equal(container.querySelectorAll('h1').length, 1)
+  assert.deepEqual([...container.querySelectorAll('.study-deadlines time')].map(item => item.dateTime), ['2026-11-04', '2026-11-05'])
+  assert.equal(container.querySelector('[aria-label="Upcoming assignments"]').children.length, 2)
+  assert.ok(!container.textContent.includes(goal))
+  assert.ok(button('Start lesson'))
+})
+
+test('saved structured context renders below the topic while the teaching and path remain available', async (t) => {
+  t.mock.method(globalThis, 'fetch', () => assert.fail('Saved lessons must not refetch'))
+  const lessonContext = { lessonTitle: 'Understanding state', reasonForLesson: 'Connect a click to what changes on screen.', focusAreas: ['Stored values', 'Renders'] }
+  await mount(t, { initialThread: { resume: { lesson: { ...lesson, lessonContext } } } })
+  assert.equal(container.querySelector('h1').textContent, lessonContext.lessonTitle)
+  assert.equal(container.querySelector('.study-lesson-reason').textContent, lessonContext.reasonForLesson)
+  assert.match(container.querySelector('.study-lesson-focus').textContent, /Stored values · Renders/)
+  assert.equal(container.querySelector('.study-deadlines'), null)
+  assert.match(container.querySelector('.study-content').textContent, /State remembers a value/)
+  assert.equal(container.querySelector('.study-path').open, false)
+})
+
+test('legacy saved lessons use topic as heading and concept as focus without adding a deadline', async (t) => {
+  t.mock.method(globalThis, 'fetch', () => assert.fail('Legacy presentation is local'))
+  await mount(t)
+  assert.equal(container.querySelector('h1').textContent, lesson.topic)
+  assert.match(container.querySelector('.study-lesson-focus').textContent, /Remembering a value/)
+  assert.equal(container.querySelector('.study-deadlines'), null)
+})
+
+test('an explicit start keeps the heading compact during generation and accepts the new lesson context', async (t) => {
+  let finish
+  const requests = []
+  t.mock.method(globalThis, 'fetch', (_url, options) => {
+    requests.push(JSON.parse(options.body))
+    return new Promise(resolve => { finish = resolve })
+  })
+  const nextTask = 'Focus on State to prepare for multiple assignments, dates, and a long list of learning objectives.'
+  await mount(t, { initialThread: undefined, course: { ...course, nextTask, learnerPosition: { currentTopic: 'State' } } })
+  await click('Start lesson')
+  assert.equal(container.querySelector('h1').textContent, 'State')
+  assert.ok(container.querySelector('.orbit-signal'))
+  assert.equal(requests.length, 1)
+  assert.equal(requests[0].nextTask, nextTask)
+  await act(async () => finish(json({ ...lesson, lessonContext: { lessonTitle: 'Understanding state', focusAreas: ['Memory', 'Updates'] } })))
+  assert.equal(container.querySelector('h1').textContent, 'Understanding state')
+  assert.match(container.querySelector('.study-lesson-focus').textContent, /Memory · Updates/)
+  assert.equal(container.querySelector('.orbit-signal'), null)
+})
+
 test('thread disclosure dismisses on Escape, outside pointer and focus exit, and returns focus after switching', async () => {
   const switches = []
   const threads = ['one', 'two'].map(id => ({ id, title: `Thread ${id}`, courseName: course.name, context: 'lesson', summary: 'A saved lesson.', createdAt: '2026-10-30T10:00:00Z' }))

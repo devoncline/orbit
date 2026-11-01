@@ -27,7 +27,7 @@ import { studyThinkingContext } from './orbitThinking'
 import { createStreamDisplay } from '../services/streamDisplay'
 import useResultReveal from './useResultReveal'
 import StudyContent from './StudyContent'
-import StudyPath from './StudyPath'
+import StudyLessonHeader from './StudyLessonHeader'
 import LessonVisual from './LessonVisual'
 import useStudyPresentation from './useStudyPresentation'
 import { logVisualRouting } from '../services/visualDiagnostics'
@@ -654,12 +654,7 @@ export default function StudySession({
     return (
         <section className={`study-session study-mode-${presentation.mode}${presentation.splitVisual ? ' study-session-illustrated' : ''}${presentation.choiceDensity === 'low' ? ' study-choice-focused' : ''}`}
             data-presentation-mode={presentation.mode} data-presentation-reason={presentation.reason} data-choice-density={presentation.choiceDensity}>
-            <header className="study-context">
-                <p className="study-subject"><span>{course.name}</span>{lesson && <span>Lesson {learningPath.step}</span>}</p>
-                {lesson && lesson.topic !== lesson.concept && <p className="study-topic">{lesson.topic}</p>}
-                <h1>{lesson?.concept || course.nextTask || course.name}</h1>
-                {lesson && <StudyPath path={pathView} />}
-            </header>
+            <StudyLessonHeader course={course} lesson={lesson} step={learningPath.step} path={pathView} today={today} />
             {!inlineCompanion && companion}
             <div className="study-body">
             <section className="study-active-panel" data-study-interaction={activeInteraction} ref={panel} tabIndex={-1} aria-label="Current study interaction">

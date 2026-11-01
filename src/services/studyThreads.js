@@ -1,3 +1,6 @@
+import { conciseLessonTitle, studyLessonContext } from './lessonContext.js'
+import { localDate } from './coursePosition.js'
+
 export const initialThreads = { threads: [], activeId: null }
 
 export function studyThreadsReducer(state, action) {
@@ -17,7 +20,7 @@ export function studyThreadsReducer(state, action) {
 }
 
 export function createStudyThread(course, topic = '', id = crypto.randomUUID(), now = new Date()) {
-  return { id, courseName: course.name, positionKey: JSON.stringify(course.learnerPosition || null), requestedTopic: topic.trim().slice(0, 120), title: (topic || course.nextTask || course.name).slice(0, 80), topic, context: 'lesson', summary: 'Ready for a short lesson.', createdAt: now.toISOString(), status: 'active' }
+  return { id, courseName: course.name, positionKey: JSON.stringify(course.learnerPosition || null), requestedTopic: topic.trim().slice(0, 120), title: conciseLessonTitle(topic) || studyLessonContext(course, null, localDate(now)).lessonTitle, topic, context: 'lesson', summary: 'Ready for a short lesson.', createdAt: now.toISOString(), status: 'active' }
 }
 
 export function resolveLearningSpace(courses, topic) {

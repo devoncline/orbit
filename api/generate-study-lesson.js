@@ -1,6 +1,7 @@
 import process from 'node:process'
 import { formatLearningProfile, normalizeLearningProfile } from '../src/services/learningProfile.js'
 import { lessonVisualPrompt } from './_lib/lessonVisualPrompt.js'
+import { normalizeLessonContext } from '../src/services/lessonContext.js'
 import { logVisualRouting } from '../src/services/visualDiagnostics.js'
 import { formatCoursePosition, inferCoursePosition, isPositionTopicAllowed } from '../src/services/coursePosition.js'
 import { formatLearningAnchors } from '../src/services/studyLearningContext.js'
@@ -116,6 +117,11 @@ Use one or two meaningful Markdown section headings (##), short paragraphs, occa
 Do not use HTML, links, images, tables, or code fences. No long lists or quiz questions.
 Do not repeat the course/topic/concept title, mastery, path, or navigation instructions in content; the UI shows them.
 Keep topic and concept labels under 120 characters.
+Separate the learning topic from the planning goal. Include lessonContext with:
+- lessonTitle: a concise topic heading, at most 60 characters and 8 words (for example "Photosynthesis"). Never put assignments, dates, or a planning sentence here. Keep the exact topic key above unchanged for learning progress.
+- reasonForLesson: at most 160 characters and 28 words explaining why this idea is useful now, grounded in the supplied context. Use an empty string if no useful reason is known. Do not repeat assignment names or dates; the UI shows those directly from the course schedule.
+- focusAreas: one to four short labels, each at most 48 characters and 8 words, describing what THIS learning chunk covers. Do not list preparation areas that are not actually taught here.
+Use the full recommended task and syllabus deadlines to guide the teaching even though the displayed heading is short. Never invent an assignment or deadline.
 Actively evaluate whether an instructional image would materially improve understanding of this specific concept before selecting visual.type. Do not force visuals for every lesson.
 Prefer an instructional image for processes, flows, sequences, cause and effect, spatial relationships, system components, inputs/outputs, transformations, comparisons, physical structure, scientific mechanisms, programming data flow, nested structure, and mathematical structure that benefits from organization.
 ${profile.visualPreference === 'on_request' ? 'This learner requests images only on demand. Return visual: {"type":"none"} for this lesson, even for visual subjects. The separate Show me tool remains available.' : 'Photosynthesis, cellular respiration, gravity/orbits, React state flow, API request/response flow, arrays, scope, props vs state, SQL vs NoSQL, mitosis, and the water cycle should usually receive an instructional image when teaching those mechanisms or relationships.'}
@@ -123,7 +129,7 @@ Short factual recall, pure vocabulary, simple definitions, or concepts where a v
 ${lessonVisualPrompt}
 ${formatLearningProfile(req.body.learningProfile, { visuals: true })}
 Do not tell the learner a visual is visible; the complete lesson text must stand alone.
-Return ONLY valid JSON with topic, concept, content${advances ? ', nextLessons (one or two objects with topic and concept)' : ''}, and visual. Select visual using the teaching rules above, including a full generated_image specification when useful or {"type":"none"} otherwise.
+Return ONLY valid JSON with topic, concept, content, lessonContext (an object with lessonTitle, reasonForLesson, focusAreas)${advances ? ', nextLessons (one or two objects with topic and concept)' : ''}, and visual. Select visual using the teaching rules above, including a full generated_image specification when useful or {"type":"none"} otherwise.
         `,
       }),
     })
@@ -162,10 +168,12 @@ Return ONLY valid JSON with topic, concept, content${advances ? ', nextLessons (
       return true
     }).map(lessonOutline)
 
+    const lessonContext = normalizeLessonContext(advances ? result.lessonContext : lesson.lessonContext || result.lessonContext)
     return res.status(200).json({
       topic: result.topic.trim(),
       concept: result.concept.trim(),
       content: result.content.trim(),
+      ...(lessonContext ? { lessonContext } : {}),
       ...(advances && result.nextLessons !== undefined ? { nextLessons } : {}),
       ...(visual ? { visual } : {}),
     })

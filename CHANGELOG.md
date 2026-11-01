@@ -4,6 +4,7 @@
 
 ### Improvements
 
+- Study lessons now lead with a concise topic, followed by quiet assignment dates and a short lesson focus. Compact thread controls and reduced introductory spacing bring teaching into view sooner, including on phones, while lessons retain their full syllabus context.
 - Opening Orbit or returning to saved lessons no longer starts AI requests automatically. Generated visuals are saved with recent threads and reused after refresh; unavailable images require **Retry visual** instead of regenerating when reopened.
 - Study controls now have clearer visual hierarchy: quiet section disclosures, a current-thread selector, softer selected states, and distinct keyboard focus. The lesson path puts the current lesson and next idea first, while mobile navigation and New thread use compact, unboxed controls.
 - Learning preferences now produce clearer differences in explanation length and example order. Choosing visuals only on request reliably keeps new lessons text-only until the learner asks.

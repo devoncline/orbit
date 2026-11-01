@@ -172,14 +172,14 @@
 .course-position strong { font-weight: 500; color: var(--orbit-text); }
 .course-position .orbit-form { margin-top: 12px; gap: 12px; }
 .position-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.study-threads { grid-column: 1 / -1; width: min(100%, 540px); margin-bottom: 32px; min-width: 0; }
+.study-threads { grid-column: 1 / -1; width: min(100%, 640px); margin-bottom: 22px; min-width: 0; }
 .study-thread-toolbar { position: relative; display: flex; align-items: center; gap: 20px; border-bottom: 1px solid var(--orbit-border); }
 .study-thread-selector { min-width: 0; flex: 1; }
-.study-thread-selector > summary { min-height: 64px; border: 0; border-radius: 6px 6px 0 0; padding: 8px 6px; }
-.study-thread-context { min-width: 0; display: grid; gap: 2px; }
-.study-thread-context > span { display: flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: .03em; }
+.study-thread-selector > summary { min-height: 44px; border: 0; border-radius: 6px 6px 0 0; padding: 6px; }
+.study-thread-context { min-width: 0; display: flex; align-items: baseline; gap: 12px; }
+.study-thread-context > span { display: flex; flex-shrink: 0; align-items: center; gap: 6px; font-size: 11px; letter-spacing: .03em; }
 .study-thread-context small { font: inherit; color: var(--orbit-muted); }
-.study-thread-context strong { font-size: 15px; font-weight: 500; color: var(--orbit-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.study-thread-context strong { min-width: 0; font-size: 13px; font-weight: 400; color: var(--orbit-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .orbit-shell .study-thread-selector[open] > summary { margin-bottom: 0; background: var(--orbit-control-selected); box-shadow: inset 0 -2px var(--orbit-control-rail); }
 .orbit-shell .study-thread-selector[open] > summary:hover { background: var(--orbit-control-selected-hover); }
 .orbit-shell .study-thread-selector[open] > summary:active { background: var(--orbit-control-pressed); }
@@ -226,9 +226,10 @@
   .shell-mobile-header .shell-brand { width: 100px; }
   .orbit-shell-focused .shell-mobile-header { padding-bottom: 6px; }
   .orbit-shell-focused .study-page { padding-top: 0; }
-  .study-threads { width: 100%; margin-bottom: 24px; }
+  .study-threads { width: 100%; margin-bottom: 18px; }
   .study-thread-toolbar { gap: 12px; }
-  .study-thread-context strong { font-size: 14px; }
+  .study-thread-context { display: grid; gap: 0; }
+  .study-thread-context strong { font-size: 12px; }
   .study-thread-new { flex-direction: column; gap: 0; padding: 4px 6px; font-size: 11px !important; min-width: 60px; }
   .thread-menu { width: 100%; }
   .shell-main { margin: 0; padding: 0 24px 40px; }

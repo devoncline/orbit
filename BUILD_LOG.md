@@ -800,6 +800,17 @@ The targeted effect trace before implementation was:
 
 ---
 
+## November 1, 2026 - Focused lesson heading and syllabus context
+
+- Replaced StudySession's `course.nextTask` heading fallback with a bounded topic/title hierarchy. The full planning goal still reaches the lesson model unchanged. New lessons may return optional `lessonContext` with a concise title, a short reason, and up to four focus areas; malformed optional fields fall back without discarding valid teaching. Topic keys, mastery, path progression, visuals, and request triggers are unchanged.
+- Added a shared context projection and StudyLessonHeader. Related future assignments come from saved course data, sorted and deduplicated with at most three shown; past, ambiguous, unrelated, and model-supplied assignment values are excluded. Legacy lessons use their existing topic and concept. The existing version-2 local snapshot now allowlists bounded display metadata, so refresh preserves the new hierarchy without a migration.
+- Compacted the thread toolbar and path spacing, reduced the Study-only heading scale, kept the heading grid row sized to its content, and moved mobile lesson content ahead of the standalone decorative companion. Existing shell, artwork, colors, asymmetric desktop composition, thread interactions, and Study tools remain in place.
+- Added 12 regressions covering long planning goals, optional metadata bounds, multiple deadlines, lessons without deadlines, topic/date changes, persistence, API grounding, pending generation, and mounted header rendering. Updated two existing heading assertions to check topic headings plus concept context. Full validation: 316 tests, 314 pass, 2 pre-existing copy mismatches in `tests/product-shell.test.js` ("latest course context" versus "updated starting point", and "This browser keeps up to 20 recent threads" versus "Up to 20 threads are saved in this browser"). Confirmed the unchanged copy against HEAD. Lint, production build, and `git diff --check` pass.
+- Extended the existing isolated review fixture with syllabus lesson and before-start scenarios. Desktop/mobile visual inspection could not run: the browser access host was unavailable and native Chrome access was not approved. No browser, device, screen-reader, or live-model validation is claimed. For manual review, run `npm.cmd run dev`, open `/.orbit-review.html`, select each syllabus scenario, and inspect 1440/768/390/320 widths, assignment wrapping, first lesson visibility, thread selection/New thread, and Study path. The existing focus scenario covers a lesson without deadlines. Mock fixtures make no live AI requests or learner-memory writes.
+- Updated the product-facing Unreleased changelog. No database changes, migrations, historical migration edits, SQL steps, new dependencies, commit, or deployment. Changed files: StudyLessonHeader.jsx, StudySession.jsx/css, AppShell.css; lessonContext.js, learnerMemory.js, studyThreads.js; generate-study-lesson.js; lesson-context, study-presentation-ui, study-streaming-ui and product-shell tests; the two existing review fixtures; CHANGELOG.md and BUILD_LOG.md.
+
+---
+
 # Next
 
 Feature development is frozen for submission. Review and deploy the hardening and control-polish changes, rehearse the production recording path in SUBMISSION_CHECKLIST.md, inspect the images used in the take, and record Orbit's adaptive teaching loop. Broader product expansion remains deferred until after the hackathon.

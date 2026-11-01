@@ -218,7 +218,8 @@ test('guided Study exposes course, lesson, readiness and continuation while the 
     setMastery: () => assert.fail('Reading is not mastery'), updateTopicMastery: () => assert.fail('Reading is not mastery'),
   }))
   assert.match(html, /<span>Introduction to Psychology<\/span><span>Lesson 1<\/span>/)
-  assert.match(html, /<h1>Explaining behavior<\/h1>/)
+  assert.match(html, /<h1>Perspectives<\/h1>/)
+  assert.match(html, /class="study-lesson-focus"><span>Today’s focus<\/span> Explaining behavior/)
   assert.match(html, /<h3>A useful lens<\/h3>/)
   assert.match(html, /<strong>Perspectives<\/strong>/)
   assert.match(html, />I understand<\/button>/)
