@@ -14,6 +14,7 @@ import { createStudyThread, resolveLearningSpace, studyThreadsReducer } from './
 import { clearLearnerMemory, learnerPositionKey, loadLearnerMemory, saveLearnerMemory } from './services/learnerMemory'
 import { retainLearningAnchors } from './services/studyLearningContext'
 import { analyzeCourseFile } from './services/meta'
+import { materialMetadata, normalizeCourseMaterials, sameMaterial } from './services/courseMaterials'
 import { useCallback, useEffect, useReducer, useState } from 'react'
 import './App.css'
 
@@ -151,6 +152,8 @@ export default function App() {
   }
 
   async function addCourseFile(file, targetCourseName) {
+    const existing = courses.find(course => course.name === targetCourseName)
+    if (existing?.files?.some(item => sameMaterial(item, materialMetadata(file)))) return
     const analysis = await analyzeCourseFile(file)
 
     setCourses((currentCourses) =>
@@ -180,15 +183,7 @@ export default function App() {
 
             ...mergeCourseAnalysis(course, analysis),
 
-            files: [
-              ...(course.files || []),
-              {
-                name: file.name,
-                type: file.type || 'file',
-                size: file.size,
-                file: file,
-              },
-            ],
+            files: normalizeCourseMaterials([...(course.files || []), materialMetadata(file, new Date().toISOString())]),
           }
         }
 
@@ -310,7 +305,7 @@ export default function App() {
         </section>
       )}
       {destination === 'space' && selectedCourse && (
-        <SpaceScreen key={selectedCourse.name} course={selectedCourse} today={today} onContinue={startSession} onNewThread={newThread} onPositionChange={(update) => updatePosition(selectedCourse.name, update)} onAddFile={addCourseFile} onSelectSpace={selectSpace} />
+        <SpaceScreen key={selectedCourse.name} course={selectedCourse} today={today} onStartLesson={newThread} onPositionChange={(update) => updatePosition(selectedCourse.name, update)} onAddFile={addCourseFile} />
       )}
       {destination === 'calendar' && (
         <section className="orbit-page orbit-page-layout calendar-page">

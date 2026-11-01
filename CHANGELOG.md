@@ -4,6 +4,7 @@
 
 ### Improvements
 
+- Course spaces now recommend a topic from upcoming work and course context, with one-click lessons and a few other starting options. Manual topic entry is optional. Course materials stay visible after processing, and learners can add multiple PDFs over time without losing earlier materials or duplicating matching deadlines.
 - Study lessons now lead with a concise topic, followed by quiet assignment dates and a short lesson focus. Compact thread controls and reduced introductory spacing bring teaching into view sooner, including on phones, while lessons retain their full syllabus context.
 - Opening Orbit or returning to saved lessons no longer starts AI requests automatically. Generated visuals are saved with recent threads and reused after refresh; unavailable images require **Retry visual** instead of regenerating when reopened.
 - Study controls now have clearer visual hierarchy: quiet section disclosures, a current-thread selector, softer selected states, and distinct keyboard focus. The lesson path puts the current lesson and next idea first, while mobile navigation and New thread use compact, unboxed controls.

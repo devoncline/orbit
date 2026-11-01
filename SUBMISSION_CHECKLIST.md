@@ -10,6 +10,10 @@ The main remaining risk is scientific image accuracy. Muse Image can still rever
 
 ## Evidence and limits
 
+November 1 course-launch follow-up: automated tests exercise class creation, PDF selection, the real analysis/lesson handlers with mocked model output, recommendation selection, multiple materials, partial failures, refresh, and Calendar. The full suite has 328 passing tests and two pre-existing copy mismatches in `product-shell.test.js`; lint and production build pass. This is separate from the October 30 live evidence below. The new course-launch layout has not had browser/device visual review or a live-model rehearsal; Chrome access was not approved during the preceding layout task.
+
+Before recording the syllabus-based flow, run the local API runtime (`npm.cmd run dev:api -- --listen 5173`) or the deployed app in a separate recording profile. Create Biology 101, add the actual demo syllabus, confirm the filename stays visible and the Nov 4/5/12 dates appear, then start the recommended Photosynthesis lesson without typing a topic. Add a second PDF, refresh, and check that both materials and the original dates remain. Inspect 1440px desktop and 320/390px mobile wrapping, keyboard topic selection, Add material, and the disabled empty manual action. Use a syllabus with dates appropriate to the recording day; recommendations intentionally change as deadlines pass. Original PDFs are not stored for reopening; their metadata and extracted course context are saved locally.
+
 | Area | Completed evidence | Remaining limit |
 | --- | --- | --- |
 | Automated gates | 282 tests pass; lint, production build and diff check pass | Parallel Vite tests report a non-failing HMR port 24678 warning; Git reports Windows line-ending conversion warnings |

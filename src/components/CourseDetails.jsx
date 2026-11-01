@@ -1,4 +1,4 @@
-export default function CourseDetails({ course }) {
+export default function CourseDetails({ course, showMaterials = true }) {
   return (
     <section>
       <h2>{course.name}</h2>
@@ -12,7 +12,7 @@ export default function CourseDetails({ course }) {
         </>
       )}
 
-      <h3>Learning material</h3>
+      {showMaterials && <><h3>Learning material</h3>
 
       {course.files?.length > 0 ? (
         course.files.map((file) => (
@@ -23,7 +23,7 @@ export default function CourseDetails({ course }) {
         ))
       ) : (
         <p>No material yet. You can start with an idea or add a PDF.</p>
-      )}
+      )}</>}
     </section>
   )
 }

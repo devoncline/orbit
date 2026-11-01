@@ -25,11 +25,23 @@ export function normalizeSyllabusItems(items) {
 }
 
 export function mergeCourseAnalysis(course, analysis) {
-  const merge = (previous, incoming, identify) => [...new Map([...previous, ...incoming].map((item) => [identify(item), item])).values()]
+  const retainKnown = (previous, incoming) => ({ ...previous, ...Object.fromEntries(Object.entries(incoming).filter(([, value]) => value !== '' && value != null)) })
+  const merge = (previous, incoming, identify) => {
+    const items = new Map()
+    for (const item of [...previous, ...incoming]) items.set(identify(item), retainKnown(items.get(identify(item)), item))
+    return [...items.values()]
+  }
+  const upcomingWork = []
+  for (const item of [course.upcomingWork, analysis.upcomingWork].flatMap(items => Array.isArray(items) ? items : []).filter(item => text(item?.title))) {
+    const existing = upcomingWork.findIndex(previous => key(previous.title) === key(item.title) &&
+      (key(previous.type) === key(item.type) || !key(previous.type) || !key(item.type) || (previous.date && previous.date === item.date)))
+    if (existing === -1) upcomingWork.push(item)
+    else upcomingWork[existing] = retainKnown(upcomingWork[existing], item)
+  }
   return {
     syllabusItems: merge(normalizeSyllabusItems(course.syllabusItems), normalizeSyllabusItems(analysis.syllabusItems), (item) => `${key(item.unit)}:${key(item.topic)}`),
     importantTopics: [...new Set([...(Array.isArray(course.importantTopics) ? course.importantTopics : []), ...(Array.isArray(analysis.importantTopics) ? analysis.importantTopics : [])].filter((topic) => typeof topic === 'string'))],
-    upcomingWork: merge(...[course.upcomingWork, analysis.upcomingWork].map((items) => (Array.isArray(items) ? items : []).filter((item) => text(item?.title))), (item) => `${key(item.title)}:${key(item.type)}`),
+    upcomingWork,
   }
 }
 
@@ -136,6 +148,53 @@ export function inferCoursePosition(course, today = localDate()) {
 
 export function isPositionTopicAllowed(topic, position) {
   return !position.learner.exclusions.some((item) => matches(item.topic, topic))
+}
+
+// Preparing for upcoming work does not assert today's classroom position.
+// Selecting a launch option is explicit learner intent, even for a future unit.
+export function courseLaunchRecommendations(course, today = localDate()) {
+  const position = inferCoursePosition(course, today)
+  const topics = [...new Map([
+    ...normalizeSyllabusItems(course.syllabusItems).map(item => item.topic),
+    ...(Array.isArray(course.importantTopics) ? course.importantTopics : []),
+    ...Object.keys(course.mastery?.topics || {}),
+  ].map(topic => text(topic)).filter(Boolean).map(topic => [key(topic), topic])).values()]
+  const allowed = topic => topic && isPositionTopicAllowed(topic, position)
+  const topicForWork = item => {
+    const explicit = text(item.topic)
+    return explicit ? topics.find(topic => key(topic) === key(explicit)) || topics.find(topic => matches(topic, explicit)) || explicit
+      : topics.find(topic => matches(item.title, topic)) || ''
+  }
+  const upcoming = position.upcoming.map(item => ({ ...item, topic: topicForWork(item) })).filter(item => allowed(item.topic))
+  const near = upcoming.find(item => (parseWorkDate(item.date) - parseWorkDate(position.today)) / 86_400_000 <= 14)
+  const weak = Object.entries(course.mastery?.topics || {}).filter(([topic, score]) => allowed(topic) && Number.isFinite(score) && score < 70)
+    .sort((a, b) => a[1] - b[1]).map(([topic]) => topic)
+  const timelineTopics = new Set(position.timeline.map(item => key(item.topic)))
+  const syllabusChoices = [
+    ...position.timeline.filter(item => item.period !== 'past').map(item => item.topic),
+    ...topics.filter(topic => !timelineTopics.has(key(topic))),
+    ...position.timeline.filter(item => item.period === 'past').reverse().map(item => item.topic),
+  ]
+  const candidates = [position.learner.currentTopic, near?.topic, position.currentTopic, ...weak, ...upcoming.map(item => item.topic), ...syllabusChoices]
+  const seen = new Set()
+  const choices = candidates.filter(allowed).filter(topic => {
+    if (seen.has(key(topic))) return false
+    seen.add(key(topic))
+    return true
+  })
+  const topic = choices[0]
+  if (!topic) return { primary: null, alternatives: [] }
+  const related = upcoming.filter(item => key(item.topic) === key(topic))
+  const firstDue = related[0]
+  // Prefer an assessment in the same preparation window over a reading task.
+  const assessment = related.find(item => /\b(quiz|test|exam|assessment|midterm|final)\b/i.test(item.title) &&
+    (parseWorkDate(item.date) - parseWorkDate(firstDue.date)) / 86_400_000 <= 7) || firstDue
+  const reason = position.learner.currentTopic === topic ? 'Continue from the starting point you chose.'
+    : assessment ? 'Based on what’s coming up, this is a useful place to start.'
+      : position.currentTopic === topic ? position.reason
+        : weak.includes(topic) ? 'Your practice suggests another look at this topic.'
+          : 'A starting point from your course material.'
+  return { primary: { topic, reason, upcomingWork: assessment || null }, alternatives: choices.slice(1, 4) }
 }
 
 export function positionAction(course, position = inferCoursePosition(course)) {

@@ -4,8 +4,10 @@ import { learningAnchorRequest } from './studyLearningContext.js'
 import { coursePositionRequest, inferCoursePosition, localDate } from './coursePosition.js'
 import { learningPathContextKey, generatedLessonVisual, normalizeLearningPath } from './learningPath.js'
 import { learningProfileRequest } from './learningProfile.js'
+import { isSupportedMaterial } from './courseMaterials.js'
 
 export async function analyzeCourseFile(file) {
+    if (!isSupportedMaterial(file)) throw new Error('Unsupported course material')
     const base64File = await fileToBase64(file)
 
     const response = await fetch('/api/analyze-course', {

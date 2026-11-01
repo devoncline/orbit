@@ -3,6 +3,7 @@ import { retainLearningAnchors } from './studyLearningContext.js'
 import { generatedLessonVisual, normalizeLearningPath, normalizeLessonVisual } from './learningPath.js'
 import { normalizeLearningPreferences } from './learningProfile.js'
 import { normalizeLessonContext } from './lessonContext.js'
+import { normalizeCourseMaterials } from './courseMaterials.js'
 import { savedLessonImages } from './lessonImageRequest.js'
 import { savedStudyVisual, savedVisualRecovery } from './studyVisualRequest.js'
 
@@ -60,9 +61,7 @@ function cleanCourse(course) {
     upcomingWork: list(course.upcomingWork).filter((item) => text(item?.title, 200)).map((item) => ({
       title: text(item.title, 200), topic: text(item.topic), type: text(item.type, 40), date: text(item.date, 40),
     })),
-    files: list(course.files).filter((file) => text(file?.name, 200)).map((file) => ({
-      name: text(file.name, 200), type: text(file.type, 100), size: Number.isFinite(file.size) ? Math.max(0, file.size) : 0,
-    })),
+    files: normalizeCourseMaterials(course.files),
     mastery: {
       overall: score(course.mastery?.overall),
       topics: Object.fromEntries(Object.entries(course.mastery?.topics || {}).slice(0, 100)

@@ -1,6 +1,7 @@
 import process from 'node:process'
 import { localDate, normalizeSyllabusItems } from '../src/services/coursePosition.js'
 import { parseWorkDate } from '../src/services/upcomingWork.js'
+import { isSupportedMaterial } from '../src/services/courseMaterials.js'
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
@@ -8,12 +9,15 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { fileName, fileData, currentDate } = req.body
+        const { fileName, fileType, fileData, currentDate } = req.body || {}
 
         if (!fileData) {
             return res.status(400).json({
                 error: 'No course file was provided',
             })
+        }
+        if (!isSupportedMaterial({ name: fileName, type: fileType })) {
+            return res.status(400).json({ error: 'Unsupported course material' })
         }
 
         const response = await fetch('https://api.meta.ai/v1/responses', {
@@ -70,6 +74,7 @@ Use YYYY-MM-DD for full dates, or YYYY-MM for a month with an explicitly support
 Infer a year ONLY from an explicit course/semester year in the document, never from today's date.
 For weeks without a dated term start or ambiguous dates, leave startDate/endDate empty and preserve the original wording in dateText.
 Keep past assignments too; upcomingWork is the complete extracted assignment list, not just future work.
+For each assignment, include its subject in topic when the document supports it. Reuse the exact matching importantTopics or syllabusItems topic label; do not put the full assignment title in topic.
 Use complete YYYY-MM-DD assignment dates only when supported; otherwise preserve the original date text.
 Choose a useful current action using today's date, not automatically the earliest topic. Treat coverage as tentative, not completed work.
 If something is unknown, use an empty string or empty array.

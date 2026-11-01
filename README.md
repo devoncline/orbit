@@ -120,6 +120,10 @@ Learners can add learning material to a space so Orbit has more context about wh
 
 PDF materials can currently be uploaded and analyzed.
 
+Course spaces lead with a recommended topic and a few other starting options, using upcoming work, syllabus topics, and existing learning context. **Start lesson** makes the selected topic explicit; a separate optional field supports any other topic. Preparation for an upcoming assessment does not claim that the class has already covered its unit.
+
+**Course materials** keeps successfully processed filenames visible. **Add material** accepts one or several PDFs and supports adding more later; failures can be retried without losing successful files or existing dates. Filenames, file metadata, and extracted course context persist in this browser. Original PDF bytes are not retained for reopening or downloading. Image materials are not supported yet.
+
 ### Short AI-generated lessons
 
 Study sessions begin with a focused lesson based on the current topic and learning context.
