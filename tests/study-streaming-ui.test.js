@@ -181,7 +181,7 @@ test('conversation installs one visual only after completion and saves its bound
   assert.equal(figure.previousElementSibling.className, 'study-transcript')
   assert.ok(figure.nextElementSibling.classList.contains('study-composer'))
   assert.equal(container.querySelector('.study-path').textContent, pathBefore)
-  assert.equal(container.querySelector('.study-mastery').textContent, 'Mastery · 40%')
+  assert.equal(container.querySelector('.study-progress'), null)
   assert.deepEqual(updates.at(-1).resume.lesson, visualLesson)
   assert.deepEqual(updates.at(-1).resume.conversationVisual, generatedLessonVisual(nativeVisual))
   assert.equal(updates.at(-1).resume.images[0].url, 'https://images.example.test/lesson.webp')
@@ -249,7 +249,7 @@ test('invalid visuals leave conversation text intact, failed streams cannot inst
   assert.ok(container.querySelector('.study-lesson-focus').textContent.includes(nextLesson.concept))
   await click('Talk it through')
   assert.equal(container.querySelector('.lesson-visual'), null)
-  assert.equal(container.querySelector('.study-mastery').textContent, 'Mastery · 40%')
+  assert.equal(container.querySelector('.study-progress'), null)
 })
 
 test('switching to Quiz during visual reply drain cancels the pending visual without changing mastery', async (t) => {
@@ -266,7 +266,7 @@ test('switching to Quiz during visual reply drain cancels the pending visual wit
   await click('Talk it through')
   assert.equal(container.querySelector('.lesson-visual'), null)
   assert.equal(container.querySelector('textarea').value, 'Diagram this differently')
-  assert.equal(container.querySelector('.study-mastery').textContent, 'Mastery · 40%')
+  assert.equal(container.querySelector('.study-progress'), null)
 })
 
 test('Study shows chunks before completion, keeps thinking, then saves one formatted exchange and anchor for resume', async (t) => {
@@ -660,12 +660,14 @@ test('four recent exchanges remain chronological while older discussion collapse
   const recent = [...container.querySelectorAll('.study-transcript .study-message-learner')].map((node) => node.textContent)
   assert.deepEqual(recent, ['Thought 3', 'Thought 4', 'Thought 5', 'Thought 6'])
   const history = container.querySelector('.study-history')
-  assert.equal(history.open, false)
-  assert.match(history.querySelector('summary').textContent, /· 2/)
-  assert.deepEqual([...history.querySelectorAll('.study-message-learner')].map((node) => node.textContent), ['Thought 1', 'Thought 2'])
+  const entries = [...history.querySelectorAll('button')]
+  assert.deepEqual(entries.map(node => node.querySelector('strong').textContent), ['Thought 2', 'Thought 1'])
   assert.doesNotMatch(history.textContent, /Thought [3-6]|Reply [3-6]/)
-  assert.ok(container.querySelector('.study-continuation').compareDocumentPosition(history) & 4)
-  assert.equal(container.querySelectorAll('.study-message-orbit .study-content').length, 6)
+  await act(async () => entries[1].click())
+  assert.equal(container.querySelector('.study-history-review .study-message-learner').textContent, 'Thought 1')
+  assert.equal(container.querySelector('.study-history-review .study-message-orbit').textContent, 'Reply 1')
+  await click('Return to current work')
+  assert.equal(container.querySelector('.study-history-review'), null)
   assert.deepEqual(updates.at(-1).resume.conversation.map((exchange) => exchange.message), ['Thought 5', 'Thought 6'])
   assert.equal(requests.at(-1).body.history.length, 4)
 })

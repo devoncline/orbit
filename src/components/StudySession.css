@@ -114,12 +114,7 @@
 .study-panel-heading { display: flex; justify-content: space-between; gap: 12px; align-items: start; margin-bottom: 16px; }
 .study-panel-heading h4 { margin: 8px 0; }
 .study-history { margin-top: 24px; font-size: 12px; }
-.study-body .study-history summary { overflow-wrap: anywhere; }
 .study-history ol { list-style: none; margin: 12px 0; padding: 0; }
-.study-history-entry { padding-block: 6px; }
-.study-history-entry > summary { gap: 4px 10px; min-height: 44px; }
-.study-history-entry > summary span { color: var(--orbit-text); }
-.study-history-entry[open] > summary { margin-bottom: 14px; }
 .study-history small { color: var(--orbit-muted); }
 .study-position-notice { padding: 12px; margin-bottom: 20px; background: #202a40; border-radius: 8px; font-size: 13px; }
 .study-position-notice button { display: block; margin-top: 8px; }
@@ -133,13 +128,6 @@
 .study-body [role='alert'] { color: #efb3b9; margin-top: 18px; }
 .study-body .study-answer { display: block; width: 100%; padding: 14px 18px; margin: 10px 0; text-align: left; font-size: 15px; line-height: 1.6; border-color: var(--orbit-border); }
 .study-quiz > .orbit-response > .orbit-response-content > p:not(:first-child), .study-adapted > p { margin-top: 24px; }
-.study-progress { grid-area: progress; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px 24px; margin-top: var(--orbit-page-utility-gap); color: #939fb8; font-size: 12px; }
-.study-stages { list-style: none; display: flex; flex-wrap: wrap; gap: 24px; padding: 0; margin: 0; }
-.study-stages li { display: flex; align-items: center; gap: 8px; }
-.study-stages li::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: #4b546a; }
-.study-stages [aria-current] { color: var(--orbit-accent); text-decoration: underline; text-decoration-color: var(--orbit-control-rail); text-underline-offset: 6px; }
-.study-stages [aria-current]::before { background: currentColor; }
-.study-mastery { margin: 0; }
 .study-context, .study-continuation, .study-content { min-width: 0; overflow-wrap: anywhere; }
 .study-content h3 { margin: 20px 0 8px; font-size: 17px; font-weight: 600; }
 .study-content h3:first-child { margin-top: 0; }
@@ -208,6 +196,4 @@
   .study-body textarea { font-size: 16px; }
   .study-activity, .study-adapted { padding-left: 14px; }
   .study-body .study-answer { padding: 12px 14px; font-size: 14px; }
-  .study-progress { font-size: 11px; }
-  .study-stages { gap: 16px; }
 }

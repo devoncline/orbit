@@ -26,9 +26,21 @@ const reload = async () => { await act(async () => root.unmount()); root = creat
 const activeRoom = () => container.querySelector('.study-room:not([hidden])')
 const image = () => activeRoom()?.querySelector('.lesson-generated-image')
 const clickElement = async (element) => { assert.ok(element, 'Expected control'); await act(async () => element.click()) }
-const click = async (label) => clickElement([...activeRoom().querySelectorAll('button')].find((el) => el.textContent === label))
+const click = async (label) => {
+  if (container.querySelector('.study-page')?.hidden) {
+    const saved = read().threads.find(thread => thread.id === read().activeId)
+    await clickElement(container.querySelector('.shell-spaces button'))
+    await clickElement([...container.querySelectorAll('.space-recent button')].find(el => el.textContent.includes(saved.title)))
+  }
+  await clickElement([...activeRoom().querySelectorAll('button')].find((el) => el.textContent === label))
+}
 const navigate = async (label) => clickElement([...container.querySelectorAll('.shell-destinations button')].find((el) => el.textContent === label))
-const switchThread = async (id) => clickElement([...container.querySelectorAll('.thread-list button')].find((el) => el.querySelector('strong').textContent === read().threads.find((entry) => entry.id === id).title))
+const switchThread = async (id) => {
+  await clickElement(container.querySelector('.shell-spaces button'))
+  const sessions = container.querySelector('.space-page .topic-sessions')
+  if (!sessions.querySelector('ul')) await clickElement(sessions.querySelector('button'))
+  await clickElement([...sessions.querySelectorAll('li button')].find(el => el.querySelector('strong').textContent === read().threads.find(entry => entry.id === id).title))
+}
 const read = () => loadLearnerMemory(dom.localStorage)
 const quiet = () => {
   assert.equal(container.querySelector('[data-expression="thinking"]'), null)

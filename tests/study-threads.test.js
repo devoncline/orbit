@@ -1,4 +1,22 @@
 import assert from 'node:assert/strict'
+import { startedTopics, findTopicThread, courseThreads } from '../src/services/studyNavigation.js'
+
+test('topic views group case variants without merging sessions and isolate courses', () => {
+  const threads = [
+    { id: 'old', courseName: 'Biology', topic: 'Cells', updatedAt: '2026-10-01' },
+    { id: 'new', courseName: 'Biology', topic: ' cells ', updatedAt: '2026-11-01' },
+    { id: 'other', courseName: 'Chemistry', topic: 'Cells', updatedAt: '2026-11-02' },
+  ]
+  const before = structuredClone(threads)
+  const groups = startedTopics(threads, 'Biology')
+  assert.equal(groups.length, 1)
+  assert.deepEqual(groups[0].threads.map(thread => thread.id), ['new', 'old'])
+  assert.equal(findTopicThread(threads, 'Biology', 'CELLS').id, 'new')
+  assert.equal(findTopicThread(threads, 'Chemistry', 'Cells').id, 'other')
+  assert.equal(findTopicThread(threads, 'Physics', 'Cells'), undefined)
+  assert.equal(courseThreads(threads, 'Biology').length, 2)
+  assert.deepEqual(threads, before)
+})
 import { test } from 'node:test'
 import { createStudyThread, initialThreads, resolveLearningSpace, selectStudyInteraction, studyThreadMetadata, studyThreadsReducer } from '../src/services/studyThreads.js'
 import { inferCoursePosition } from '../src/services/coursePosition.js'

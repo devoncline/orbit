@@ -183,19 +183,21 @@ export function courseLaunchRecommendations(course, today = localDate()) {
     seen.add(key(topic))
     return true
   })
-  const topic = choices[0]
-  if (!topic) return { primary: null, alternatives: [] }
-  const related = upcoming.filter(item => key(item.topic) === key(topic))
-  const firstDue = related[0]
-  // Prefer an assessment in the same preparation window over a reading task.
-  const assessment = related.find(item => /\b(quiz|test|exam|assessment|midterm|final)\b/i.test(item.title) &&
-    (parseWorkDate(item.date) - parseWorkDate(firstDue.date)) / 86_400_000 <= 7) || firstDue
-  const reason = position.learner.currentTopic === topic ? 'Continue from the starting point you chose.'
-    : assessment ? 'Based on what’s coming up, this is a useful place to start.'
-      : position.currentTopic === topic ? position.reason
-        : weak.includes(topic) ? 'Your practice suggests another look at this topic.'
-          : 'A starting point from your course material.'
-  return { primary: { topic, reason, upcomingWork: assessment || null }, alternatives: choices.slice(1, 4) }
+  if (!choices.length) return { primary: null, alternatives: [], recommendations: [] }
+  const recommendations = choices.slice(0, 4).map(topic => {
+    const related = upcoming.filter(item => key(item.topic) === key(topic))
+    const firstDue = related[0]
+    // Prefer an assessment in the same preparation window over a reading task.
+    const assessment = related.find(item => /\b(quiz|test|exam|assessment|midterm|final)\b/i.test(item.title) &&
+      (parseWorkDate(item.date) - parseWorkDate(firstDue.date)) / 86_400_000 <= 7) || firstDue
+    const reason = position.learner.currentTopic === topic ? 'Continue from the starting point you chose.'
+      : assessment ? 'Based on what’s coming up, this is a useful place to start.'
+        : position.currentTopic === topic ? position.reason
+          : weak.includes(topic) ? 'Your practice suggests another look at this topic.'
+            : 'A starting point from your course material.'
+    return { topic, reason, upcomingWork: assessment || null }
+  })
+  return { primary: recommendations[0], alternatives: choices.slice(1, 4), recommendations }
 }
 
 export function positionAction(course, position = inferCoursePosition(course)) {

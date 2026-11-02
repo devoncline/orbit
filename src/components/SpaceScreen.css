@@ -8,11 +8,9 @@
 .space-recommendation p { color: var(--orbit-muted); max-width: 52ch; margin: 0 0 18px; }
 .space-recommendation time { color: var(--orbit-accent); white-space: nowrap; }
 .space-starting-options { margin-bottom: 30px; }
-.space-starting-options ul { list-style: none; padding: 0; margin: 0; }
-.space-starting-options button { width: 100%; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 12px 2px; border-radius: 0; border-bottom: 1px solid var(--orbit-border); text-align: left; }
-.space-starting-options button > span:first-child { color: var(--orbit-text); min-width: 0; }
-.space-starting-options button > span:last-child { font-size: 12px; flex-shrink: 0; color: var(--orbit-muted); }
-.space-starting-options button > span:last-child span { margin-left: 6px; color: var(--orbit-accent); }
+.space-learning-section { margin-block: 36px; }
+.space-recommendation-empty { margin-block: 8px 30px; }
+.space-learning-section > p, .space-recommendation-empty p { font-size: 14px; }
 .space-page .space-coming-up { margin-top: 30px; }
 .space-coming-up .upcoming-list li { padding-block: 12px; }
 .space-coming-up .upcoming-item { min-width: 0; }
@@ -37,7 +35,5 @@
 @media (max-width: 760px) {
   .space-page { grid-template-areas: 'header' 'content' 'stage'; }
   .space-recommendation { padding-left: 16px; }
-  .space-starting-options button { gap: 8px; }
-  .space-starting-options button > span:last-child { font-size: 11px; }
   .space-page > .orbit-stage { height: 180px; }
 }

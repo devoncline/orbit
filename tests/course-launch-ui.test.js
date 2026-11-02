@@ -82,6 +82,74 @@ function lessonMock(t) {
   return requests
 }
 
+const savedThread = (id, topic, updatedAt, courseName = biologyCourse.name) => ({
+  id, courseName, topic, title: `${topic} lesson ${id}`, requestedTopic: topic, positionKey: 'null',
+  context: 'conversation', summary: `Discussion ${id}`, createdAt: updatedAt, updatedAt,
+  resume: { lesson: { topic, concept: `${topic} concept ${id}`, content: `Saved explanation ${id}` },
+    conversation: [{ message: `Question ${id}`, response: `Answer ${id}` }],
+    learningPath: { step: 2, visited: [{ topic, concept: `Earlier concept ${id}` }] } },
+})
+
+test('class sections render recommendations, recent learning and searchable topics with separate sessions', async t => {
+  const threads = Array.from({ length: 12 }, (_, i) => savedThread(`topic-${i}`, i === 0 ? 'Photosynthesis' : `Topic ${i} ${'long name '.repeat(7)}`, `2026-10-${String(i + 1).padStart(2, '0')}T12:00:00Z`))
+  threads.push(savedThread('latest', 'Photosynthesis', '2026-11-01T12:00:00Z'))
+  seed()
+  saveLearnerMemory({ ...read(), threads, activeId: 'latest' }, dom.localStorage)
+  t.mock.method(globalThis, 'fetch', () => assert.fail('Browsing and resuming must not fetch'))
+  await render(); await openSpace()
+  const page = container.querySelector('.space-page')
+  for (const heading of ['Recommended next', 'Continue learning', 'Your topics']) assert.ok([...page.querySelectorAll('h2')].some(el => el.textContent === heading))
+  assert.equal(page.querySelectorAll('.space-recent .topic-item').length, 3)
+  assert.match(page.querySelector('.space-recent .topic-item').textContent, /Photosynthesis.*Discussion.*Nov 1/)
+  assert.equal(page.querySelectorAll('.topic-browser > .topic-grid > li').length, 8)
+  await click([...page.querySelectorAll('button')].find(el => el.textContent.startsWith('Show more topics')))
+  assert.equal(page.querySelectorAll('.topic-browser > .topic-grid > li').length, 12)
+  await type(page.querySelector('input[type="search"]'), 'photosynthesis')
+  assert.equal(page.querySelectorAll('.topic-browser > .topic-grid > li').length, 1)
+  await click(page.querySelector('.topic-sessions > button'))
+  const sessions = page.querySelectorAll('.topic-sessions li button')
+  assert.equal(sessions.length, 2)
+  await click(sessions[1])
+  assert.equal(read().activeId, 'topic-0')
+  assert.equal(read().threads.length, threads.length)
+  assert.match(container.querySelector('.study-room:not([hidden]) .study-active-panel').textContent, /Saved explanation topic-0/)
+})
+
+test('recommendations and recent work resume existing threads, classes stay isolated, and refresh preserves history', async t => {
+  const otherCourse = { ...biologyCourse, name: 'Another class' }
+  seed()
+  saveLearnerMemory({ ...read(), courses: [biologyCourse, otherCourse], threads: [savedThread('bio', 'Photosynthesis', '2026-11-01T12:00:00Z'), savedThread('other', 'Photosynthesis', '2026-11-01T13:00:00Z', otherCourse.name)], activeId: 'bio' }, dom.localStorage)
+  t.mock.method(globalThis, 'fetch', () => assert.fail('Existing topics must resume without generation'))
+  await render(); await openSpace()
+  assert.equal(container.querySelectorAll('.space-page .space-recent .topic-item').length, 1)
+  await click(container.querySelector('.space-recommendation button'))
+  assert.equal(read().activeId, 'bio')
+  assert.equal(read().threads.length, 2)
+  await click([...container.querySelectorAll('.shell-spaces button')].find(el => el.textContent === otherCourse.name))
+  await click(container.querySelector('.space-recent button'))
+  assert.equal(read().activeId, 'other')
+  await reload(); await openSpace()
+  await click(container.querySelector('.space-recent button'))
+  const room = container.querySelector('.study-room:not([hidden])')
+  assert.equal(read().activeId, 'bio')
+  await click([...room.querySelectorAll('.study-history button')].find(el => el.textContent.includes('Earlier concept bio')))
+  assert.match(room.querySelector('.study-history-review').textContent, /Only this lesson summary was saved.*Earlier concept bio/)
+  await click([...room.querySelectorAll('button')].find(el => el.textContent === 'Return to current work'))
+  await click([...room.querySelectorAll('.study-thread-history button')].find(el => el.textContent.startsWith('Discussion')))
+  assert.match(room.querySelector('.study-transcript').textContent, /Question bio.*Answer bio/)
+  assert.equal(read().threads.length, 2)
+  await click(button('Learn'))
+  assert.match(container.querySelector('#learn-heading').textContent, /What do you want to learn/)
+})
+
+test('empty and single-topic classes provide complete sections without invented progress', async t => {
+  seed({ name: 'Biology 101', type: 'class', files: [] })
+  t.mock.method(globalThis, 'fetch', () => assert.fail('Empty classes must not fetch'))
+  await render(); await openSpace()
+  assert.match(container.querySelector('.space-page').textContent, /Nothing to pick up yet.*Your topics.*after you start learning/)
+  assert.equal(container.querySelectorAll('.space-page .topic-item').length, 0)
+})
+
 test('no material opens the optional manual flow; blank and whitespace input are disabled without native validation', async t => {
   seed({ name: 'Biology 101', type: 'class', files: [] })
   const requests = lessonMock(t)

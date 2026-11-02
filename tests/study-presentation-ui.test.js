@@ -114,43 +114,40 @@ test('an explicit start keeps the heading compact during generation and accepts 
   assert.equal(container.querySelector('.orbit-signal'), null)
 })
 
-test('thread disclosure dismisses on Escape, outside pointer and focus exit, and returns focus after switching', async () => {
+test('desktop history rail collapses and resumes the selected session', async (t) => {
+  t.mock.method(dom, 'matchMedia', () => ({ matches: false, addEventListener() {}, removeEventListener() {} }))
   const switches = []
-  const threads = ['one', 'two'].map(id => ({ id, title: `Thread ${id}`, courseName: course.name, context: 'lesson', summary: 'A saved lesson.', createdAt: '2026-10-30T10:00:00Z' }))
+  const threads = ['one', 'two'].map(id => ({ id, topic: id, title: id, courseName: course.name, createdAt: '2026-10-30T10:00:00Z' }))
   await act(async () => root.render(createElement(StudyThreads, { courses: [course], threads, activeId: 'one', onSwitch: id => switches.push(id) })))
-  const selector = container.querySelector('details')
-  const summary = selector.querySelector('summary')
-  assert.equal(selector.open, false)
-  assert.match(summary.textContent, /Thread one/)
-  assert.equal(selector.querySelector('[aria-current] .thread-current').textContent, 'Current')
-
-  selector.open = true
-  selector.querySelector('button').focus()
-  await act(async () => selector.dispatchEvent(new dom.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
-  assert.equal(selector.open, false)
-  assert.equal(dom.document.activeElement, summary)
-  assert.deepEqual(switches, [])
-
-  selector.open = true
-  await act(async () => dom.document.body.dispatchEvent(new dom.PointerEvent('pointerdown', { bubbles: true })))
-  assert.equal(selector.open, false)
-
-  selector.open = true
-  await act(async () => container.querySelector('.study-thread-new').focus())
-  assert.equal(selector.open, false)
-
-  selector.open = true
-  await act(async () => selector.querySelector('button').click())
+  const rail = container.querySelector('.study-nav-rail')
+  assert.equal(rail.hidden, false)
+  await act(async () => container.querySelector('[aria-label="Collapse topics and history"]').click())
+  assert.equal(rail.hidden, true)
+  await act(async () => container.querySelector('.study-nav-toggle').click())
+  assert.equal(rail.hidden, false)
+  await act(async () => [...rail.querySelectorAll('.topic-item-open')].find(el => el.textContent.startsWith('two')).click())
   assert.deepEqual(switches, ['two'])
-  assert.equal(selector.open, false)
-  assert.equal(dom.document.activeElement, summary)
+})
+
+test('mobile history uses a labelled modal drawer with close and focus return', async (t) => {
+  t.mock.method(dom, 'matchMedia', () => ({ matches: true, addEventListener() {}, removeEventListener() {} }))
+  await act(async () => root.render(createElement(StudyThreads, { courses: [course] })))
+  const trigger = container.querySelector('.study-nav-toggle')
+  const drawer = container.querySelector('dialog')
+  assert.equal(trigger.getAttribute('aria-haspopup'), 'dialog')
+  await act(async () => trigger.click())
+  assert.equal(drawer.open, true)
+  assert.equal(trigger.getAttribute('aria-expanded'), 'true')
+  await act(async () => drawer.querySelector('[aria-label="Close topics and history"]').click())
+  assert.equal(drawer.open, false)
+  assert.equal(dom.document.activeElement, trigger)
 })
 
 test('New thread keeps its labelled disclosure and existing course/topic submission', async () => {
   const creations = []
   await act(async () => root.render(createElement(StudyThreads, { courses: [course], threads: [], onCreate: (...args) => creations.push(args) })))
   const trigger = container.querySelector('.study-thread-new')
-  assert.equal(trigger.textContent, 'New thread')
+  assert.match(trigger.textContent, /New topic/)
   assert.equal(trigger.getAttribute('aria-expanded'), 'false')
   await act(async () => trigger.click())
   const form = container.querySelector('form')
@@ -360,7 +357,7 @@ test('quiz recovery is local, follow-up success returns to check, and existing s
   await click('Quiz me')
   assert.equal(mode(), 'check')
   assert.equal(container.querySelector('.study-question-number').textContent, 'Question 1')
-  assert.equal(container.querySelector('.study-stages [aria-current]').textContent, 'Practice · Question 1')
+  assert.equal(container.querySelector('.study-stages'), null)
   await act(async () => { firstQuestion = false; completeQuestion(json(question)); await setImmediate() })
   await click('A prop')
   assert.equal(mode(), 'recover')
@@ -398,6 +395,29 @@ test('a successful continuation clears recovery while failure retains the curren
   assert.equal(button('That helps'), undefined)
   assert.equal(container.querySelector('.study-subject').textContent, 'ReactLesson 2')
   assert.ok(container.querySelector('.study-history'))
+})
+
+test('previous lessons and activities reopen without requests, progress changes, or losing current work', async t => {
+  const calls = t.mock.method(globalThis, 'fetch', async url => url === '/api/study-activity' ? json(activity)
+    : json({ ...lesson, concept: 'Responding to events', content: 'This is the next lesson.' }))
+  const updates = []
+  await mount(t, { onThreadUpdate: (_id, value) => updates.push(value) })
+  await click('Let me try it')
+  await type('My retained activity response.')
+  await click('Continue to next lesson')
+  const before = JSON.stringify(updates)
+  const count = calls.mock.callCount()
+  const entries = [...container.querySelectorAll('.study-history button')]
+  assert.equal(entries.length, 2)
+  await act(async () => entries.find(el => el.textContent.endsWith('Activity')).click())
+  assert.match(container.querySelector('.study-history-review').textContent, /My retained activity response/)
+  assert.match(container.querySelector('.study-active-panel').textContent, /This is the next lesson/)
+  await act(async () => entries.find(el => el.textContent.endsWith('Lesson')).click())
+  assert.ok(container.querySelector('.study-history-review').textContent.includes(lesson.content))
+  await click('Return to current work')
+  assert.equal(container.querySelector('.study-history-review'), null)
+  assert.equal(calls.mock.callCount(), count)
+  assert.equal(JSON.stringify(updates), before)
 })
 
 test('conversation recovery keeps earlier discussion accessible and releases recovery after a new understanding signal', async (t) => {

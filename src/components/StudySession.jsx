@@ -30,6 +30,8 @@ import { createStreamDisplay } from '../services/streamDisplay'
 import useResultReveal from './useResultReveal'
 import StudyContent from './StudyContent'
 import StudyLessonHeader from './StudyLessonHeader'
+import StudyThreads from './StudyThreads'
+import { studyContextLabels } from '../services/studyNavigation'
 import LessonVisual from './LessonVisual'
 import useStudyPresentation from './useStudyPresentation'
 import { logVisualRouting } from '../services/visualDiagnostics'
@@ -44,6 +46,7 @@ function loadLessonVisual(cache, courseName, lesson, visual = lesson?.visual) {
 
 export default function StudySession({
     course,
+    navigation,
     learningProfile,
     threadId,
     initialThread,
@@ -75,6 +78,8 @@ export default function StudySession({
     const [followUpResult, setFollowUpResult] = useState('')
     const [followUpAnswer, setFollowUpAnswer] = useState(null)
     const [history, setHistory] = useState([])
+    const [review, setReview] = useState(null)
+    const reviewPanel = useRef(null)
     const [positionChanged, setPositionChanged] = useState(false)
     const [evaluationError, setEvaluationError] = useState('')
     const [selectedAnswer, setSelectedAnswer] = useState(null)
@@ -152,6 +157,8 @@ export default function StudySession({
     const lastPublished = useRef('')
     const lastLearningPublished = useRef('')
     const companion = <OrbitStage thinking={busy} expression={active && activeInteraction === 'quiz' && celebrating && (answerResult === 'correct' || followUpResult === 'correct') ? 'celebrating' : 'rest'} thinkingContext={studyThinkingContext({ loadingLesson, loadingConversation, loadingActivity, loadingQuestion, loadingEvaluation })} />
+    const earlierLessons = learningPath.visited.filter(item => !history.some(entry => entry.type === 'lesson' && entry.title === item.concept.slice(0, 80)))
+    useEffect(() => { if (review) reviewPanel.current?.focus({ preventScroll: true }) }, [review])
 
     useEffect(() => {
         if (!import.meta.env.DEV || !active || !lesson || !['lesson', 'conversation'].includes(activeInteraction)) return
@@ -659,11 +666,33 @@ export default function StudySession({
     }
 
     return (
+        <div className="study-workspace">
+        <StudyThreads {...(navigation || { courses: [course], threads: initialThread ? [initialThread] : [], activeId: threadId })}>
+          <section className="study-thread-history" aria-label="Work in this thread">
+            <h3>In this thread</h3>
+            <ul className="study-history-list">
+              <li><button className="orbit-text-button" disabled={busy} aria-current={!review && activeInteraction === 'lesson' ? 'true' : undefined} onClick={() => { setReview(null); openInteraction('lesson') }}><strong>{lesson?.concept || 'Current lesson'}</strong><small>Current lesson</small></button></li>
+              {[['conversation', conversation.length && 'Discussion'], ['activity', activity?.title], ['quiz', studyQuestion && `Question ${questionNumber || 1}`], ['example', example && 'Example']].filter(([, title]) => title).map(([interaction, title]) => <li key={interaction}><button className="orbit-text-button" disabled={busy} aria-current={!review && activeInteraction === interaction ? 'true' : undefined} onClick={() => { setReview(null); openInteraction(interaction) }}><strong>{title}</strong><small>{studyContextLabels[interaction]} · Current lesson</small></button></li>)}
+            </ul>
+            {(history.length > 0 || earlierLessons.length > 0) && <div className="study-history"><h3>Previous work</h3><ul className="study-history-list">
+              {[...history].reverse().map((entry, index) => <li key={`history-${index}`}><button className="orbit-text-button" aria-current={review === entry ? 'true' : undefined} onClick={() => { setReview(entry) }}><strong>{entry.title}</strong><small>{studyContextLabels[entry.type] || 'Lesson'}</small></button></li>)}
+              {[...earlierLessons].reverse().map((entry, index) => <li key={`outline-${index}`}><button className="orbit-text-button" onClick={() => { setReview({ type: 'lesson', title: entry.concept, content: `You visited ${entry.concept} in ${entry.topic}.${entry.understood ? ' You said you felt ready to continue.' : ''}`, summaryOnly: true }) }}><strong>{entry.concept}</strong><small>Lesson · Saved summary</small></button></li>)}
+            </ul></div>}
+          </section>
+        </StudyThreads>
         <section className={`study-session study-mode-${presentation.mode}${presentation.splitVisual ? ' study-session-illustrated' : ''}${presentation.choiceDensity === 'low' ? ' study-choice-focused' : ''}`}
             data-presentation-mode={presentation.mode} data-presentation-reason={presentation.reason} data-choice-density={presentation.choiceDensity}>
             <StudyLessonHeader course={course} lesson={lesson} step={learningPath.step} path={pathView} today={today} />
             {!inlineCompanion && companion}
             <div className="study-body">
+            {review && <article className="study-history-review" tabIndex={-1} ref={reviewPanel} aria-label="Previous work">
+              <p>{studyContextLabels[review.type] || 'Lesson'} · Previous work</p><h2>{review.title}</h2>
+              {review.summaryOnly && <p className="orbit-muted">Only this lesson summary was saved. Your current lesson is still available below.</p>}
+              {review.type === 'conversation' ? <div className="study-exchange"><div className="study-message study-message-learner" aria-label="Your message"><p>{review.content}</p></div><div className="study-message study-message-orbit" aria-label="Orbit reply"><StudyContent content={review.response} /></div></div>
+                : <><StudyContent content={review.content} />{review.response && <StudyContent content={review.response} />}</>}
+              <button onClick={() => { setReview(null); queueMicrotask(() => panel.current?.focus({ preventScroll: true })) }}>Return to current work</button>
+            </article>}
+            <div hidden={Boolean(review)}>
             <section className="study-active-panel" data-study-interaction={activeInteraction} ref={panel} tabIndex={-1} aria-label="Current study interaction">
             {resumeSummary && <p className="orbit-muted study-resume-note" role="status">{resumeSummary}</p>}
             {positionChanged && <div className="study-position-notice" role="status">Your course starting point is updated. Continue when you are ready to use it.
@@ -956,26 +985,9 @@ export default function StudySession({
                 </div>
                 {progressionError && <p role="alert">{progressionError}</p>}
             </nav>}
-            {history.length > 0 && <details className="study-history">
-                <summary>Earlier in this thread <span>· {history.length}</span></summary>
-                <ol>{history.map((entry, index) => <li key={index}>
-                    <details className="study-history-entry">
-                        <summary><small>{entry.type === 'conversation' ? 'Discussion' : entry.type}</small><span>{entry.title}</span></summary>
-                        {entry.type === 'conversation' ? <div className="study-exchange">
-                            <div className="study-message study-message-learner" aria-label="Your message"><p>{entry.content}</p></div>
-                            <div className="study-message study-message-orbit" aria-label="Orbit reply"><StudyContent content={entry.response} /></div>
-                        </div> : <><StudyContent content={entry.content} />{entry.response && <StudyContent content={entry.response} />}</>}
-                    </details>
-                </li>)}</ol>
-            </details>}
             </div>
-            <footer className="study-progress">
-                <ol className="study-stages" aria-label="Session progress">
-                    <li aria-current={stage === 'learn' ? 'step' : undefined}>Learn & try</li>
-                    <li aria-current={stage === 'quiz' ? 'step' : undefined}>Practice{stage === 'quiz' ? ` · Question ${questionNumber || 1}` : ''}</li>
-                </ol>
-                <p className="study-mastery">Mastery · {mastery}%</p>
-            </footer>
+            </div>
         </section>
+        </div>
     )
 }

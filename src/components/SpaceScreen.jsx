@@ -7,9 +7,13 @@ import CoursePosition from './CoursePosition'
 import { courseLaunchRecommendations } from '../services/coursePosition'
 import { parseWorkDate } from '../services/upcomingWork'
 import './SpaceScreen.css'
+import TopicItem from './TopicItem'
+import TopicBrowser from './TopicBrowser'
+import { courseThreads, findTopicThread, threadDate, threadDescription, threadTopic } from '../services/studyNavigation'
 
-export default function SpaceScreen({ course, onStartLesson, onAddFile, onAnalyzeFile, onRemoveFile, hasFile, today, onPositionChange }) {
-  const { primary, alternatives } = courseLaunchRecommendations(course, today)
+export default function SpaceScreen({ course, threads = [], onOpenThread, onStartLesson, onAddFile, onAnalyzeFile, onRemoveFile, hasFile, today, onPositionChange }) {
+  const { primary, recommendations } = courseLaunchRecommendations(course, today)
+  const recent = courseThreads(threads, course.name).slice(0, 3)
   const [topic, setTopic] = useState('')
   const id = useId()
   const validTopic = topic.trim().length > 0 && topic.trim().length <= 120
@@ -21,7 +25,7 @@ export default function SpaceScreen({ course, onStartLesson, onAddFile, onAnalyz
     }}>
       <label htmlFor={`${id}-topic`}>What do you want to work on?</label>
       <input id={`${id}-topic`} value={topic} maxLength={120} onChange={event => setTopic(event.target.value)} placeholder="Enter a topic…" />
-      <button className={`orbit-button${primary ? '' : ' orbit-button-primary'}`} type="submit" disabled={!validTopic}>Start lesson</button>
+      <button className={`orbit-button${primary ? '' : ' orbit-button-primary'}`} type="submit" disabled={!validTopic}>{findTopicThread(threads, course.name, topic) ? 'Continue topic' : 'Start lesson'}</button>
     </form>
   </section>
   return (
@@ -34,15 +38,23 @@ export default function SpaceScreen({ course, onStartLesson, onAddFile, onAnalyz
           <h2 id={`${id}-recommended`}>Recommended next</h2>
           <h3>{primary.topic}</h3>
           <p>{primary.upcomingWork ? <>Prepare for {primary.upcomingWork.title} on <time dateTime={primary.upcomingWork.date}>{parseWorkDate(primary.upcomingWork.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</time>.</> : primary.reason}</p>
-          <button className="orbit-button orbit-button-primary" onClick={() => onStartLesson(course, primary.topic)}>Start lesson</button>
+          <button className="orbit-button orbit-button-primary" onClick={() => onStartLesson(course, primary.topic)}>{findTopicThread(threads, course.name, primary.topic) ? 'Continue topic' : 'Start lesson'}</button>
         </section>
-        {alternatives.length > 0 && <section className="space-starting-options" aria-labelledby={`${id}-options`}>
-          <h2 id={`${id}-options`}>Other useful topics</h2>
-          <ul>{alternatives.map(option => <li key={option}><button className="orbit-text-button" aria-label={`Start lesson: ${option}`} onClick={() => onStartLesson(course, option)}><span>{option}</span><span aria-hidden="true">Start lesson <span>→</span></span></button></li>)}</ul>
+        {recommendations.length > 1 && <section className="space-starting-options" aria-label="More recommended topics">
+          <ul className="topic-grid">{recommendations.slice(1).map(option => <li key={option.topic}><TopicItem topic={option.topic} detail={option.upcomingWork ? `Prepare for ${option.upcomingWork.title}.` : option.reason} action={findTopicThread(threads, course.name, option.topic) ? 'Continue' : 'Explore'} onClick={() => onStartLesson(course, option.topic)} /></li>)}</ul>
         </section>}
-      </> : manual}
+      </> : <section className="space-recommendation-empty"><h2>Recommended next</h2><p className="orbit-muted">Choose a topic below, or add a syllabus to find a useful starting point.</p></section>}
+      <section className="space-learning-section" aria-labelledby={`${id}-continue`}>
+        <h2 id={`${id}-continue`}>Continue learning</h2>
+        {recent.length ? <ul className="topic-grid space-recent">{recent.map(thread => <li key={thread.id}><TopicItem topic={threadTopic(thread)} detail={threadDescription(thread)} meta={`${thread.title && thread.title !== threadTopic(thread) ? `${thread.title} · ` : ''}${threadDate(thread)}`} onClick={() => onOpenThread(thread.id)} /></li>)}</ul>
+          : <p className="orbit-muted">Nothing to pick up yet. Start a lesson when you’re ready.</p>}
+      </section>
+      <section className="space-learning-section" aria-labelledby={`${id}-topics`}>
+        <h2 id={`${id}-topics`}>Your topics</h2>
+        <TopicBrowser threads={threads} courseName={course.name} onOpen={onOpenThread} />
+      </section>
+      {manual}
       <section className="calendar-group space-coming-up"><h2>Coming up in this space</h2><UpcomingWork courses={[course]} preview today={today} /></section>
-      {primary && manual}
       <AddCourseFile files={course.files} onAddFile={(file, kind) => onAddFile(file, course.name, kind)} onAnalyzeFile={file => onAnalyzeFile(file, course.name)} onRemoveFile={onRemoveFile && (file => onRemoveFile(file, course.name))} hasFile={hasFile} />
       <details className="space-details"><summary>Learning details</summary><p>Current mastery: {course.mastery?.overall ?? 0}%</p>
         <p className="orbit-muted">An estimate from quiz answers and applied activities. Topics with more practice carry more weight in the course average. Reading and “I understand” do not raise it. Older saved estimates are kept.</p>

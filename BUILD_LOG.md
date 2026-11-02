@@ -880,6 +880,13 @@ The targeted effect trace before implementation was:
 
 ---
 
+## Learn and topic navigation — November 1, 2026
+
+- Added class-level recommendations with reasons, recent learning, and searchable started topics using existing threads and course inference. Same-topic sessions remain separate and selectable; recommendation/manual launches reuse an existing matching session.
+- Replaced the Study thread dropdown and nested earlier-work disclosures with a collapsible desktop rail, mobile dialog, and read-only previous-work viewer. Existing bounded persistence remains unchanged; saved lesson outlines are labelled as summaries, with full activity/history available during the current visit. Removed the detached progress strip and added an optional presentation slot for future topic badges.
+- Added integration coverage for isolation, resume/deduplication, many/long topics, history, drawer behavior and the badge slot, plus an isolated responsive fixture at `/tests/fixtures/navigation-review.html`. Browser review remains pending: automatic approval rejected Chrome access. No live provider or physical-device testing is claimed. No database changes, migrations, dependencies, deployment or commit were required.
+- Validation: all 439 tests passed, including the existing provider-mocked client/API tests; lint, production build and diff checks passed. Updated the obsolete dropdown/footer assertions and the stale course-position wording assertion.
+
 # Next
 
 Feature development is frozen for submission. Review and deploy the hardening and control-polish changes, rehearse the production recording path in SUBMISSION_CHECKLIST.md, inspect the images used in the take, and record Orbit's adaptive teaching loop. Broader product expansion remains deferred until after the hackathon.

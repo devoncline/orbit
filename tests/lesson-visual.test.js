@@ -137,7 +137,7 @@ test('StudySession places context and path before the lesson, visuals before too
   assert.ok(html.indexOf('class="study-tools"') < html.indexOf('study-recommendation'))
   assert.equal(body.querySelectorAll('.study-primary-action').length, 1)
   assert.equal(body.querySelector('.study-primary-action').textContent, recommendStudyAction({ lesson }).label)
-  assert.equal(body.querySelector('.study-mastery').textContent, 'Mastery · 40%')
+  assert.equal(body.querySelector('.study-progress'), null)
   assert.match(body.querySelector('.study-path-next').textContent, /Responding to a click/)
 })
 

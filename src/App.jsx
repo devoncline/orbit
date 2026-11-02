@@ -6,7 +6,7 @@ import AppShell from './components/AppShell'
 import SpaceScreen from './components/SpaceScreen'
 import UpcomingWork from './components/UpcomingWork'
 import OrbitStage from './components/OrbitStage'
-import StudyThreads from './components/StudyThreads'
+import { findTopicThread } from './services/studyNavigation'
 import LearningPreferences from './components/LearningPreferences'
 import { normalizeLearningPreferences } from './services/learningProfile'
 import { applyPositionOverride, inferCoursePosition, localDate, mergeCourseAnalysis, positionAction } from './services/coursePosition'
@@ -164,7 +164,7 @@ export default function App() {
   }
 
   function navigate(next) {
-    setDestination(next === 'learn' && sessionStarted ? 'study' : next)
+    setDestination(next)
   }
 
   function selectSpace(name) {
@@ -202,6 +202,13 @@ export default function App() {
     // Intent belongs to this click only; learner-memory's projection never saves it.
     dispatchThreads({ type: 'create', thread: { ...createStudyThread(course, topic), startRequested: true } })
     setDestination('study')
+  }
+
+  function openTopic(course, topic) {
+    if (!topic?.trim()) { startSession(course); return }
+    const previous = findTopicThread(threads, course.name, topic)
+    if (previous) switchThread(previous.id)
+    else newThread(course, topic)
   }
 
   function switchThread(id) {
@@ -260,7 +267,7 @@ export default function App() {
         />
       )}
       {destination === 'learn' && (
-        <LearnScreen courses={courses} recommendedCourse={recommendedCourse} onStart={startLearning} />
+        <LearnScreen courses={courses} recommendedCourse={recommendedCourse} onStart={startLearning} onSelectSpace={selectSpace} />
       )}
       {destination === 'new' && (
         <section className="orbit-page orbit-page-layout new-space-page">
@@ -276,7 +283,7 @@ export default function App() {
         </section>
       )}
       {destination === 'space' && selectedCourse && (
-        <SpaceScreen key={selectedCourse.name} course={selectedCourse} today={today} onStartLesson={newThread} onPositionChange={(update) => updatePosition(selectedCourse.name, update)} onAddFile={addCourseFile} onAnalyzeFile={analyzeMaterial} onRemoveFile={removeMaterial} hasFile={file => sessionFiles.current.has(materialKey(selectedCourse.name, file))} />
+        <SpaceScreen key={selectedCourse.name} course={selectedCourse} threads={threads} onOpenThread={switchThread} today={today} onStartLesson={openTopic} onPositionChange={(update) => updatePosition(selectedCourse.name, update)} onAddFile={addCourseFile} onAnalyzeFile={analyzeMaterial} onRemoveFile={removeMaterial} hasFile={file => sessionFiles.current.has(materialKey(selectedCourse.name, file))} />
       )}
       {destination === 'calendar' && (
         <section className="orbit-page orbit-page-layout calendar-page">
@@ -331,7 +338,6 @@ export default function App() {
       )}
       {sessionStarted && sessionCourse && (
         <div className="orbit-page study-page" hidden={destination !== 'study'}>
-          <StudyThreads threads={threads} activeId={activeId} courses={courses} onSwitch={switchThread} onCreate={newThread} />
           {threads.map((thread) => {
             const originalCourse = courses.find((course) => course.name === thread.courseName)
             // A thread goal seeds its lesson; a later course correction takes precedence.
@@ -340,6 +346,7 @@ export default function App() {
             return <div className="study-room" key={thread.id} hidden={thread.id !== activeId}>
               <StudySession
                 course={course}
+                navigation={{ threads, activeId, courses, onSwitch: switchThread, onCreate: openTopic, onSelectSpace: selectSpace }}
                 learningProfile={learningPreferences.profile}
                 threadId={thread.id}
                 initialThread={thread}

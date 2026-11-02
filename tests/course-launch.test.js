@@ -42,6 +42,13 @@ test('explicit corrections and exclusions win; mastery informs choices without f
   assert.ok(courseLaunchRecommendations({ importantTopics: ['One', 'Two', 'Three', 'Four', 'Five', 'One'] }, launchDate).alternatives.length <= 3)
 })
 
+test('every recommended topic has a reason from the existing course priorities', () => {
+  const result = courseLaunchRecommendations(biologyCourse, launchDate)
+  assert.deepEqual(result.recommendations.map(item => item.topic), [result.primary.topic, ...result.alternatives])
+  assert.ok(result.recommendations.every(item => typeof item.reason === 'string' && item.reason.length > 0))
+  assert.equal(result.primary.topic, 'Photosynthesis')
+})
+
 test('repeated and partial material analyses preserve known syllabus fields and do not duplicate deadlines', () => {
   const notes = { syllabusItems: [{ topic: 'Photosynthesis', unit: 'Unit 3', startDate: '', endDate: '' }], upcomingWork: [
     { title: 'Photosynthesis Quiz', type: 'assessment', topic: '', date: '2026-11-05' },

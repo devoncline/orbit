@@ -4,6 +4,7 @@
 
 ### Improvements
 
+- Learn now opens your spaces, with Recommended next, Continue learning, and searchable Your topics in each class. Topic choices return to existing work, with separate saved sessions kept accessible. Study adds a collapsible topic/history rail and a mobile drawer for revisiting lessons, discussions, and activities. The detached progress strip is removed; mastery details remain in the class.
 - Fixed a deployment configuration mismatch that could leave public demo AI actions temporarily unavailable.
 - Mastery now builds gradually from quiz answers, demonstrated activity understanding, and recovery after mistakes. Course estimates reflect topic practice; repeated credit for the same recent task is prevented. Reading, examples and “I understand” remain separate from mastery, and saved progress stays compatible.
 - Course materials now accept multiple PDFs and JPG/JPEG, PNG and WebP photo attachments, with filename/type lists, later additions, removal, and mobile photo/camera controls. PDF reading is explicit: syllabi can add dates, while ordinary resources provide learning context without calendar entries. Photos currently save names only and clearly state that image reading is unavailable; HEIC/HEIF shows conversion guidance.
@@ -50,6 +51,13 @@
 - Study answers now update mastery for the question's topic, with course mastery derived from topic scores. Questions without a topic use the current lesson topic or course name.
 
 ### Manual test checklist
+
+Learn and topic navigation (automated behavior checks completed; browser/device review pending):
+
+1. Run `npm.cmd run dev`, then open `/tests/fixtures/navigation-review.html`. This isolated fixture uses no learner storage or provider calls. Compare 1440, 768, 390, and 320px using the width controls. Viewport and document widths should match, drawer overflow should be false, and runtime errors/requests should remain zero while browsing.
+2. Try 0, 1, and 15 topics, long names, search, Show more topics, both classes, and the optional mastery-slot preview. Open a recent topic, its saved lesson summary and discussion, then return to current work.
+3. On desktop, collapse/reopen the history rail. On tablet/mobile, open Topics & history, use Tab/Shift+Tab, close with Escape and the close button, and verify focus returns to the trigger. Select previous work and another saved session. Check full mascot visibility, readable wrapping, scrolling and no horizontal overflow; repeat with reduced motion and a physical phone.
+4. In the full app, open a class, resume a recommendation already started, and confirm it reuses the session. Start a different topic, switch classes and return, then refresh. Saved lesson summaries and recent discussion should remain; full earlier activities/exchanges are limited to the current visit. Confirm mastery is unchanged by browsing.
 
 Current submission evidence and remaining checks are recorded in [SUBMISSION_CHECKLIST.md](SUBMISSION_CHECKLIST.md). The sequences below remain reusable regression checklists, not claims that every step was manually completed.
 

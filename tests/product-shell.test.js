@@ -18,6 +18,7 @@ let App
 let StudySession
 let StudyContent
 let OrbitStage
+let TopicItem
 
 before(async () => {
   server = await createServer({ server: { middlewareMode: true, watch: null }, appType: 'custom' })
@@ -30,6 +31,7 @@ before(async () => {
   StudySession = (await server.ssrLoadModule('/src/components/StudySession.jsx')).default
   StudyContent = (await server.ssrLoadModule('/src/components/StudyContent.jsx')).default
   OrbitStage = (await server.ssrLoadModule('/src/components/OrbitStage.jsx')).default
+  TopicItem = (await server.ssrLoadModule('/src/components/TopicItem.jsx')).default
 })
 after(async () => { await server?.close() })
 
@@ -39,6 +41,18 @@ const courses = Array.from({ length: 7 }, (_, index) => ({
   mastery: { overall: 40, topics: {} },
 }))
 const renderHome = (spaces) => renderToStaticMarkup(createElement(HomeScreen, { courses: spaces, recommendedCourse: spaces[0] }))
+
+test('topic tiles support an optional mastery presentation without an empty placeholder or changing their action', () => {
+  const topic = 'A very long topic name '.repeat(5)
+  const plain = renderToStaticMarkup(createElement(TopicItem, { topic, detail: 'Lesson', onClick() {} }))
+  const ranked = renderToStaticMarkup(createElement(TopicItem, { topic, detail: 'Lesson', onClick() {}, mastery: createElement('span', null, 'Future rank') }))
+  assert.ok(plain.includes(topic))
+  assert.doesNotMatch(plain, /topic-item-mastery/)
+  assert.match(ranked, /topic-item-mastery.*Future rank/)
+  assert.equal((ranked.match(/<button/g) || []).length, 1)
+  assert.match(plain, /topic-item-action/)
+  assert.match(ranked, /topic-item-action/)
+})
 
 test('thinking retains the existing asset, bounds decorative fragments, and exposes only one loading status', () => {
   const html = renderToStaticMarkup(createElement(OrbitStage, { thinking: true, thinkingContext: 'example' }))
@@ -185,7 +199,7 @@ test('a fresh App render hydrates saved spaces, mastery, recommendation and thre
     assert.match(reloaded, /Explore Props/)
     assert.match(reloaded, /Return to React/)
     assert.match(reloaded, /Last time: Practiced passing inputs/)
-    assert.match(reloaded, /Mastery · 70%/)
+    assert.equal(JSON.parse(saved).spaces[0].mastery.overall, 70)
     assert.match(reloaded, /A parent passes a name to a child/)
     assert.doesNotMatch(reloaded, /Orbit is preparing a short lesson|What do you want<br/)
   } finally {
@@ -233,7 +247,7 @@ test('guided Study exposes course, lesson, readiness and continuation while the 
   assert.equal((html.match(/class="study-primary-action"/g) || []).length, 1)
   assert.ok(html.indexOf('study-path') < html.indexOf('study-active-panel'))
   assert.ok(html.indexOf('study-recommendation') > html.indexOf('A useful lens'))
-  assert.match(html, /Mastery · 40%/)
+  assert.doesNotMatch(html, /study-progress|study-mastery/)
   assert.match(html, /Let me try it/)
   assert.match(html, /Talk it through/)
   assert.match(html, /Quiz me/)
@@ -248,7 +262,7 @@ test('resuming after course evidence changes preserves the current lesson but hi
     course: { ...course, importantTopics: ['Memory'] }, mastery: 40, initialThread: { resume: { lesson, learningPath } },
   }))
   assert.match(html, /Explaining behavior/)
-  assert.match(html, /latest course context/)
+  assert.match(html, /updated starting point/)
   assert.doesNotMatch(html, /STALE_SUGGESTION/)
 })
 
@@ -302,19 +316,19 @@ test('Home uses current syllabus timing ahead of an outdated recommendation and 
   assert.equal(html.match(/This part of your syllabus lines up with today\./g).length, 1)
 })
 
-test('thread navigation starts collapsed and identifies the current objective without transcript content', () => {
+test('thread navigation shows current course topics in a persistent rail', () => {
   const html = renderToStaticMarkup(createElement(StudyThreads, {
     courses, activeId: 'second', threads: [
       { id: 'first', title: 'Props basics', courseName: courses[0].name, context: 'conversation', summary: 'A parent passes data.', createdAt: '2026-10-27T10:00:00Z' },
       { id: 'second', title: 'Events', courseName: courses[0].name, context: 'activity', summary: 'Trying a button.', createdAt: '2026-10-27T10:05:00Z' },
     ],
   }))
-  assert.match(html, /<details class="study-thread-selector"><summary><span class="study-thread-context"><span>Study threads/)
+  assert.match(html, /class="study-nav-rail"/)
   assert.doesNotMatch(html, /<details open|<textarea/)
   assert.match(html, /aria-current="true"/)
-  assert.match(html, /class="thread-current">Current<\/small>/)
+  assert.match(html, /Topics &amp; history/)
   assert.ok(html.indexOf('Events') < html.indexOf('Props basics'))
-  assert.match(html, /This browser keeps up to 20 recent threads/)
+  assert.match(html, /Up to 20 sessions are saved in this browser/)
 })
 
 test('learning actions use the task context and keep an active session distinct', () => {
