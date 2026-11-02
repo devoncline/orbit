@@ -29,6 +29,7 @@ export default function App() {
   const [destination, setDestination] = useState('home')
   const [selectedSpace, setSelectedSpace] = useState(null)
   const [newSpaceIntent, setNewSpaceIntent] = useState('topic')
+  const [suggestedTopic, setSuggestedTopic] = useState('')
   const sessionFiles = useRef(new Map())
   const materialKey = (courseName, file) => JSON.stringify([courseName, file.name, file.size, file.lastModified])
 
@@ -172,8 +173,9 @@ export default function App() {
     setDestination('space')
   }
 
-  function newSpace(intent) {
+  function newSpace(intent, topic = '') {
     setNewSpaceIntent(intent)
+    setSuggestedTopic(topic)
     setDestination('new')
   }
 
@@ -267,7 +269,7 @@ export default function App() {
         />
       )}
       {destination === 'learn' && (
-        <LearnScreen courses={courses} recommendedCourse={recommendedCourse} onStart={startLearning} onSelectSpace={selectSpace} />
+        <LearnScreen courses={courses} threads={threads} today={today} onStart={startLearning} onSelectSpace={selectSpace} onOpenTopic={openTopic} onNewSpace={newSpace} />
       )}
       {destination === 'new' && (
         <section className="orbit-page orbit-page-layout new-space-page">
@@ -277,7 +279,7 @@ export default function App() {
           </header>
           <OrbitStage variant="page" />
           <div className="orbit-page-content">
-            <AddCourse key={newSpaceIntent} onAddCourse={addCourse} intent={newSpaceIntent} courses={courses} />
+            <AddCourse key={`${newSpaceIntent}:${suggestedTopic}`} onAddCourse={addCourse} intent={newSpaceIntent} courses={courses} suggestedTopic={suggestedTopic} />
             <p className="orbit-session-note">Your learning is saved in this browser. It won't appear on your other devices.</p>
           </div>
         </section>

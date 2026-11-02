@@ -1,0 +1,21 @@
+/* React Bits Carousel, adapted for Orbit. See NOTICE.md. */
+.orbit-carousel { width: 100%; min-width: 0; max-width: 100%; border-radius: var(--orbit-radius); }
+.orbit-carousel:focus-visible { outline: 2px solid var(--orbit-focus); outline-offset: 3px; }
+.orbit-carousel .carousel-viewport { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; width: 100%; padding-block: 10px; overflow: clip; touch-action: pan-y pinch-zoom; user-select: none; -webkit-user-select: none; }
+.orbit-carousel .carousel-viewport[data-draggable='true'] {
+  cursor: grab;
+  --carousel-edge-fade: clamp(12px, 5%, 36px);
+  --carousel-edge-mask: linear-gradient(to right, transparent, #000 var(--carousel-edge-fade), #000 calc(100% - var(--carousel-edge-fade)), transparent);
+  -webkit-mask-image: var(--carousel-edge-mask);
+  mask-image: var(--carousel-edge-mask);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+.carousel-viewport[data-dragging='true'], .carousel-viewport[data-dragging='true'] button { cursor: grabbing; }
+.orbit-carousel .carousel-slide { grid-area: 1 / 1; align-self: stretch; width: min(440px, calc(100% - clamp(16px, 7%, 48px) * 2)); min-width: 0; max-width: 100%; margin-inline: auto; will-change: transform; }
+.orbit-carousel .carousel-viewport[data-single='true'] .carousel-slide { width: min(440px, 100%); }
+.orbit-carousel .carousel-hint { margin: 4px 0 0; color: var(--orbit-muted); font-size: 12px; }
+.carousel-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) {
+  .orbit-carousel .carousel-slide { will-change: auto; }
+}

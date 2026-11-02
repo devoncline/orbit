@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
-export default function AddCourse({ onAddCourse, intent = 'topic', courses = [] }) {
-  const [courseName, setCourseName] = useState('')
+export default function AddCourse({ onAddCourse, intent = 'topic', courses = [], suggestedTopic = '' }) {
+  const [courseName, setCourseName] = useState(suggestedTopic)
   const [instructor, setInstructor] = useState('')
   const [goal, setGoal] = useState('')
   const [error, setError] = useState('')
