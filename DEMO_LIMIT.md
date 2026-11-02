@@ -78,6 +78,8 @@ It links to [Watch the full demo](https://youtu.be/-xQGO-GYUVg). Inline Study/up
 
 Local development bypasses the limiter only with explicit `NODE_ENV=development` or `test` and no deployed Production/Preview/custom-environment markers. `vercel dev` with `VERCEL_ENV=development` is supported; use `npm run dev:api` for the full local runtime. The provider key is still required and local AI calls can still incur provider charges. A deployed environment stays protected even if `NODE_ENV` is incorrectly set to development/test. No production-disable environment variable exists.
 
+`npm run dev:api` uses `scripts/dev-api.js` to set `NODE_ENV=development` only in the local Vercel process and its API workers. Restart the runtime after updating that script. Vercel CLI 59.1.3 was observed serving local API functions with `VERCEL_REGION=dev1` and `NOW_REGION=dev1`, but without `NODE_ENV`, `VERCEL`, or `VERCEL_ENV`. That environment correctly fails closed, then returns `503 demo_temporarily_unavailable` when demo-store credentials are absent. The startup setting fixes this without changing the guard, adding production credentials locally, or trusting host/request headers. Keep it out of shared `.env.local` and deployed configuration so production builds retain production mode. The regression test covers lesson/image allowances and confirms deployed markers still prevent the local exception.
+
 `npm test` preloads `tests/fixtures/testEnvironment.js` to set an explicit local test environment, a dummy provider credential and a guard against unmocked paid-provider fetches. New limiter tests explicitly exercise production/preview behavior using fakes. Run focused tests with:
 
 ```sh

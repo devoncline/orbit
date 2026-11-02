@@ -185,6 +185,27 @@ test('only explicit local dev/test bypasses; deployed production and previews st
   assert.equal(res.code, 503, 'Unknown environment must fail closed')
 })
 
+test('Vercel local functions with dev1 regions still require explicit NODE_ENV development', async () => {
+  // Observed Vercel CLI 59.1.3 function environment when loading .env.local:
+  // region markers are present, but NODE_ENV and VERCEL_ENV are absent.
+  const env = { MODEL_API_KEY: 'fake', VERCEL_REGION: 'dev1', NOW_REGION: 'dev1' }
+  const request = () => assert.fail('Local diagnosis must not contact Redis or the provider')
+  const unavailable = demoResponse()
+  assert.equal((await createDemoRateLimiter({ env, fetch: request })(demoRequest(), unavailable)).allowed, false)
+  assert.equal(unavailable.code, 503)
+  assert.equal(unavailable.body.error, 'demo_temporarily_unavailable')
+
+  const configured = createDemoRateLimiter({ env: { ...env, NODE_ENV: 'development' }, fetch: request })
+  assert.equal((await configured(demoRequest(), demoResponse())).allowed, true)
+  assert.equal((await configured(demoRequest(), demoResponse(), { imageContext: context })).allowed, true)
+  // A local-looking region must never override a deployed environment marker.
+  for (const VERCEL_ENV of ['production', 'preview']) {
+    const response = demoResponse()
+    await createDemoRateLimiter({ env: { ...env, NODE_ENV: 'development', VERCEL_ENV }, fetch: request })(demoRequest(), response)
+    assert.equal(response.code, 503)
+  }
+})
+
 test('store errors, malformed results, missing secrets/IP and missing model key fail closed without leaks', async () => {
   const cases = [
     { env: { UPSTASH_REDIS_REST_TOKEN: '' } }, { env: { UPSTASH_REDIS_REST_URL: 'http://redis.example.test' } },

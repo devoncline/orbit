@@ -4,6 +4,7 @@
 
 ### Improvements
 
+- Fixed the local development startup so AI requests use development mode without affecting production builds or public-demo protections.
 - Learn now opens your spaces, with Recommended next, Continue learning, and searchable Your topics in each class. Topic choices return to existing work, with separate saved sessions kept accessible. Study adds a collapsible topic/history rail and a mobile drawer for revisiting lessons, discussions, and activities. The detached progress strip is removed; mastery details remain in the class.
 - Fixed a deployment configuration mismatch that could leave public demo AI actions temporarily unavailable.
 - Mastery now builds gradually from quiz answers, demonstrated activity understanding, and recovery after mistakes. Course estimates reflect topic practice; repeated credit for the same recent task is prevented. Reading, examples and “I understand” remain separate from mastery, and saved progress stays compatible.

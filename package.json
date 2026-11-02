@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:api": "vercel dev",
+    "dev:api": "node scripts/dev-api.js",
     "build": "vite build",
     "lint": "eslint .",
     "test": "node --import ./tests/fixtures/testEnvironment.js --test tests/*.test.js",

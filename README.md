@@ -148,6 +148,8 @@ MODEL_API_KEY=your_meta_api_key
 
 Environment files are ignored by Git. Keep this key server-side: do not prefix it with `VITE_`, place it in frontend code, or commit it. Use your own Vercel project if the CLI prompts you to link one.
 
+The `dev:api` command sets `NODE_ENV=development` for the local Vercel process and its API workers. Vercel's local function runtime does not always set it, even while Vite runs in development. Without it, Orbit requires the public-demo limiter configuration and can return `503 demo_temporarily_unavailable`. Local development needs the model key but no public-demo Redis credentials; model calls still use provider credits. Do not put `NODE_ENV=development` in `.env.local` or deployed configuration: that can affect production builds. Restart `dev:api` after updating the startup script or environment.
+
 ### 3. Start the full app
 
 ```bash
