@@ -4,6 +4,7 @@
 
 ### Improvements
 
+- Fixed a deployment configuration mismatch that could leave public demo AI actions temporarily unavailable.
 - Mastery now builds gradually from quiz answers, demonstrated activity understanding, and recovery after mistakes. Course estimates reflect topic practice; repeated credit for the same recent task is prevented. Reading, examples and “I understand” remain separate from mastery, and saved progress stays compatible.
 - Course materials now accept multiple PDFs and JPG/JPEG, PNG and WebP photo attachments, with filename/type lists, later additions, removal, and mobile photo/camera controls. PDF reading is explicit: syllabi can add dates, while ordinary resources provide learning context without calendar entries. Photos currently save names only and clearly state that image reading is unavailable; HEIC/HEIF shows conversion guidance.
 - The public demo includes 25 AI actions per visitor every six hours, plus an emergency ceiling of 750 actions across the demo in any 24-hour period. Automatic supporting images stay included in their parent action. When either allowance is used, Orbit shows a friendly message and a link to the full demo; navigation and saved learning remain available.

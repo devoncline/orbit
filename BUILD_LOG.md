@@ -872,6 +872,14 @@ The targeted effect trace before implementation was:
 
 ---
 
+## November 1, 2026 - Upstash integration configuration compatibility
+
+- The user confirmed production limiter unavailability and supplied the integration-created variable names. The limiter only read the original REST names. Changed the two server-side lookups to prefer `UPSTASH_REDIS_REST_KV_REST_API_URL` and `UPSTASH_REDIS_REST_KV_REST_API_TOKEN`, independently falling back to `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` only when the preferred variable is unset. Empty/invalid preferred values and Redis errors still fail closed. Read-only tokens and TCP URLs are never selected; scripts, keys, quotas, routes and UI are unchanged.
+- Added five limiter regression tests for original/integration names, precedence, image grants and quota behavior, invalid/missing configuration, ignored read-only/TCP variables, and rejected preferred credentials without retries. The integration-only and precedence tests failed before the fix and pass afterward. Focused demo checks: 87/87 pass. Full `npm.cmd test`: 431 tests, 429 pass; the same existing copy assertions fail at `tests/product-shell.test.js:251` and `:317`. Lint, build and diff checks pass. Redis/Meta are mocked; no live verification is claimed.
+- Updated deployment guidance and the product-focused Unreleased changelog. Add `DEMO_RATE_LIMIT_SECRET` manually if absent (at least 32 characters); it is not supplied by the integration. A new deployment is required to load the code and correctly scoped environment. After deployment, verify Example and Next succeed while blocked requests retain their dedicated errors. No credentials were read or exposed, no database/schema changes or migrations are required, and no deployment, commit or push was performed.
+
+---
+
 # Next
 
 Feature development is frozen for submission. Review and deploy the hardening and control-polish changes, rehearse the production recording path in SUBMISSION_CHECKLIST.md, inspect the images used in the take, and record Orbit's adaptive teaching loop. Broader product expansion remains deferred until after the hackathon.

@@ -21,9 +21,11 @@ Set these **server-only** environment variables in Vercel for Production and Pre
 | Variable | Purpose |
 | --- | --- |
 | `MODEL_API_KEY` | Existing Meta provider credential |
-| `UPSTASH_REDIS_REST_URL` | HTTPS REST endpoint for the Redis database |
-| `UPSTASH_REDIS_REST_TOKEN` | Redis write credential, with permission to run the limiter's Lua scripts |
+| `UPSTASH_REDIS_REST_KV_REST_API_URL` | Preferred HTTPS REST endpoint from this project's Vercel/Upstash integration; falls back to `UPSTASH_REDIS_REST_URL` when unset |
+| `UPSTASH_REDIS_REST_KV_REST_API_TOKEN` | Preferred writable REST token from the integration, with permission to run the limiter's Lua scripts; falls back to `UPSTASH_REDIS_REST_TOKEN` when unset |
 | `DEMO_RATE_LIMIT_SECRET` | A separate, securely generated secret with at least 32 characters, used to HMAC visitor and image identities |
+
+The URL and token each prefer the integration name independently. A present but empty/invalid preferred value fails closed; a rejected Redis request does not retry with the original credentials. Read-only tokens (`UPSTASH_REDIS_REST_KV_REST_API_READ_ONLY_TOKEN` / `KV_REST_API_READ_ONLY_TOKEN`) and TCP connection strings (`UPSTASH_REDIS_REST_KV_URL` / `UPSTASH_REDIS_REST_REDIS_URL`) are never selected. The integration does not supply `DEMO_RATE_LIMIT_SECRET`: add it manually if absent. Deploy this compatibility change after confirming the required variables are scoped to Production (and separately to Preview when used).
 
 Store credentials as secrets. Never use a `VITE_` prefix, client code, query strings or browser storage for them. Configure variables before creating a new deployment. Rotating the HMAC secret changes visitor/image identities and starts new visitor allowances, but does not reset the global ceiling. Coordinate rotation deliberately. There is no owner/admin bypass. No additional environment variable, dependency or service is required for the global ceiling.
 
@@ -93,7 +95,9 @@ Automated tests use fake Redis/provider responses and mounted Happy DOM componen
 
 ## Investigating generic Example / Next failures
 
-Local investigation on November 1, 2026, against commit `718dbc2`: the reported production incident is **not diagnosed or fixed**. Vercel metadata requests returned a team-access `403`; investigation then continued locally at the user's request. That authorization failure is from the management API, not the Study endpoint. The tester's exact HTTP response, deployed commit and whether their request reached Meta remain unknown. Do not infer a limiter or provider failure from the screenshot alone.
+Follow-up: the user supplied the production `503 demo_temporarily_unavailable` response and integration variable names. Those REST URL/token names were not read by the original limiter. Configuration lookup now accepts them with precedence over the original names, and regression tests reproduce the rejection before the fix and acceptance afterward. Production must be redeployed with this change; the identity secret and other prerequisites still apply. Live Redis credentials/EVAL and the deployment have not been reverified.
+
+Earlier local investigation on November 1, 2026, against commit `718dbc2`: the reported production incident was not yet diagnosed or fixed. Vercel metadata requests returned a team-access `403`; investigation then continued locally at the user's request. That authorization failure was from the management API, not the Study endpoint. The historical results below describe that earlier investigation.
 
 Both paths were exercised locally through the actual code: `generateStudyExample` / `generateNextStudyLesson` -> `requestStudyLesson` -> `/api/generate-study-lesson` -> `enforceDemoRateLimit` -> mocked Redis/Meta -> `demoAiFetch` -> mounted Study. The mocks replace external services; they do not execute Lua or prove deployment configuration.
 

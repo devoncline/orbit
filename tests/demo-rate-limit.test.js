@@ -54,6 +54,82 @@ function setup(t) {
   return { env, store, enforce: createDemoRateLimiter({ env, fetch: store.fetch }) }
 }
 
+const integrationRedisEnv = {
+  UPSTASH_REDIS_REST_KV_REST_API_URL: 'https://redis.example.test',
+  UPSTASH_REDIS_REST_KV_REST_API_TOKEN: 'fake-integration-write-token',
+}
+
+for (const [name, variables, token] of [
+  ['original Redis REST names', {}, 'fake-redis-token'],
+  ['integration Redis REST names', { ...integrationRedisEnv, UPSTASH_REDIS_REST_URL: undefined, UPSTASH_REDIS_REST_TOKEN: undefined }, integrationRedisEnv.UPSTASH_REDIS_REST_KV_REST_API_TOKEN],
+  ['integration names take precedence over original names', { ...integrationRedisEnv, UPSTASH_REDIS_REST_URL: 'https://unused.example.test' }, integrationRedisEnv.UPSTASH_REDIS_REST_KV_REST_API_TOKEN],
+]) {
+  test(`${name}: reservations and included-image grants use the writable REST configuration`, async () => {
+    const store = fakeDemoStore()
+    const enforce = createDemoRateLimiter({ env: { ...demoEnv(), ...variables,
+      UPSTASH_REDIS_REST_KV_REST_API_READ_ONLY_TOKEN: 'fake-read-only-token',
+    }, fetch: (url, options) => {
+      assert.equal(options.headers.Authorization, `Bearer ${token}`)
+      return store.fetch(url, options)
+    } })
+    const allowance = await enforce(demoRequest(), demoResponse())
+    assert.equal(allowance.allowed, true)
+    assert.equal(await allowance.includeImage(context), true)
+    assert.equal((await enforce(demoRequest(), demoResponse(), { imageContext: context })).allowed, true)
+    assert.equal(store.globalCount(), 1, 'An included image still shares its parent action')
+    await exhaust(enforce, demoRequest(), 24)
+    const blocked = demoResponse()
+    await enforce(demoRequest(), blocked)
+    assert.equal(blocked.code, 429)
+    assert.equal(blocked.body.error, 'demo_limit_reached')
+    assert.equal(store.globalCount(), 25)
+  })
+}
+
+test('integration aliases retain validation and never substitute read-only tokens or TCP URLs', async () => {
+  const env = { ...demoEnv(), ...integrationRedisEnv, UPSTASH_REDIS_REST_URL: undefined, UPSTASH_REDIS_REST_TOKEN: undefined,
+    UPSTASH_REDIS_REST_KV_REST_API_READ_ONLY_TOKEN: 'fake-read-only-token',
+    KV_REST_API_READ_ONLY_TOKEN: 'fake-other-read-only-token',
+    UPSTASH_REDIS_REST_KV_URL: 'rediss://redis.example.test:6379',
+    UPSTASH_REDIS_REST_REDIS_URL: 'redis://redis.example.test:6379',
+  }
+  for (const overrides of [
+    { UPSTASH_REDIS_REST_KV_REST_API_URL: undefined },
+    { UPSTASH_REDIS_REST_KV_REST_API_TOKEN: undefined },
+    { DEMO_RATE_LIMIT_SECRET: 'x'.repeat(31) },
+    { MODEL_API_KEY: undefined },
+    ...['http://redis.example.test', 'redis://redis.example.test', 'rediss://redis.example.test',
+      'https://user:pass@redis.example.test', 'https://redis.example.test?token=fake', 'https://redis.example.test#fragment']
+      .map(url => ({ UPSTASH_REDIS_REST_KV_REST_API_URL: url })),
+    { UPSTASH_REDIS_REST_KV_REST_API_URL: 'http://redis.example.test', UPSTASH_REDIS_REST_URL: 'https://redis.example.test' },
+    { UPSTASH_REDIS_REST_KV_REST_API_URL: '', UPSTASH_REDIS_REST_URL: 'https://redis.example.test' },
+    { UPSTASH_REDIS_REST_KV_REST_API_TOKEN: '', UPSTASH_REDIS_REST_TOKEN: 'fake-redis-token' },
+  ]) {
+    const res = demoResponse()
+    let calls = 0
+    const result = await createDemoRateLimiter({ env: { ...env, ...overrides },
+      fetch: () => { calls++; throw new Error('Unexpected Redis call') },
+    })(demoRequest(), res)
+    assert.equal(result.allowed, false)
+    assert.equal(res.code, 503)
+    assert.equal(res.body.error, 'demo_temporarily_unavailable')
+    assert.equal(calls, 0, 'Invalid configuration must stop before Redis')
+  }
+})
+
+test('a rejected integration token fails closed without retrying the original credentials', async () => {
+  const calls = []
+  const res = demoResponse()
+  const result = await createDemoRateLimiter({ env: { ...demoEnv(), ...integrationRedisEnv }, fetch: async (url, options) => {
+    calls.push({ url, authorization: options.headers.Authorization })
+    return new Response('{}', { status: 403 })
+  } })(demoRequest(), res)
+  assert.equal(result.allowed, false)
+  assert.equal(res.code, 503)
+  assert.equal(res.body.error, 'demo_temporarily_unavailable')
+  assert.deepEqual(calls, [{ url: 'https://redis.example.test/', authorization: `Bearer ${integrationRedisEnv.UPSTASH_REDIS_REST_KV_REST_API_TOKEN}` }])
+})
+
 test('25 actions share one six-hour window: final request allowed, next blocked, denials do not extend expiry', async () => {
   assert.equal(DEMO_AI_ACTION_LIMIT, 25)
   assert.equal(DEMO_AI_ACTION_WINDOW_HOURS, 6)

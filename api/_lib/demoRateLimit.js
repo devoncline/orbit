@@ -86,8 +86,8 @@ export function createDemoRateLimiter({ env = process.env, fetch: request = (...
 
     try {
       const secret = env.DEMO_RATE_LIMIT_SECRET
-      const token = env.UPSTASH_REDIS_REST_TOKEN
-      const url = new URL(env.UPSTASH_REDIS_REST_URL)
+      const token = env.UPSTASH_REDIS_REST_KV_REST_API_TOKEN ?? env.UPSTASH_REDIS_REST_TOKEN
+      const url = new URL(env.UPSTASH_REDIS_REST_KV_REST_API_URL ?? env.UPSTASH_REDIS_REST_URL)
       if (!secret || secret.length < 32 || !token || url.protocol !== 'https:' || url.username || url.password || url.search || url.hash) throw new Error('Missing configuration')
       const digest = (value) => createHmac('sha256', secret).update(value).digest('hex')
       const visitor = digest(visitorAddress(req, env))
