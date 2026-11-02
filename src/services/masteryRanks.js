@@ -16,8 +16,16 @@ export function masteryRank(score) {
   return MASTERY_RANKS.findLast(rank => value >= rank.minimum)
 }
 
+function topicMasteryEntry(mastery, topic) {
+  return Object.entries(normalizeMastery(mastery).topics).find(([name]) => topicKey(name) === topicKey(topic))
+}
+
+export function hasTopicMastery(mastery, topic) {
+  return Boolean(topicMasteryEntry(mastery, topic))
+}
+
 export function topicMasteryRank(mastery, topic) {
-  const entry = Object.entries(normalizeMastery(mastery).topics).find(([name]) => topicKey(name) === topicKey(topic))
+  const entry = topicMasteryEntry(mastery, topic)
   // A course-only legacy estimate cannot tell us the rank of an individual topic.
   return masteryRank(entry?.[1])
 }

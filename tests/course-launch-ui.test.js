@@ -217,7 +217,7 @@ test('class sections render recommendations, recent learning and searchable topi
   assert.equal(page.querySelectorAll('.topic-browser .topic-item-rank').length, 12)
   await type(page.querySelector('input[type="search"]'), 'photosynthesis')
   assert.equal(page.querySelectorAll('.topic-browser > .topic-grid > li').length, 1)
-  assert.equal(page.querySelector('.topic-item-rank').textContent, 'Deep Space')
+  assert.equal(page.querySelector('.topic-browser .topic-item-rank').textContent, 'Deep Space')
   await click(page.querySelector('.topic-sessions > button'))
   assert.equal(page.querySelector('.topic-sessions > button').getAttribute('aria-expanded'), 'true')
   const sessions = page.querySelectorAll('.topic-sessions li button')
@@ -266,6 +266,90 @@ test('Your topics uses each course score, falls back for new topics, and preserv
   assert.equal([...container.querySelectorAll('.topic-browser .topic-item-open')].find(item => item.querySelector('strong').textContent === 'Gravity').querySelector('.topic-item-rank').textContent, 'Cruising')
   assert.doesNotMatch(container.textContent, /reached (?:In Orbit|Cruising|Deep Space|Mission Ready)/)
   assert.deepEqual(read().courses.map(item => item.mastery), before)
+})
+
+test('Continue learning matches Your topics ranks without duplicate markers and resumes each exact session', async t => {
+  const course = { name: 'Physics', mastery: { topics: { GRAVITY: 63 } } }
+  const otherCourse = { name: 'Other class', mastery: { topics: { Gravity: 90, Light: 90 } } }
+  const threads = [
+    savedThread('earlier', 'gravity', '2026-10-30T12:00:00Z', course.name),
+    savedThread('latest', 'Gravity', '2026-11-01T12:00:00Z', course.name),
+    savedThread('unscored', 'Light', '2026-10-31T12:00:00Z', course.name),
+    savedThread('other', 'Gravity', '2026-11-01T13:00:00Z', otherCourse.name),
+  ]
+  seed(course)
+  saveLearnerMemory({ ...read(), courses: [course, otherCourse], threads }, dom.localStorage)
+  t.mock.method(globalThis, 'fetch', () => assert.fail('Opening existing sessions must not generate'))
+  const before = read().courses.map(item => item.mastery)
+  await render(); await openSpace()
+  const expected = [['latest', 'Gravity', 'Deep Space', 'deep-space', 'Nov 1, 2026'], ['unscored', 'Light', 'Launch Pad', 'launch-pad', 'Oct 31, 2026'], ['earlier', 'gravity', 'Deep Space', 'deep-space', 'Oct 30, 2026']]
+  assert.equal(container.querySelectorAll('.space-recent .topic-item-open').length, 3)
+  for (const [index, [id, topic, label, asset, date]] of expected.entries()) {
+    const row = container.querySelectorAll('.space-recent .topic-item-open')[index]
+    assert.equal(row.querySelector('strong').textContent, topic)
+    assert.equal(row.querySelector('.topic-item-rank').textContent, label)
+    assert.equal(row.querySelectorAll('.mastery-badge').length, 1)
+    assert.ok(row.querySelector('.mastery-badge').src.endsWith(`mastery-${asset}-compact.svg`))
+    assert.equal(row.querySelector('.mastery-badge').alt, '')
+    assert.equal(row.querySelector('.topic-orbit'), null)
+    assert.ok(row.textContent.includes(`Discussion · In progress${topic} lesson ${id} · ${date}`))
+    const topicRow = [...container.querySelectorAll('.topic-browser .topic-item-open')].find(item => item.querySelector('strong').textContent.toLowerCase() === topic.toLowerCase())
+    assert.equal(topicRow.querySelector('.topic-item-rank').textContent, label)
+    await click(row)
+    assert.equal(read().activeId, id)
+    assert.match(container.querySelector('.study-room:not([hidden]) .study-active-panel').textContent, new RegExp(`Saved explanation ${id}`))
+    await openSpace()
+  }
+  assert.equal(read().threads.length, threads.length)
+  assert.deepEqual(read().courses.map(item => item.mastery), before)
+})
+
+for (const score of [63, undefined]) test(`started recommendation cards use ${score === undefined ? 'Launch Pad' : 'the current rank'} and reuse the latest matching session`, async t => {
+  const course = { ...biologyCourse, mastery: { topics: score === undefined ? {} : { 'CELLULAR RESPIRATION': score } } }
+  seed(course)
+  saveLearnerMemory({ ...read(), courses: [course, { name: 'Other class', mastery: { topics: { Genetics: 90 } } }], threads: [
+    savedThread('respiration-old', 'Cellular Respiration', '2026-10-30T12:00:00Z'),
+    savedThread('respiration-new', 'cellular respiration', '2026-10-31T12:00:00Z'),
+    savedThread('other-genetics', 'Genetics', '2026-11-01T12:00:00Z', 'Other class'),
+  ] }, dom.localStorage)
+  t.mock.method(globalThis, 'fetch', () => assert.fail('Existing recommendations must resume without generation'))
+  const before = read().courses.map(item => item.mastery)
+  await render(); await openSpace()
+  const option = [...container.querySelectorAll('.space-starting-options .topic-item-open')].find(item => /cellular respiration/i.test(item.querySelector('strong').textContent))
+  assert.equal(option.querySelector('.topic-item-rank').textContent, score === undefined ? 'Launch Pad' : 'Deep Space')
+  assert.equal(option.querySelectorAll('.mastery-badge').length, 1)
+  assert.equal(option.querySelector('.topic-orbit'), null)
+  assert.match(option.querySelector('.topic-item-action').textContent, /Continue/)
+  assert.match(option.textContent, /Prepare for Respiration Practice/)
+  const newOption = [...container.querySelectorAll('.space-starting-options .topic-item-open')].find(item => item.querySelector('strong').textContent === 'Genetics')
+  assert.equal(newOption.querySelector('.mastery-badge'), null)
+  assert.equal(newOption.querySelector('.topic-item-rank'), null)
+  assert.ok(newOption.querySelector('.topic-orbit'))
+  assert.match(newOption.querySelector('.topic-item-action').textContent, /Explore/)
+  await click(option)
+  assert.equal(read().activeId, 'respiration-new')
+  assert.equal(read().threads.length, 3)
+  assert.deepEqual(read().courses.map(item => item.mastery), before)
+})
+
+test('recommendations retain mastery badges when only topic scores remain, while new topics stay unbadged', async t => {
+  seed({ ...biologyCourse, mastery: { topics: { 'CELLULAR RESPIRATION': 0 } } })
+  const requests = lessonMock(t)
+  await render(); await openSpace()
+  const option = [...container.querySelectorAll('.space-starting-options .topic-item-open')].find(item => /cellular respiration/i.test(item.querySelector('strong').textContent))
+  assert.equal(option.querySelector('.topic-item-rank').textContent, 'Launch Pad')
+  assert.equal(option.querySelectorAll('.mastery-badge').length, 1)
+  assert.equal(option.querySelector('.topic-orbit'), null)
+  assert.match(option.querySelector('.topic-item-action').textContent, /Explore/)
+  const newOption = [...container.querySelectorAll('.space-starting-options .topic-item-open')].find(item => item.querySelector('strong').textContent === 'Genetics')
+  assert.equal(newOption.querySelector('.mastery-badge'), null)
+  assert.ok(newOption.querySelector('.topic-orbit'))
+  assert.equal(requests.length, 0)
+  await click(option)
+  assert.equal(requests.length, 1)
+  assert.equal(requests[0].learnerPosition.currentTopic, 'CELLULAR RESPIRATION')
+  assert.equal(read().threads.length, 1)
+  assert.equal(read().courses[0].mastery.topics['CELLULAR RESPIRATION'], 0)
 })
 
 test('an empty legacy course estimate does not become a course-wide rank or percentage', async t => {

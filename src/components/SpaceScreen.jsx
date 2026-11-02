@@ -10,7 +10,7 @@ import './SpaceScreen.css'
 import TopicItem from './TopicItem'
 import TopicBrowser from './TopicBrowser'
 import { courseThreads, findTopicThread, startedTopics, threadDate, threadDescription, threadTopic } from '../services/studyNavigation'
-import { masteryRankDistribution } from '../services/masteryRanks'
+import { hasTopicMastery, masteryRankDistribution, topicMasteryRank } from '../services/masteryRanks'
 
 export default function SpaceScreen({ course, threads = [], onOpenThread, onStartLesson, onAddFile, onAnalyzeFile, onRemoveFile, hasFile, today, onPositionChange }) {
   const { primary, recommendations } = courseLaunchRecommendations(course, today)
@@ -43,12 +43,16 @@ export default function SpaceScreen({ course, threads = [], onOpenThread, onStar
           <button className="orbit-button orbit-button-primary" onClick={() => onStartLesson(course, primary.topic)}>{findTopicThread(threads, course.name, primary.topic) ? 'Continue topic' : 'Start lesson'}</button>
         </section>
         {recommendations.length > 1 && <section className="space-starting-options" aria-label="More recommended topics">
-          <ul className="topic-grid">{recommendations.slice(1).map(option => <li key={option.topic}><TopicItem topic={option.topic} detail={option.upcomingWork ? `Prepare for ${option.upcomingWork.title}.` : option.reason} action={findTopicThread(threads, course.name, option.topic) ? 'Continue' : 'Explore'} onClick={() => onStartLesson(course, option.topic)} /></li>)}</ul>
+          <ul className="topic-grid">{recommendations.slice(1).map(option => {
+            const saved = findTopicThread(threads, course.name, option.topic)
+            const rank = saved || hasTopicMastery(course.mastery, option.topic) ? topicMasteryRank(course.mastery, option.topic) : undefined
+            return <li key={option.topic}><TopicItem topic={option.topic} rank={rank} detail={option.upcomingWork ? `Prepare for ${option.upcomingWork.title}.` : option.reason} action={saved ? 'Continue' : 'Explore'} onClick={() => onStartLesson(course, option.topic)} /></li>
+          })}</ul>
         </section>}
       </> : <section className="space-recommendation-empty"><h2>Recommended next</h2><p className="orbit-muted">Choose a topic below, or add a syllabus to find a useful starting point.</p></section>}
       <section className="space-learning-section" aria-labelledby={`${id}-continue`}>
         <h2 id={`${id}-continue`}>Continue learning</h2>
-        {recent.length ? <ul className="topic-grid space-recent">{recent.map(thread => <li key={thread.id}><TopicItem topic={threadTopic(thread)} detail={threadDescription(thread)} meta={`${thread.title && thread.title !== threadTopic(thread) ? `${thread.title} · ` : ''}${threadDate(thread)}`} onClick={() => onOpenThread(thread.id)} /></li>)}</ul>
+        {recent.length ? <ul className="topic-grid space-recent">{recent.map(thread => <li key={thread.id}><TopicItem topic={threadTopic(thread)} rank={topicMasteryRank(course.mastery, threadTopic(thread))} detail={threadDescription(thread)} meta={`${thread.title && thread.title !== threadTopic(thread) ? `${thread.title} · ` : ''}${threadDate(thread)}`} onClick={() => onOpenThread(thread.id)} /></li>)}</ul>
           : <p className="orbit-muted">Nothing to pick up yet. Start a lesson when you’re ready.</p>}
       </section>
       <section className="space-learning-section" aria-labelledby={`${id}-topics`}>

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { applyMasteryEvidence, masteryEvidenceId } from '../src/services/mastery.js'
-import { MASTERY_RANKS, masteryRank, topicMasteryRank, masteryRankDistribution, topicMasteryRankChange } from '../src/services/masteryRanks.js'
+import { MASTERY_RANKS, hasTopicMastery, masteryRank, topicMasteryRank, masteryRankDistribution, topicMasteryRankChange } from '../src/services/masteryRanks.js'
 import { createLearnerSnapshot, loadLearnerMemory } from '../src/services/learnerMemory.js'
 import { courseLaunchRecommendations } from '../src/services/coursePosition.js'
 
@@ -24,6 +24,16 @@ test('topic lookup follows mastery normalization, matches casing, and never borr
   assert.equal(topicMasteryRank(mastery, 'ORBITS').label, 'Deep Space')
   for (const topic of ['New topic', 'Unknown', undefined]) assert.equal(topicMasteryRank(mastery, topic).label, 'Launch Pad')
   assert.equal(topicMasteryRank({ overall: 90 }, 'Gravity').label, 'Launch Pad')
+})
+
+test('topic mastery presence distinguishes saved zero evidence from absent or invalid scores', () => {
+  const mastery = { overall: 90, topics: { ' Gravity ': 0, GRAVITY: 80, Orbits: 63, Invalid: null } }
+  assert.equal(hasTopicMastery(mastery, ' gRavity '), true)
+  assert.equal(topicMasteryRank(mastery, 'gravity').label, 'Launch Pad')
+  assert.equal(hasTopicMastery(mastery, 'ORBITS'), true)
+  for (const topic of ['New topic', 'Invalid', undefined]) assert.equal(hasTopicMastery(mastery, topic), false)
+  assert.equal(hasTopicMastery({ overall: 90 }, 'Gravity'), false)
+  assert.equal(hasTopicMastery(undefined, 'Gravity'), false)
 })
 
 test('distribution counts unique practiced and started topics without assigning a course rank', () => {
