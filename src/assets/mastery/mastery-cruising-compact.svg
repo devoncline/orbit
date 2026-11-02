@@ -1,0 +1,83 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Rank=Cruising, Size=Compact">
+<g id="Artwork / Cruising">
+<g id="Beveled frame" filter="url(#filter0_d_2_250)">
+<path id="Vector" d="M16 2.33334L25.3333 6.66668C26.8888 7.33334 27.7777 8.44445 28 10L29.3333 19.6667C29.3333 21.2222 28.6666 22.5556 27.3333 23.6667L17.3333 30.3333C16.4444 31 15.5555 31 14.6666 30.3333L4.66663 23.6667C3.33329 22.5556 2.66663 21.2222 2.66663 19.6667L3.99996 10C4.22218 8.44445 5.11107 7.33334 6.66663 6.66668L16 2.33334Z" fill="url(#paint0_linear_2_250)" stroke-width="0.933333" stroke-linecap="round" stroke-linejoin="round" stroke="url(#paint1_linear_2_250)"/>
+</g>
+<g id="Recessed space">
+<path id="Vector_2" d="M16 29.3333C22.0751 29.3333 27 24.5577 27 18.6667C27 12.7756 22.0751 8 16 8C9.92487 8 5 12.7756 5 18.6667C5 24.5577 9.92487 29.3333 16 29.3333Z" fill="url(#paint2_radial_2_250)"/>
+</g>
+<g id="Receding horizon">
+<path id="Vector_3" d="M8 25.6667C13.3333 23.2222 18.8889 23.2222 24.6667 25.6667L16 29.6667L8 25.6667Z" fill="url(#paint3_radial_2_250)"/>
+<path id="Vector_4" opacity="0.6" d="M8 25.6667C13.3333 23.2222 18.8889 23.2222 24.6667 25.6667" stroke-width="0.4" stroke-linecap="round" stroke-linejoin="round" stroke="#86BFFF"/>
+</g>
+<g id="Continuous flight wake">
+<path id="Vector_5" d="M8.6667 23.6667C5.6667 19.6667 10 15 17.3334 13.6667L18 14.6667C11.3334 15.6667 7.00003 19.6667 8.6667 23.6667Z" fill="url(#paint4_linear_2_250)"/>
+<path id="Vector_6" d="M17 16.3333C18.4728 16.3333 19.6667 15.5871 19.6667 14.6667C19.6667 13.7462 18.4728 13 17 13C15.5273 13 14.3334 13.7462 14.3334 14.6667C14.3334 15.5871 15.5273 16.3333 17 16.3333Z" fill="url(#paint5_radial_2_250)"/>
+</g>
+<g id="Swept spacecraft">
+<path id="Vector_7" d="M14 11.6667L24.6667 9.66666L18.6667 19L17.6667 14.6667L14 11.6667Z" fill="url(#paint6_linear_2_250)"/>
+<path id="Vector_8" d="M24.6666 9.66666L17.6666 14.6667L18.6666 19L24.6666 9.66666Z" fill="url(#paint7_linear_2_250)"/>
+<path id="Vector_9" d="M17.6667 14.6667L15 16.3333L15.6667 13.3333L24.6667 9.66666L17.6667 14.6667Z" fill="#445988"/>
+<path id="Vector_10" d="M14.3334 11.6667L24.6667 9.66666L17.6667 14.6667" stroke-width="0.366667" stroke-linecap="round" stroke-linejoin="round" stroke="#E0EAFF"/>
+</g>
+<g id="Directional frame shoulders">
+<path id="Vector_11" d="M5.00004 13.6667L4.33337 19.3333L6.66671 21.3333" stroke-width="0.6" stroke-linecap="round" stroke-linejoin="round" stroke="#86BFFF"/>
+<path id="Vector_12" d="M27 13.6667L27.6667 19.3333L25.3334 21.3333" stroke-width="0.6" stroke-linecap="round" stroke-linejoin="round" stroke="#86BFFF"/>
+</g>
+</g>
+</g>
+<defs>
+<filter id="filter0_d_2_250" x="1.53328" y="1.2" width="28.9333" height="30.7667" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset/>
+<feGaussianBlur stdDeviation="0.333333"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0.52549 0 0 0 0 0.74902 0 0 0 0 1 0 0 0 0.216 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_2_250"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_2_250" result="shape"/>
+</filter>
+<linearGradient id="paint0_linear_2_250" x1="9.66663" y1="4.33334" x2="22" y2="28.3333" gradientUnits="userSpaceOnUse">
+<stop stop-color="#182640"/>
+<stop offset="0.4" stop-color="#0B142A"/>
+<stop offset="1" stop-color="#141C37"/>
+</linearGradient>
+<linearGradient id="paint1_linear_2_250" x1="8.33329" y1="3.33334" x2="24.3333" y2="30.3333" gradientUnits="userSpaceOnUse">
+<stop stop-color="#E0EAFF"/>
+<stop offset="0.17" stop-color="#86BFFF"/>
+<stop offset="0.5" stop-color="#7F69DB"/>
+<stop offset="0.75" stop-color="#28365E"/>
+<stop offset="1" stop-color="#86BFFF"/>
+</linearGradient>
+<radialGradient id="paint2_radial_2_250" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(16 22.2933) scale(11 10.6667)">
+<stop stop-color="#7F69DB" stop-opacity="0.34"/>
+<stop offset="1" stop-color="#7F69DB" stop-opacity="0"/>
+</radialGradient>
+<radialGradient id="paint3_radial_2_250" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(14.6667 23.8333) scale(15.8333 5.54167)">
+<stop stop-color="#385F95"/>
+<stop offset="0.3" stop-color="#263C6B"/>
+<stop offset="1" stop-color="#0B132B"/>
+</radialGradient>
+<linearGradient id="paint4_linear_2_250" x1="7.00003" y1="21.6667" x2="25.3334" y2="12" gradientUnits="userSpaceOnUse">
+<stop stop-color="#86BFFF"/>
+<stop offset="0.38" stop-color="#E0EAFF"/>
+<stop offset="0.64" stop-color="#86BFFF"/>
+<stop offset="1" stop-color="#7F69DB"/>
+</linearGradient>
+<radialGradient id="paint5_radial_2_250" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(17 14.6667) scale(2.66667 1.66667)">
+<stop stop-color="#86BFFF" stop-opacity="0.6"/>
+<stop offset="1" stop-color="#7F69DB" stop-opacity="0"/>
+</radialGradient>
+<linearGradient id="paint6_linear_2_250" x1="12" y1="11.6667" x2="19.3333" y2="20" gradientUnits="userSpaceOnUse">
+<stop stop-color="#F2F7FF"/>
+<stop offset="0.33" stop-color="#E0EAFF"/>
+<stop offset="0.68" stop-color="#86BFFF"/>
+<stop offset="1" stop-color="#7F69DB"/>
+</linearGradient>
+<linearGradient id="paint7_linear_2_250" x1="15.6666" y1="11.6667" x2="21.6666" y2="21.6667" gradientUnits="userSpaceOnUse">
+<stop stop-color="#86BFFF"/>
+<stop offset="0.55" stop-color="#7F69DB"/>
+<stop offset="1" stop-color="#2C366A"/>
+</linearGradient>
+</defs>
+</svg>

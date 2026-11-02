@@ -1,0 +1,87 @@
+<svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Rank=Launch Pad, Size=Hero">
+<g id="Artwork / Launch Pad">
+<g id="Beveled frame" filter="url(#filter0_d_2_2)">
+<path id="Vector" d="M48 14C51 14 53 15 56 17L74 27C78 29 80 32.3333 80 37V65C80 69.6667 78 73.3333 74 76L54 87C50 89 46 89 42 87L22 76C18 73.3333 16 69.6667 16 65V37C16 32.3333 18 29 22 27L40 17C43.3333 15 46 14 48 14Z" fill="url(#paint0_linear_2_2)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" stroke="url(#paint1_linear_2_2)"/>
+<path id="Vector_2" opacity="0.45" d="M48 17.5C50.7 17.5 52.5 18.4 55.2 20.2L71.3999 29.2C74.9999 31 76.7999 34 76.7999 38.2V63.4C76.7999 67.6 74.9999 70.9 71.3999 73.3L53.4 83.2C49.8 85 46.2 85 42.6 83.2L24.6 73.3C21 70.9 19.2 67.6 19.2 63.4V38.2C19.2 34 21 31 24.6 29.2L40.8 20.2C43.8 18.4 46.2 17.5 48 17.5Z" stroke-width="0.63" stroke-linecap="round" stroke-linejoin="round" stroke="#76BCFF"/>
+<path id="Vector_3" opacity="0.7" d="M20 37C20 33.6667 21.6667 31 25 29L43 19" stroke-width="0.75" stroke-linecap="round" stroke-linejoin="round" stroke="#D2EFFF"/>
+</g>
+<g id="Recessed space">
+<path id="Vector_4" d="M48 88C66.2254 88 81 73.6731 81 56C81 38.3269 66.2254 24 48 24C29.7746 24 15 38.3269 15 56C15 73.6731 29.7746 88 48 88Z" fill="url(#paint2_radial_2_2)"/>
+<path id="Vector_5" d="M65 32.3C65.2667 33.1667 65.8334 33.7333 66.7 34C65.8334 34.2667 65.2667 34.8333 65 35.7C64.7334 34.8333 64.1667 34.2667 63.3 34C64.1667 33.7333 64.7334 33.1667 65 32.3Z" fill="#D2EFFF"/>
+<path id="Vector_6" d="M66 28.55C66.3037 28.55 66.55 28.3038 66.55 28C66.55 27.6962 66.3037 27.45 66 27.45C65.6962 27.45 65.45 27.6962 65.45 28C65.45 28.3038 65.6962 28.55 66 28.55Z" fill="#76BCFF"/>
+<path id="Vector_7" d="M31 50.5C31.2761 50.5 31.5 50.2761 31.5 50C31.5 49.7239 31.2761 49.5 31 49.5C30.7239 49.5 30.5 49.7239 30.5 50C30.5 50.2761 30.7239 50.5 31 50.5Z" fill="#76BCFF"/>
+</g>
+<g id="Launch atmosphere">
+<path id="Vector_8" d="M48 80C57.9411 80 66 75.9706 66 71C66 66.0294 57.9411 62 48 62C38.0589 62 30 66.0294 30 71C30 75.9706 38.0589 80 48 80Z" fill="url(#paint3_radial_2_2)"/>
+<path id="Vector_9" d="M28 76C41.3333 70 54.6667 70 68 76L62 79H34L28 76Z" fill="#1A2948"/>
+<path id="Vector_10" d="M48 79C59.0457 79 68 77.6569 68 76C68 74.3431 59.0457 73 48 73C36.9543 73 28 74.3431 28 76C28 77.6569 36.9543 79 48 79Z" fill="#243C60" stroke-width="0.55" stroke="#76BCFF"/>
+</g>
+<g id="Integrated rocket and ignition">
+<path id="Vector_11" d="M43 60C43.6667 67.3333 45.3333 73.3333 48 78C50.6667 73.3333 52.3333 67.3333 53 60H43Z" fill="url(#paint4_linear_2_2)"/>
+<path id="Vector_12" d="M48 29C41 36 40 45 41 53L35 60V65L42 62H54L61 65V60L55 53C56 44 54 35 48 29Z" fill="url(#paint5_linear_2_2)"/>
+<path id="Vector_13" d="M48 29C54 38 54 51 51 61L54 62L61 65V60L55 53C56 44 54 35 48 29Z" fill="url(#paint6_linear_2_2)"/>
+<path id="Vector_14" d="M42 61H54L53 64H43L42 61Z" fill="#1A2549"/>
+<path id="Vector_15" d="M47.5 49.5C49.7644 49.5 51.6 47.4853 51.6 45C51.6 42.5147 49.7644 40.5 47.5 40.5C45.2357 40.5 43.4 42.5147 43.4 45C43.4 47.4853 45.2357 49.5 47.5 49.5Z" fill="#142A4A" stroke-width="0.8" stroke="#D2EFFF"/>
+<path id="Vector_16" d="M46.5 45.3C47.2732 45.3 47.9 44.6284 47.9 43.8C47.9 42.9716 47.2732 42.3 46.5 42.3C45.7268 42.3 45.1 42.9716 45.1 43.8C45.1 44.6284 45.7268 45.3 46.5 45.3Z" fill="#76BCFF"/>
+<path id="Vector_17" opacity="0.8" d="M46 34C42 41 43 49 43 53" stroke-width="0.75" stroke-linecap="round" stroke-linejoin="round" stroke="#F1F7FF"/>
+</g>
+<g id="Foreground launch vapor">
+<path id="Vector_18" d="M29 77C30 73 34 72 37 74C40 70 44 73 46 75C50 72 55 72 58 75C62 72 66 75 67 78C54.3333 81.3333 41.6667 81 29 77Z" fill="url(#paint7_linear_2_2)"/>
+<path id="Vector_19" opacity="0.65" d="M30 77C41.3333 79.6667 53.3333 79.6667 66 77" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round" stroke="#76BCFF"/>
+</g>
+</g>
+</g>
+<defs>
+<filter id="filter0_d_2_2" x="11.7" y="9.7" width="72.6001" height="83.1" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset/>
+<feGaussianBlur stdDeviation="1.5"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0.462745 0 0 0 0 0.737255 0 0 0 0 1 0 0 0 0.18 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_2_2"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_2_2" result="shape"/>
+</filter>
+<linearGradient id="paint0_linear_2_2" x1="29" y1="13" x2="66" y2="85" gradientUnits="userSpaceOnUse">
+<stop stop-color="#182640"/>
+<stop offset="0.4" stop-color="#0B142A"/>
+<stop offset="1" stop-color="#141C37"/>
+</linearGradient>
+<linearGradient id="paint1_linear_2_2" x1="25" y1="10" x2="73" y2="91" gradientUnits="userSpaceOnUse">
+<stop stop-color="#D2EFFF"/>
+<stop offset="0.17" stop-color="#76BCFF"/>
+<stop offset="0.5" stop-color="#4662B5"/>
+<stop offset="0.75" stop-color="#28365E"/>
+<stop offset="1" stop-color="#76BCFF"/>
+</linearGradient>
+<radialGradient id="paint2_radial_2_2" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(48 66.88) scale(33 32)">
+<stop stop-color="#4662B5" stop-opacity="0.34"/>
+<stop offset="1" stop-color="#4662B5" stop-opacity="0"/>
+</radialGradient>
+<radialGradient id="paint3_radial_2_2" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(48 71) scale(18 9)">
+<stop stop-color="#76BCFF" stop-opacity="0.6"/>
+<stop offset="1" stop-color="#4662B5" stop-opacity="0"/>
+</radialGradient>
+<linearGradient id="paint4_linear_2_2" x1="48" y1="59" x2="48" y2="76" gradientUnits="userSpaceOnUse">
+<stop stop-color="#F2F6FF"/>
+<stop offset="0.25" stop-color="#76BCFF"/>
+<stop offset="1" stop-color="#4662B5" stop-opacity="0"/>
+</linearGradient>
+<linearGradient id="paint5_linear_2_2" x1="36" y1="35" x2="58" y2="60" gradientUnits="userSpaceOnUse">
+<stop stop-color="#F2F7FF"/>
+<stop offset="0.33" stop-color="#D2EFFF"/>
+<stop offset="0.68" stop-color="#76BCFF"/>
+<stop offset="1" stop-color="#4662B5"/>
+</linearGradient>
+<linearGradient id="paint6_linear_2_2" x1="47" y1="35" x2="65" y2="65" gradientUnits="userSpaceOnUse">
+<stop stop-color="#76BCFF"/>
+<stop offset="0.55" stop-color="#4662B5"/>
+<stop offset="1" stop-color="#2C366A"/>
+</linearGradient>
+<linearGradient id="paint7_linear_2_2" x1="47" y1="35" x2="65" y2="65" gradientUnits="userSpaceOnUse">
+<stop stop-color="#76BCFF"/>
+<stop offset="0.55" stop-color="#4662B5"/>
+<stop offset="1" stop-color="#2C366A"/>
+</linearGradient>
+</defs>
+</svg>
