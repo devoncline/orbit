@@ -1,4 +1,6 @@
 import process from 'node:process'
+import { enforceDemoRateLimit } from './_lib/demoRateLimit.js'
+import { MODEL_OUTPUT_TOKENS } from './_lib/modelLimits.js'
 import { formatLearningProfile } from '../src/services/learningProfile.js'
 import { formatCoursePosition } from '../src/services/coursePosition.js'
 import { formatLearningAnchors } from '../src/services/studyLearningContext.js'
@@ -20,7 +22,7 @@ export default async function handler(req, res) {
       learningAnchors,
     } = req.body
 
-    const response = await fetch('https://api.meta.ai/v1/responses', {
+    const providerRequest = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -28,6 +30,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'muse-spark-1.3',
+        max_output_tokens: MODEL_OUTPUT_TOKENS.question,
 
         input: `
 You are Orbit, an adaptive learning agent.
@@ -76,7 +79,10 @@ Return ONLY valid JSON in this exact shape:
 }
         `,
       }),
-    })
+    }
+    const allowance = await enforceDemoRateLimit(req, res)
+    if (!allowance.allowed) return
+    const response = await fetch('https://api.meta.ai/v1/responses', providerRequest)
 
     const data = await response.json()
 

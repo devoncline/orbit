@@ -1,4 +1,5 @@
 import { useId, useRef, useState } from 'react'
+import { aiErrorMessage } from '../services/demoUsage'
 import { isSupportedMaterial, MATERIAL_ACCEPT, MATERIAL_FORMAT_LABEL, MAX_COURSE_MATERIALS, materialMetadata, normalizeCourseMaterials, sameMaterial } from '../services/courseMaterials'
 
 export default function AddCourseFile({ files, onAddFile }) {
@@ -34,8 +35,9 @@ export default function AddCourseFile({ files, onAddFile }) {
                 await onAddFile(file)
                 retained.push(metadata)
                 added++
-            } catch {
-                failures.push(`${file.name} couldn’t be added. Choose it again to retry.`)
+            } catch (error) {
+                failures.push(aiErrorMessage(error, `${file.name} couldn’t be added. Choose it again to retry.`))
+                if (error?.code === 'demo_limit_reached' || error?.code === 'demo_temporarily_unavailable') break
             }
         }
         setStatus([added ? `${added} ${added === 1 ? 'material added' : 'materials added'}. Your topics and dates are ready to review.` : '',

@@ -1,4 +1,6 @@
 import process from 'node:process'
+import { enforceDemoRateLimit } from './_lib/demoRateLimit.js'
+import { MODEL_OUTPUT_TOKENS } from './_lib/modelLimits.js'
 import { formatLearningProfile, normalizeLearningProfile } from '../src/services/learningProfile.js'
 import { lessonVisualPrompt } from './_lib/lessonVisualPrompt.js'
 import { normalizeLessonContext } from '../src/services/lessonContext.js'
@@ -80,7 +82,7 @@ If an example was already shown, use a different situation. Do not add a quiz or
   const seen = new Set([...path.visited, ...(lesson ? [lesson] : [])].map(lessonKey))
 
   try {
-    const response = await fetch('https://api.meta.ai/v1/responses', {
+    const providerRequest = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -88,6 +90,7 @@ If an example was already shown, use a different situation. Do not add a quiz or
       },
       body: JSON.stringify({
         model: 'muse-spark-1.3',
+        max_output_tokens: MODEL_OUTPUT_TOKENS.lesson,
         input: `
 You are Orbit, an adaptive learning companion.
 
@@ -132,7 +135,10 @@ Do not tell the learner a visual is visible; the complete lesson text must stand
 Return ONLY valid JSON with topic, concept, content, lessonContext (an object with lessonTitle, reasonForLesson, focusAreas)${advances ? ', nextLessons (one or two objects with topic and concept)' : ''}, and visual. Select visual using the teaching rules above, including a full generated_image specification when useful or {"type":"none"} otherwise.
         `,
       }),
-    })
+    }
+    const allowance = await enforceDemoRateLimit(req, res)
+    if (!allowance.allowed) return
+    const response = await fetch('https://api.meta.ai/v1/responses', providerRequest)
 
     if (!response.ok) {
       return res.status(response.status).json({ error: 'Failed to generate study lesson' })
@@ -157,8 +163,10 @@ Return ONLY valid JSON with topic, concept, content, lessonContext (an object wi
       return res.status(502).json({ error: 'Invalid study lesson response' })
     }
     // Show me uses the separate image service. A model cannot override opt-in imagery here.
-    const visual = profile.visualPreference === 'on_request' ? { type: 'none' }
+    let visual = profile.visualPreference === 'on_request' ? { type: 'none' }
       : generatedLessonVisual(result.visual) || (normalizeLessonVisual(result.visual)?.type === 'none' ? { type: 'none' } : null)
+    if (visual?.type === 'generated_image' && action !== 'example' &&
+      !await allowance.includeImage({ courseName, lesson: result, visual })) visual = null
     logVisualRouting(process.env.NODE_ENV === 'development', { source: 'lesson', phase: 'response',
       concept: result.concept, requested: result.visual, normalized: visual, rendered: false })
     const nextSeen = new Set([...seen, lessonKey(result)])

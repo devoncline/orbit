@@ -1,4 +1,6 @@
 import process from 'node:process'
+import { enforceDemoRateLimit } from './_lib/demoRateLimit.js'
+import { MODEL_OUTPUT_TOKENS } from './_lib/modelLimits.js'
 import { formatLearningProfile } from '../src/services/learningProfile.js'
 import {
   formatLearningAnchors,
@@ -88,7 +90,7 @@ Choose one tentative signal: applied_understanding, partial_understanding, misco
 Return ONLY valid JSON: {"feedback":"", "signal":"neutral"}`
 
   try {
-    const response = await fetch('https://api.meta.ai/v1/responses', {
+    const providerRequest = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -96,6 +98,7 @@ Return ONLY valid JSON: {"feedback":"", "signal":"neutral"}`
       },
       body: JSON.stringify({
         model: 'muse-spark-1.3',
+        max_output_tokens: MODEL_OUTPUT_TOKENS.activity,
         input: `
 You are Orbit, an adaptive learning partner helping a learner apply one concept.
 ${instruction}
@@ -116,7 +119,10 @@ ${action === 'evaluate' ? `${anchorSuggestionPrompt}
 Applied Learning is a strong source of anchors when the learner actually applies the concept. Preserve the specific action or prediction, not generic praise. Partial or mistaken responses must not become success anchors.` : ''}
         `,
       }),
-    })
+    }
+    const allowance = await enforceDemoRateLimit(req, res)
+    if (!allowance.allowed) return
+    const response = await fetch('https://api.meta.ai/v1/responses', providerRequest)
 
     if (!response.ok) {
       return res.status(response.status).json({ error: 'Failed to process study activity' })

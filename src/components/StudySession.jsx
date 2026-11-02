@@ -18,6 +18,7 @@ import { selectStudyInteraction, studyThreadMetadata } from '../services/studyTh
 import { acceptPathLesson, learningPathContextKey, generatedLessonVisual, normalizeLearningPath, recommendStudyAction, studyPathView } from '../services/learningPath'
 import { createLessonImageCache } from '../services/lessonImages'
 import { lessonImageRequest } from '../services/lessonImageRequest'
+import { aiErrorMessage } from '../services/demoUsage'
 import { createStudyVisualRequest, studyVisualContext } from '../services/studyVisualRequest'
 import { learningResumeGuidance, normalizeLearningProfile } from '../services/learningProfile'
 import CoursePosition from './CoursePosition'
@@ -37,7 +38,7 @@ import './StudySession.css'
 // Mounting a saved lesson or visual never calls this function.
 function loadLessonVisual(cache, courseName, lesson, visual = lesson?.visual) {
     const request = lessonImageRequest({ courseName, lesson, visual })
-    if (request) cache.load(JSON.stringify(request))
+    if (request) cache.load(JSON.stringify(request), false, true)
 }
 
 export default function StudySession({
@@ -301,8 +302,8 @@ export default function StudySession({
                     loadLessonVisual(lessonImageCache, initialContext.course.name, result)
                 }
             })
-            .catch(() => {
-                if (current) setLessonError('Orbit could not load your lesson. Please try again.')
+            .catch((error) => {
+                if (current) setLessonError(aiErrorMessage(error, 'Orbit could not load your lesson. Please try again.'))
             })
             .finally(() => {
                 if (current) setLoadingLesson('')
@@ -385,10 +386,10 @@ export default function StudySession({
                 { message, response: result.response, signal: result.signal },
             ]))
             setPendingTurn(null)
-        } catch {
+        } catch (error) {
             if (!controller.signal.aborted) {
                 setLearnerMessage(message)
-                setConversationError('Orbit’s reply was interrupted. Your message is still here; try sending it again.')
+                setConversationError(aiErrorMessage(error, 'Orbit’s reply was interrupted. Your message is still here; try sending it again.'))
             }
         } finally {
             preference.removeEventListener('change', changeMotion)
@@ -434,13 +435,13 @@ export default function StudySession({
                 setActivityFeedback({ ...result, learnerResponse: response })
                 rememberVisualRecovery({ activeInteraction: 'activity', activity, activityResponse: response, activityFeedback: { ...result, learnerResponse: response } })
             }
-        } catch {
+        } catch (error) {
             if (!controller.signal.aborted) {
                 setActivityError({
                     action,
-                    message: action === 'generate'
+                    message: aiErrorMessage(error, action === 'generate'
                         ? 'Orbit could not prepare an activity. Please try again.'
-                        : 'Orbit could not respond to your activity. Your response is still here; try again.',
+                        : 'Orbit could not respond to your activity. Your response is still here; try again.'),
                 })
             }
         } finally {
@@ -488,8 +489,8 @@ export default function StudySession({
                 if (example) rememberInteraction('example', lesson.concept, example)
                 setExample(result.content)
             }
-        } catch {
-            setLessonError('Orbit could not update this lesson. Please try that action again.')
+        } catch (error) {
+            setLessonError(aiErrorMessage(error, 'Orbit could not update this lesson. Please try that action again.'))
         } finally {
             setLoadingLesson('')
         }
@@ -559,7 +560,7 @@ export default function StudySession({
                     openInteraction('lesson')
                     setProgressionError('Choose what your class is working on above, then continue to the next lesson.')
                 } else {
-                    setProgressionError('Orbit could not prepare the next lesson. Your place is saved; try again or keep exploring this lesson.')
+                    setProgressionError(aiErrorMessage(error, 'Orbit could not prepare the next lesson. Your place is saved; try again or keep exploring this lesson.'))
                 }
             }
         } finally {
@@ -595,8 +596,8 @@ export default function StudySession({
             setEvaluation(null)
             setSelectedAnswer(null)
             setQuestionNumber((number) => number + 1)
-        } catch {
-            setQuestionError('Orbit could not load your question. Please try again.')
+        } catch (error) {
+            setQuestionError(aiErrorMessage(error, 'Orbit could not load your question. Please try again.'))
         } finally {
             setLoadingQuestion(false)
         }
@@ -644,8 +645,8 @@ export default function StudySession({
             setEvaluation(result)
             rememberVisualRecovery({ activeInteraction: 'quiz', lesson, studyQuestion, selectedAnswer: answer, answerResult: 'incorrect', evaluation: result })
             rememberAnchor(result.anchor)
-        } catch {
-            setEvaluationError('Orbit could not prepare a different explanation. Your answer is saved; try again.')
+        } catch (error) {
+            setEvaluationError(aiErrorMessage(error, 'Orbit could not prepare a different explanation. Your answer is saved; try again.'))
         } finally {
             setLoadingEvaluation(false)
         }

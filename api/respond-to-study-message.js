@@ -1,4 +1,6 @@
 import process from 'node:process'
+import { enforceDemoRateLimit } from './_lib/demoRateLimit.js'
+import { MODEL_OUTPUT_TOKENS } from './_lib/modelLimits.js'
 import { formatLearningProfile } from '../src/services/learningProfile.js'
 import { lessonVisualPrompt } from './_lib/lessonVisualPrompt.js'
 import { generatedLessonVisual } from '../src/services/learningPath.js'
@@ -81,7 +83,7 @@ export default async function handler(req, res) {
 
   try {
     controller.signal.throwIfAborted()
-    const response = await fetch('https://api.meta.ai/v1/responses', {
+    const providerRequest = {
       method: 'POST',
       signal: controller.signal,
       headers: {
@@ -91,6 +93,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'muse-spark-1.3',
+        max_output_tokens: MODEL_OUTPUT_TOKENS.conversation,
         ...(streaming ? { stream: true, store: false } : {}),
         input: `
 You are Orbit, a thoughtful learning partner in a focused lesson conversation.
@@ -152,7 +155,10 @@ ${anchorSuggestionPrompt}
 ${streaming ? 'Write the "response" property FIRST, followed by "signal" and optional "anchor", "visual", or "reuseVisual". Keep all metadata outside the response string.' : ''}
         `,
       }),
-    })
+    }
+    const allowance = await enforceDemoRateLimit(req, res)
+    if (!allowance.allowed) return
+    const response = await fetch('https://api.meta.ai/v1/responses', providerRequest)
 
     if (!response.ok) {
       return res.status(response.status).json({ error: 'Failed to respond to study message' })
@@ -182,7 +188,8 @@ ${streaming ? 'Write the "response" property FIRST, followed by "signal" and opt
       return res.status(502).json({ error: 'Invalid study conversation response' })
     }
 
-    const visual = result.reuseVisual === true && currentVisual ? currentVisual : generatedLessonVisual(result.visual)
+    let visual = result.reuseVisual === true && currentVisual ? currentVisual : generatedLessonVisual(result.visual)
+    if (visual && !await allowance.includeImage({ courseName, lesson, visual })) visual = null
     logVisualRouting(process.env.NODE_ENV === 'development', { source: 'conversation', phase: 'response',
       concept: lesson.concept, requested: result.reuseVisual === true ? currentVisual : result.visual, normalized: visual, rendered: false })
     const reply = {

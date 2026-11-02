@@ -1,4 +1,6 @@
 import process from 'node:process'
+import { enforceDemoRateLimit } from './_lib/demoRateLimit.js'
+import { MODEL_OUTPUT_TOKENS } from './_lib/modelLimits.js'
 import { localDate, normalizeSyllabusItems } from '../src/services/coursePosition.js'
 import { parseWorkDate } from '../src/services/upcomingWork.js'
 import { isSupportedMaterial } from '../src/services/courseMaterials.js'
@@ -20,7 +22,7 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Unsupported course material' })
         }
 
-        const response = await fetch('https://api.meta.ai/v1/responses', {
+        const providerRequest = {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -28,6 +30,7 @@ export default async function handler(req, res) {
             },
             body: JSON.stringify({
                 model: 'muse-spark-1.3',
+            max_output_tokens: MODEL_OUTPUT_TOKENS.analyzeCourse,
 
                 input: [
                     {
@@ -84,7 +87,10 @@ If something is unknown, use an empty string or empty array.
                     },
                 ],
             }),
-        })
+        }
+        const allowance = await enforceDemoRateLimit(req, res)
+        if (!allowance.allowed) return
+        const response = await fetch('https://api.meta.ai/v1/responses', providerRequest)
 
         const data = await response.json()
 

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import DemoLimitNotice from './DemoLimitNotice'
 import orbitLogo from '../assets/brand/orbit-logo-horizontal-dark.svg'
 import './AppShell.css'
 
@@ -61,7 +62,7 @@ export default function AppShell({ courses, destination, selectedSpace, onNaviga
       <dialog id="orbit-navigation" className="shell-drawer" ref={drawer} aria-label="Orbit navigation" onClose={() => setDrawerOpen(false)} onClick={(event) => { if (event.target === event.currentTarget) event.currentTarget.close() }}>
         <div className="shell-drawer-content"><button className="orbit-text-button shell-close" onClick={() => drawer.current.close()} autoFocus>Close menu ×</button>{navigation()}</div>
       </dialog>
-      <main id="orbit-content" className="shell-main" tabIndex={-1} ref={main}>{children}</main>
+      <main id="orbit-content" className="shell-main" tabIndex={-1} ref={main}><DemoLimitNotice />{children}</main>
     </div>
   )
 }

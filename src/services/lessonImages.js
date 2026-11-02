@@ -1,12 +1,13 @@
 import { lessonImageRequest, lessonImageUrl, savedLessonImages } from './lessonImageRequest.js'
+import { demoAiFetch } from './demoUsage.js'
 
-export async function generateLessonImage(context) {
+export async function generateLessonImage(context, { includedImage = false } = {}) {
   const request = lessonImageRequest(context)
   if (!request) return null
-  const response = await fetch('/api/generate-lesson-image', {
+  const response = await demoAiFetch('/api/generate-lesson-image', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     signal: AbortSignal.timeout(195000), body: JSON.stringify(request),
-  })
+  }, { includedImage })
   if (!response.ok) throw new Error('Could not generate lesson image')
   const url = lessonImageUrl((await response.json()).url)
   if (!url) throw new Error('Invalid lesson image response')
@@ -34,12 +35,12 @@ export function createLessonImageCache(saved) {
       const entry = entries.get(key)
       if (entry) { entry.snapshot = { status: 'error' }; notify() }
     },
-    load(key, retry = false) {
+    load(key, retry = false, includedImage = false) {
       const previous = entries.get(key)
       if (previous && (!retry || previous.snapshot.status !== 'error')) return previous.promise
       const entry = { snapshot: { status: 'pending' } }
       entries.set(key, entry)
-      entry.promise = generateLessonImage(JSON.parse(key)).then((image) => {
+      entry.promise = generateLessonImage(JSON.parse(key), { includedImage }).then((image) => {
         entry.snapshot = image ? { status: 'ready', ...image } : { status: 'error' }
       }).catch(() => { entry.snapshot = { status: 'error' } }).finally(notify)
       notify()

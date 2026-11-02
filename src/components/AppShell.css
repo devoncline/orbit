@@ -164,6 +164,9 @@
 .space-details h3 { font-size: 15px; margin: 24px 0 10px; }
 .space-details p { font-size: 14px; }
 .shell-page-notices { max-width: var(--orbit-page-width); margin-inline: auto; }
+.demo-limit-notice { max-width: var(--orbit-page-width); margin: 0 auto 1rem; padding: .75rem 1rem; border: 1px solid var(--orbit-border); border-radius: 12px; }
+.demo-limit-notice p { margin: 0; line-height: 1.6; overflow-wrap: anywhere; }
+.demo-limit-notice a { color: inherit; text-decoration: underline; text-underline-offset: .2em; }
 .orbit-shell-focused .orbit-environment { opacity: .28; }
 .study-page { display: grid; grid-template-columns: var(--orbit-page-columns); column-gap: var(--orbit-page-gap); }
 .study-room { grid-column: 1 / -1; min-width: 0; }

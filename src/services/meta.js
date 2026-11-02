@@ -5,12 +5,13 @@ import { coursePositionRequest, inferCoursePosition, localDate } from './courseP
 import { learningPathContextKey, generatedLessonVisual, normalizeLearningPath } from './learningPath.js'
 import { learningProfileRequest } from './learningProfile.js'
 import { isSupportedMaterial } from './courseMaterials.js'
+import { demoAiFetch } from './demoUsage.js'
 
 export async function analyzeCourseFile(file) {
     if (!isSupportedMaterial(file)) throw new Error('Unsupported course material')
     const base64File = await fileToBase64(file)
 
-    const response = await fetch('/api/analyze-course', {
+    const response = await demoAiFetch('/api/analyze-course', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -50,7 +51,7 @@ export function generateStudyExample(course, lesson, example = '', options = {})
 }
 
 async function requestStudyLesson(course, mastery, action, lesson, example, { anchors = [], path, signal, learningProfile } = {}) {
-    const response = await fetch('/api/generate-study-lesson', {
+    const response = await demoAiFetch('/api/generate-study-lesson', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -101,7 +102,7 @@ async function requestStudyConversation(
     streaming = false,
 ) {
     const visual = generatedLessonVisual(currentVisual)
-    const response = await fetch('/api/respond-to-study-message', {
+    const response = await demoAiFetch('/api/respond-to-study-message', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -152,7 +153,7 @@ async function requestStudyActivity(
     action,
     { history = [], example = '', activity, learnerResponse, activityContext, signal, anchors = [], learningProfile }
 ) {
-    const response = await fetch('/api/study-activity', {
+    const response = await demoAiFetch('/api/study-activity', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -189,7 +190,7 @@ async function requestStudyActivity(
 }
 
 export async function generateStudyQuestion(course, mastery, lesson, { anchors = [], learningProfile } = {}) {
-    const response = await fetch('/api/generate-study-question', {
+    const response = await demoAiFetch('/api/generate-study-question', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -226,7 +227,7 @@ export async function evaluateStudyAnswer(
         (answer) => answer.correct
     )
 
-    const response = await fetch('/api/evaluate-study-answer', {
+    const response = await demoAiFetch('/api/evaluate-study-answer', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -268,7 +269,7 @@ export function recommendationCourses(courses) {
 }
 
 export async function recommendCourse(courses, { signal, currentDate = localDate() } = {}) {
-    const response = await fetch('/api/recommend-course', {
+    const response = await demoAiFetch('/api/recommend-course', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

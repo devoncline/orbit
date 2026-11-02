@@ -1,4 +1,6 @@
 import process from 'node:process'
+import { enforceDemoRateLimit } from './_lib/demoRateLimit.js'
+import { MODEL_OUTPUT_TOKENS } from './_lib/modelLimits.js'
 import { formatLearningProfile } from '../src/services/learningProfile.js'
 import {
     formatLearningAnchors,
@@ -23,7 +25,7 @@ export default async function handler(req, res) {
             learningAnchors,
         } = req.body
 
-        const response = await fetch('https://api.meta.ai/v1/responses', {
+        const providerRequest = {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -31,6 +33,7 @@ export default async function handler(req, res) {
             },
             body: JSON.stringify({
                 model: 'muse-spark-1.3',
+            max_output_tokens: MODEL_OUTPUT_TOKENS.evaluateAnswer,
 
                 input: `
 You are Orbit, an adaptive learning agent.
@@ -77,7 +80,10 @@ Only suggest a misconception anchor if this particular mistake reveals a specifi
 A multiple-choice selection does not demonstrate the learner's reasoning. Do not claim the correction worked or create an understanding/preference anchor from your own adapted explanation.` : ''}
         `,
             }),
-        })
+        }
+        const allowance = await enforceDemoRateLimit(req, res)
+        if (!allowance.allowed) return
+        const response = await fetch('https://api.meta.ai/v1/responses', providerRequest)
 
         const data = await response.json()
 
