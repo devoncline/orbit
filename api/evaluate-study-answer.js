@@ -1,3 +1,4 @@
+import { formatMaterialContext } from '../src/services/courseMaterials.js'
 import process from 'node:process'
 import { enforceDemoRateLimit } from './_lib/demoRateLimit.js'
 import { MODEL_OUTPUT_TOKENS } from './_lib/modelLimits.js'
@@ -49,6 +50,7 @@ Current mastery: ${mastery}%
 ${formatLearningAnchors(learningAnchors, { topic, text: question })}
 
 Explain the concept in a simpler way based on the student's mistake.
+${formatMaterialContext(req.body.materialContext)}
 ${formatLearningProfile(req.body.learningProfile)}
 
 Then generate ONE easier follow-up multiple-choice question that tests the same concept.

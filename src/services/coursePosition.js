@@ -1,3 +1,4 @@
+import { courseMaterialContext } from './courseMaterials.js'
 import { parseWorkDate } from './upcomingWork.js'
 import { retainLearningAnchors, selectLearningAnchors } from './studyLearningContext.js'
 
@@ -205,7 +206,9 @@ export function positionAction(course, position = inferCoursePosition(course)) {
 }
 
 export function coursePositionRequest(course, today = localDate()) {
+  const materialContext = courseMaterialContext(course.files, inferCoursePosition(course, today).currentTopic)
   return {
+    ...(materialContext.length ? { materialContext } : {}),
     currentDate: today, syllabusItems: normalizeSyllabusItems(course.syllabusItems),
     ...(course.learnerPosition ? { learnerPosition: normalizeLearnerPosition(course.learnerPosition) } : {}),
     ...(course.recentLearning ? { recentLearning: normalizeRecentLearning(course.recentLearning) } : {}),

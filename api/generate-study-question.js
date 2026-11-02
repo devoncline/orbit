@@ -1,3 +1,4 @@
+import { formatMaterialContext } from '../src/services/courseMaterials.js'
 import process from 'node:process'
 import { enforceDemoRateLimit } from './_lib/demoRateLimit.js'
 import { MODEL_OUTPUT_TOKENS } from './_lib/modelLimits.js'
@@ -36,6 +37,7 @@ export default async function handler(req, res) {
 You are Orbit, an adaptive learning agent.
 
 Generate ONE multiple-choice study question for this student.
+${formatMaterialContext(req.body.materialContext)}
 ${formatLearningProfile(req.body.learningProfile)}
 
 Course: ${courseName}

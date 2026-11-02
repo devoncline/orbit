@@ -1,3 +1,4 @@
+import { formatMaterialContext } from '../src/services/courseMaterials.js'
 import process from 'node:process'
 import { enforceDemoRateLimit } from './_lib/demoRateLimit.js'
 import { MODEL_OUTPUT_TOKENS } from './_lib/modelLimits.js'
@@ -130,6 +131,7 @@ Prefer an instructional image for processes, flows, sequences, cause and effect,
 ${profile.visualPreference === 'on_request' ? 'This learner requests images only on demand. Return visual: {"type":"none"} for this lesson, even for visual subjects. The separate Show me tool remains available.' : 'Photosynthesis, cellular respiration, gravity/orbits, React state flow, API request/response flow, arrays, scope, props vs state, SQL vs NoSQL, mitosis, and the water cycle should usually receive an instructional image when teaching those mechanisms or relationships.'}
 Short factual recall, pure vocabulary, simple definitions, or concepts where a visual adds no meaningful value may use none.
 ${lessonVisualPrompt}
+${formatMaterialContext(req.body.materialContext)}
 ${formatLearningProfile(req.body.learningProfile, { visuals: true })}
 Do not tell the learner a visual is visible; the complete lesson text must stand alone.
 Return ONLY valid JSON with topic, concept, content, lessonContext (an object with lessonTitle, reasonForLesson, focusAreas)${advances ? ', nextLessons (one or two objects with topic and concept)' : ''}, and visual. Select visual using the teaching rules above, including a full generated_image specification when useful or {"type":"none"} otherwise.

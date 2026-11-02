@@ -8,7 +8,7 @@ import { courseLaunchRecommendations } from '../services/coursePosition'
 import { parseWorkDate } from '../services/upcomingWork'
 import './SpaceScreen.css'
 
-export default function SpaceScreen({ course, onStartLesson, onAddFile, today, onPositionChange }) {
+export default function SpaceScreen({ course, onStartLesson, onAddFile, onAnalyzeFile, onRemoveFile, hasFile, today, onPositionChange }) {
   const { primary, alternatives } = courseLaunchRecommendations(course, today)
   const [topic, setTopic] = useState('')
   const id = useId()
@@ -43,8 +43,11 @@ export default function SpaceScreen({ course, onStartLesson, onAddFile, today, o
       </> : manual}
       <section className="calendar-group space-coming-up"><h2>Coming up in this space</h2><UpcomingWork courses={[course]} preview today={today} /></section>
       {primary && manual}
-      <AddCourseFile files={course.files} onAddFile={(file) => onAddFile(file, course.name)} />
-      <details className="space-details"><summary>Learning details</summary><p>Current mastery: {course.mastery?.overall ?? 40}%</p><CourseDetails course={course} showMaterials={false} />
+      <AddCourseFile files={course.files} onAddFile={(file, kind) => onAddFile(file, course.name, kind)} onAnalyzeFile={file => onAnalyzeFile(file, course.name)} onRemoveFile={onRemoveFile && (file => onRemoveFile(file, course.name))} hasFile={hasFile} />
+      <details className="space-details"><summary>Learning details</summary><p>Current mastery: {course.mastery?.overall ?? 0}%</p>
+        <p className="orbit-muted">An estimate from quiz answers and applied activities. Topics with more practice carry more weight in the course average. Reading and “I understand” do not raise it. Older saved estimates are kept.</p>
+        {Object.keys(course.mastery?.topics || {}).length > 0 && <ul>{Object.entries(course.mastery.topics).map(([topicName, score]) => <li key={topicName}>{topicName}: {score}%</li>)}</ul>}
+        <CourseDetails course={course} showMaterials={false} />
         {onPositionChange && <CoursePosition course={course} today={today} onChange={onPositionChange} showSummary={false} />}
       </details>
       </div>

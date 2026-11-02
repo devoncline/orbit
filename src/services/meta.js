@@ -4,11 +4,11 @@ import { learningAnchorRequest } from './studyLearningContext.js'
 import { coursePositionRequest, inferCoursePosition, localDate } from './coursePosition.js'
 import { learningPathContextKey, generatedLessonVisual, normalizeLearningPath } from './learningPath.js'
 import { learningProfileRequest } from './learningProfile.js'
-import { isSupportedMaterial } from './courseMaterials.js'
+import { canAnalyzeMaterial, courseMaterialContext, materialValidationError } from './courseMaterials.js'
 import { demoAiFetch } from './demoUsage.js'
 
-export async function analyzeCourseFile(file) {
-    if (!isSupportedMaterial(file)) throw new Error('Unsupported course material')
+export async function analyzeCourseFile(file, materialKind = 'syllabus') {
+    if (!canAnalyzeMaterial(file) || materialValidationError(file)) throw new Error('Unsupported course material')
     const base64File = await fileToBase64(file)
 
     const response = await demoAiFetch('/api/analyze-course', {
@@ -21,6 +21,7 @@ export async function analyzeCourseFile(file) {
             fileType: file.type,
             fileData: base64File,
             currentDate: localDate(),
+            materialKind,
         }),
     })
 
@@ -235,6 +236,7 @@ export async function evaluateStudyAnswer(
         body: JSON.stringify({
             courseName: course.name,
             question: studyQuestion.question,
+            ...(courseMaterialContext(course.files).length ? { materialContext: courseMaterialContext(course.files, studyQuestion.topic) } : {}),
             selectedAnswer: selectedAnswer.text,
             ...learningProfileRequest(learningProfile),
             correctAnswer: correctAnswer.text,
@@ -293,7 +295,7 @@ function fileToBase64(file) {
         const reader = new FileReader()
 
         reader.onload = () => {
-            resolve(reader.result)
+            resolve(String(reader.result).replace(/^data:[^;]*;base64,/, 'data:application/pdf;base64,'))
         }
 
         reader.onerror = reject

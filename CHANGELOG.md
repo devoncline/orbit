@@ -4,6 +4,8 @@
 
 ### Improvements
 
+- Mastery now builds gradually from quiz answers, demonstrated activity understanding, and recovery after mistakes. Course estimates reflect topic practice; repeated credit for the same recent task is prevented. Reading, examples and “I understand” remain separate from mastery, and saved progress stays compatible.
+- Course materials now accept multiple PDFs and JPG/JPEG, PNG and WebP photo attachments, with filename/type lists, later additions, removal, and mobile photo/camera controls. PDF reading is explicit: syllabi can add dates, while ordinary resources provide learning context without calendar entries. Photos currently save names only and clearly state that image reading is unavailable; HEIC/HEIF shows conversion guidance.
 - The public demo includes 25 AI actions per visitor every six hours, plus an emergency ceiling of 750 actions across the demo in any 24-hour period. Automatic supporting images stay included in their parent action. When either allowance is used, Orbit shows a friendly message and a link to the full demo; navigation and saved learning remain available.
 - Course spaces now recommend a topic from upcoming work and course context, with one-click lessons and a few other starting options. Manual topic entry is optional. Course materials stay visible after processing, and learners can add multiple PDFs over time without losing earlier materials or duplicating matching deadlines.
 - Study lessons now lead with a concise topic, followed by quiet assignment dates and a short lesson focus. Compact thread controls and reduced introductory spacing bring teaching into view sooner, including on phones, while lessons retain their full syllabus context.
@@ -36,7 +38,7 @@
 - A lightweight Calendar and Home preview gather dated work from learning materials, keeping unclear dates separate for review. Materials can be added directly to a chosen space, with visible upload progress and retry feedback.
 - Study now has a quieter environment, clear Learn/Practice progress, and a way to return Home and resume the current session.
 - Orbit can now remember useful connections, successful activities, and tentative misconceptions during study, then reuse relevant examples in later teaching and practice. These memories do not change mastery.
-- Learn now offers "Let me try it": a short, practical activity based on the current concept and conversation. Learners can share what they tried, get focused feedback, and keep talking or choose "Quiz me". Activities stay in the current session and do not change mastery.
+- Learn now offers "Let me try it": a short, practical activity based on the current concept and conversation. Learners can share what they tried, get focused feedback, and keep talking or choose "Quiz me". Activity screens stay in the current session.
 - Learners can now ask questions or share connections during a lesson and receive short, contextual replies from Orbit. The lesson shortcuts and "Quiz me" remain available, with recent conversation kept compact.
 - Study sessions now begin with a short, topic-aware lesson. Learners can ask for a different explanation or a concrete example, then choose "Quiz me" to practice the concept before continuing through adaptive questions.
 - Home now places its learning recommendation and companion in a nebula environment, with dark text areas, soft edges, and a quieter crop on smaller screens.
@@ -44,7 +46,7 @@
 - Home now features the Orbit logo and companion artwork, with gentle floating motion that respects reduced-motion preferences and compact placement on smaller screens.
 - Home now puts the next learning action first, with a calmer dark palette, a responsive hero, and easy-to-scan courses below. Course details, adding courses, and uploading materials remain available below the recommendation.
 - Study question generation now asks Muse to choose a relevant topic, preferring weaker topics when they relate to upcoming work.
-- Study answers now update mastery for the question's topic, with overall course mastery calculated as the rounded average of topic scores. Questions without a topic retain the existing course mastery behavior.
+- Study answers now update mastery for the question's topic, with course mastery derived from topic scores. Questions without a topic use the current lesson topic or course name.
 
 ### Manual test checklist
 

@@ -26,7 +26,7 @@ const routes = [
   ['evaluate-study-answer', answerHandler, { courseName: 'React', question: 'What remembers?', selectedAnswer: 'Screen', correctAnswer: 'State' }, { feedback: 'State remembers.' }, 'evaluateAnswer'],
   ['respond-to-study-message', conversationHandler, { ...context, message: 'Why?' }, reply, 'conversation'],
   ['study-activity', activityHandler, { ...context, action: 'generate' }, activity, 'activity'],
-  ['analyze-course', analyzeHandler, { fileName: 'course.pdf', fileData: 'fake-pdf' }, { courseName: 'React' }, 'analyzeCourse'],
+  ['analyze-course', analyzeHandler, { fileName: 'course.pdf', fileData: 'data:application/pdf;base64,JVBERi1maXh0dXJl' }, { courseName: 'React' }, 'analyzeCourse'],
   ['recommend-course', recommendHandler, { courses: [{ name: 'React' }] }, { courseName: 'React' }, 'recommendCourse'],
   ['generate-lesson-image', imageHandler, context, { data: [{ url: 'https://images.example.test/image.webp' }] }],
 ]

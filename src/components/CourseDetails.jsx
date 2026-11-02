@@ -22,7 +22,7 @@ export default function CourseDetails({ course, showMaterials = true }) {
           </div>
         ))
       ) : (
-        <p>No material yet. You can start with an idea or add a PDF.</p>
+        <p>No material yet. You can start with an idea or add photos or files.</p>
       )}</>}
     </section>
   )

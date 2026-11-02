@@ -60,7 +60,7 @@ export default function AddCourse({ onAddCourse, intent = 'topic', courses = [] 
         />
         </label>}
         {error && <p role="alert">{error}</p>}
-        <button className="orbit-button orbit-button-primary" type="submit">{intent === 'material' ? 'Create space & add PDF' : 'Create space'}</button>
+        <button className="orbit-button orbit-button-primary" type="submit">{intent === 'material' ? 'Create space & add material' : 'Create space'}</button>
       </form>
   )
 }

@@ -13,9 +13,10 @@ import { applyPositionOverride, inferCoursePosition, localDate, mergeCourseAnaly
 import { createStudyThread, resolveLearningSpace, studyThreadsReducer } from './services/studyThreads'
 import { clearLearnerMemory, learnerPositionKey, loadLearnerMemory, saveLearnerMemory } from './services/learnerMemory'
 import { retainLearningAnchors } from './services/studyLearningContext'
+import { applyMasteryEvidence } from './services/mastery'
 import { analyzeCourseFile } from './services/meta'
-import { materialMetadata, normalizeCourseMaterials, sameMaterial } from './services/courseMaterials'
-import { useCallback, useEffect, useReducer, useState } from 'react'
+import { canAnalyzeMaterial, materialValidationError, MAX_COURSE_MATERIALS, materialMetadata, normalizeCourseMaterials, removeCourseMaterial, sameMaterial } from './services/courseMaterials'
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import './App.css'
 
 export default function App() {
@@ -28,6 +29,8 @@ export default function App() {
   const [destination, setDestination] = useState('home')
   const [selectedSpace, setSelectedSpace] = useState(null)
   const [newSpaceIntent, setNewSpaceIntent] = useState('topic')
+  const sessionFiles = useRef(new Map())
+  const materialKey = (courseName, file) => JSON.stringify([courseName, file.name, file.size, file.lastModified])
 
   const [recommendation, setRecommendation] = useState(restored.recommendation)
   const [today, setToday] = useState(localDate)
@@ -64,6 +67,7 @@ export default function App() {
       return
     }
     setCourses([])
+    sessionFiles.current.clear()
     setLearningPreferences(normalizeLearningPreferences())
     dispatchThreads({ type: 'reset' })
     setRecommendation(null)
@@ -78,7 +82,7 @@ export default function App() {
       {
         ...newCourse,
         mastery: {
-          overall: 40,
+          overall: 0,
           topics: {},
         },
       },
@@ -88,77 +92,43 @@ export default function App() {
     else setDestination('space')
   }
 
-  function updateCourseMastery(courseName, newMastery) {
-    setCourses((currentCourses) =>
-      currentCourses.map((course) => {
-        if (course.name === courseName) {
-          return {
-            ...course,
-            mastery: {
-              ...course.mastery,
-              overall: newMastery,
-            },
-          }
-        }
-
-        return course
-      })
-    )
+  function updateTopicMastery(courseName, topic, evidence) {
+    setCourses(current => current.map(course => course.name === courseName
+      ? { ...course, mastery: applyMasteryEvidence(course.mastery, { ...evidence, topic }) } : course))
   }
 
-  function updateTopicMastery(courseName, topicName, newMastery) {
-    if (!topicName) return
-
-    setCourses((currentCourses) =>
-      currentCourses.map((course) => {
-        if (course.name !== courseName) {
-          return course
-        }
-
-        const currentTopics = course.mastery?.topics || {}
-
-        const existingTopic =
-          Object.keys(currentTopics).find(
-            (topic) =>
-              topic.toLowerCase() === topicName.toLowerCase()
-          ) || topicName
-
-        const updatedTopics = {
-          ...currentTopics,
-          [existingTopic]: newMastery,
-        }
-
-        const topicScores = Object.values(updatedTopics)
-
-        const overall =
-          topicScores.length > 0
-            ? Math.round(
-                topicScores.reduce(
-                  (total, score) => total + score,
-                  0
-                ) / topicScores.length
-              )
-            : course.mastery?.overall ?? 40
-
-        return {
-          ...course,
-          mastery: {
-            overall,
-            topics: updatedTopics,
-          },
-        }
-      })
-    )
-  }
-
-  async function addCourseFile(file, targetCourseName) {
+  function addCourseFile(file, targetCourseName, kind = 'resource') {
+    const error = materialValidationError(file)
+    if (error) throw new Error(error)
     const existing = courses.find(course => course.name === targetCourseName)
-    if (existing?.files?.some(item => sameMaterial(item, materialMetadata(file)))) return
-    const analysis = await analyzeCourseFile(file)
+    if (!existing) return
+    const previous = existing.files?.find(item => sameMaterial(item, materialMetadata(file)))
+    if (!previous && existing.files?.length >= MAX_COURSE_MATERIALS) throw new Error('Material limit reached')
+    const metadata = previous || materialMetadata(file, new Date().toISOString(), kind)
+    if (canAnalyzeMaterial(file)) sessionFiles.current.set(materialKey(targetCourseName, metadata), file)
+    setCourses(current => current.map(course => course.name === targetCourseName
+      ? { ...course, files: normalizeCourseMaterials([...(course.files || []), metadata]) } : course))
+  }
+
+  function removeMaterial(material, courseName) {
+    sessionFiles.current.delete(materialKey(courseName, material))
+    setCourses(current => current.map(course => course.name === courseName ? removeCourseMaterial(course, material) : course))
+  }
+
+  async function analyzeMaterial(material, targetCourseName) {
+    const key = materialKey(targetCourseName, material)
+    const file = sessionFiles.current.get(key)
+    if (!file || !canAnalyzeMaterial(file)) throw new Error('Choose the PDF again to read it')
+    const analysis = await analyzeCourseFile(file, material.kind)
+    if (sessionFiles.current.get(key) !== file) return // Removed or reset during the request.
 
     setCourses((currentCourses) =>
       currentCourses.map((course) => {
         if (course.name === targetCourseName) {
+          if (!course.files?.some(item => sameMaterial(item, material))) return course
+          const files = normalizeCourseMaterials(course.files.map(item => sameMaterial(item, material)
+            ? { ...item, analyzed: true, ...(material.kind === 'resource' ? { summary: analysis.summary, topics: analysis.importantTopics } : {}) } : item))
+          if (material.kind === 'resource') return { ...course, files }
           return {
             ...course,
 
@@ -183,13 +153,14 @@ export default function App() {
 
             ...mergeCourseAnalysis(course, analysis),
 
-            files: normalizeCourseMaterials([...(course.files || []), materialMetadata(file, new Date().toISOString())]),
+            files,
           }
         }
 
         return course
       })
     )
+    sessionFiles.current.delete(key)
   }
 
   function navigate(next) {
@@ -305,7 +276,7 @@ export default function App() {
         </section>
       )}
       {destination === 'space' && selectedCourse && (
-        <SpaceScreen key={selectedCourse.name} course={selectedCourse} today={today} onStartLesson={newThread} onPositionChange={(update) => updatePosition(selectedCourse.name, update)} onAddFile={addCourseFile} />
+        <SpaceScreen key={selectedCourse.name} course={selectedCourse} today={today} onStartLesson={newThread} onPositionChange={(update) => updatePosition(selectedCourse.name, update)} onAddFile={addCourseFile} onAnalyzeFile={analyzeMaterial} onRemoveFile={removeMaterial} hasFile={file => sessionFiles.current.has(materialKey(selectedCourse.name, file))} />
       )}
       {destination === 'calendar' && (
         <section className="orbit-page orbit-page-layout calendar-page">
@@ -378,9 +349,8 @@ export default function App() {
                 onPositionChange={(update) => updatePosition(course.name, update)}
                 onNewThread={() => newThread(courses.find((entry) => entry.name === course.name))}
                 today={today}
-                mastery={originalCourse.mastery?.overall ?? 40}
-                setMastery={(newMastery) => updateCourseMastery(course.name, newMastery)}
-                updateTopicMastery={(topicName, newMastery) => updateTopicMastery(course.name, topicName, newMastery)}
+                mastery={originalCourse.mastery?.overall ?? 0}
+                updateTopicMastery={(topicName, evidence) => updateTopicMastery(course.name, topicName, evidence)}
               />
             </div>
           })}

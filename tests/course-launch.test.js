@@ -69,10 +69,10 @@ test('materials retain metadata only, deduplicate identical files, and allow a r
   assert.doesNotMatch(JSON.stringify(snapshot), /BINARY|SECRET|fileData/)
 })
 
-test('the material capability is PDF-only, with the same gate on the server before model calls', async (t) => {
+test('attachments accept images while the server rejects unsupported analysis before model calls', async (t) => {
   assert.equal(isSupportedMaterial({ name: 'notes.PDF', type: '' }), true)
   for (const file of [{ name: 'board.png', type: 'image/png' }, { name: 'file.pdf', type: 'image/png' }]) {
-    assert.equal(isSupportedMaterial(file), false)
+    assert.equal(isSupportedMaterial(file), file.name === 'board.png')
     t.mock.method(globalThis, 'fetch', () => assert.fail('Unsupported files must not reach the model'))
     const res = { status(code) { this.code = code; return this }, json(value) { this.body = value; return this } }
     await analysisHandler({ method: 'POST', body: { fileName: file.name, fileType: file.type, fileData: 'fake' } }, res)

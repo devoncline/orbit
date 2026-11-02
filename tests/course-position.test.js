@@ -162,7 +162,7 @@ test('recommendation receives current date, classified timeline, mastery, and ex
 
 test('syllabus analysis preserves the complete teaching timeline and avoids invented years', async (t) => {
   const mock = model(t, { courseName: course.name, syllabusItems: course.syllabusItems, upcomingWork: course.upcomingWork })
-  const res = await call(analysisHandler, { fileName: 'syllabus.pdf', fileData: 'test fixture', currentDate: '2026-10-27' })
+  const res = await call(analysisHandler, { fileName: 'syllabus.pdf', fileData: 'data:application/pdf;base64,JVBERi1maXh0dXJl', currentDate: '2026-10-27' })
   assert.equal(res.body.syllabusItems.length, 4)
   assert.equal(res.body.upcomingWork.length, 2)
   const prompt = JSON.parse(mock.mock.calls[0].arguments[1].body).input[0].content[1].text

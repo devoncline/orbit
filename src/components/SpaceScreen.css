@@ -31,6 +31,9 @@
 .course-material-formats { color: var(--orbit-muted); font-size: 13px; margin: 0 0 12px; }
 .course-material-status { min-height: 1.6em; font-size: 13px; color: var(--orbit-muted); }
 .course-material-errors { padding-left: 20px; font-size: 13px; }
+.course-material-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 12px; }
+.course-material-controls { margin-bottom: 12px; }
+.course-material-list .orbit-text-button { min-height: 44px; margin-right: 16px; }
 @media (max-width: 760px) {
   .space-page { grid-template-areas: 'header' 'content' 'stage'; }
   .space-recommendation { padding-left: 16px; }

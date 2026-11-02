@@ -9,7 +9,7 @@ for (const [name, handler, body] of [
   ['question', question, { courseName: 'Physics' }],
   ['evaluation', evaluate, { courseName: 'Physics' }],
   ['recommendation', recommend, { courses: [{ name: 'Physics' }] }],
-  ['document analysis', analyze, { fileName: 'test.pdf', fileData: 'synthetic-test-data' }],
+  ['document analysis', analyze, { fileName: 'test.pdf', fileData: 'data:application/pdf;base64,JVBERi1maXh0dXJl' }],
 ]) {
   test(`${name} keeps provider failures and exceptions out of responses and logs`, async (t) => {
     const logs = t.mock.method(console, 'error', () => {})

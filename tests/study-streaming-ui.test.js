@@ -526,10 +526,11 @@ test('initial lesson, simplification, examples and next lesson replace the local
 
 test('activities and activity feedback yield in place, preserve drafts on failure, and retry locally', async (t) => {
   const requests = structuredRequests(t)
-  await act(async () => root.render(createElement(StudySession, props)))
+  const evidence = []
+  await act(async () => root.render(createElement(StudySession, { ...props, updateTopicMastery: (...args) => evidence.push(args) })))
   await click('Let me try it')
   const activitySlot = checkSignal('activity')
-  const activity = { title: 'Name an input', instruction: 'Choose an input for a greeting.' }
+  const activity = { topic: 'Props', title: 'Name an input', instruction: 'Choose an input for a greeting.' }
   await complete(requests[0], activity)
   assert.match(activitySlot.textContent, /Choose an input/)
   await enterMessage('A name is the input.')
@@ -538,6 +539,8 @@ test('activities and activity feedback yield in place, preserve drafts on failur
   assert.equal(container.querySelector('textarea').value, 'A name is the input.')
   assert.equal(feedbackSlot.parentElement.previousElementSibling.tagName, 'FORM')
   await complete(requests[1], { feedback: 'Yes, the name is a prop.', signal: 'applied_understanding' })
+  assert.equal(evidence[0][1].kind, 'activity')
+  assert.equal(evidence[0][1].outcome, 'success')
   assert.match(feedbackSlot.textContent, /Yes, the name/)
   await click('Share response')
   assert.equal(checkSignal('response'), feedbackSlot)
@@ -567,7 +570,7 @@ test('quiz generation, next question and recovery use the result slot without ch
   await complete(requests[0], question)
   assert.match(slot.textContent, /What supplies inputs/)
   await click('Props')
-  assert.deepEqual(mastery, [['Props', 80]])
+  assert.deepEqual(mastery.map(([topic, evidence]) => [topic, evidence.kind, evidence.outcome]), [['Props', 'quiz', 'success']])
   await click('Next question')
   assert.equal(checkSignal('quiz'), slot)
   assert.doesNotMatch(slot.textContent, /What supplies inputs/)
@@ -576,7 +579,7 @@ test('quiz generation, next question and recovery use the result slot without ch
   await click('State')
   assert.equal(checkSignal('evaluation'), slot)
   assert.equal(slot.querySelector('button'), null)
-  assert.deepEqual(mastery, [['Props', 80], ['Props', 40]])
+  assert.deepEqual(mastery.map(([topic, evidence]) => [topic, evidence.kind, evidence.outcome]), [['Props', 'quiz', 'success'], ['Props', 'quiz', 'miss']])
   await complete(requests[2], {}, 500)
   assert.match(container.querySelector('[role="alert"]').textContent, /Your answer is saved/)
   await click('Try again')
@@ -584,7 +587,7 @@ test('quiz generation, next question and recovery use the result slot without ch
   await complete(requests[3], { feedback: 'Look at where the input starts.', adaptedExplanation: 'A parent passes props to its child.', followUpQuestion: 'What is passed?', followUpAnswers: [{ text: 'The prop', correct: true }] })
   assert.match(slot.textContent, /A parent passes props/)
   assert.equal(slot.querySelector('.study-adapted details').open, false)
-  assert.deepEqual(mastery, [['Props', 80], ['Props', 40]], 'Retrying does not apply mastery twice')
+  assert.deepEqual(mastery.map(([topic, evidence]) => [topic, evidence.kind, evidence.outcome]), [['Props', 'quiz', 'success'], ['Props', 'quiz', 'miss']], 'Retrying does not apply mastery twice')
 })
 
 test('failed next lesson restores the prior interaction and its draft after the Signal clears', async (t) => {

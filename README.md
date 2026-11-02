@@ -34,11 +34,13 @@ The goal is to make learning feel less like managing a school dashboard and more
 | --- | --- |
 | **Learn** | Begin with a focused explanation informed by the topic, available course material, recent work, and teaching preferences. |
 | **Practice** | Ask for an example, try a small applied activity, discuss a question, or choose a quiz. |
-| **Evaluate** | Activity feedback identifies what the response shows; quiz answers update the relevant topic's mastery estimate. |
+| **Evaluate** | Quiz answers and demonstrated understanding in activities gradually update the relevant topic's mastery estimate. |
 | **Adapt** | Confusion can lead to a different explanation, a useful visual, or an easier follow-up question on the same concept. |
 | **Continue** | Move to the next small lesson using a revisable path, or return later with recent context intact. |
 
-The learner controls the pace. Continuing does not require a quiz, and reading a lesson or clicking “I understand” does not count as proof of mastery. Practice feedback and quiz results have different roles: activities inform teaching, while quiz answers update topic scores.
+The learner controls the pace. Continuing does not require a quiz, and reading a lesson or clicking “I understand” does not count as proof of mastery. Quiz answers, successful applied work, and recovery after a mistake build topic estimates gradually. Asking for examples or simpler explanations does not change the score.
+
+New spaces start at zero evidence. Successful quiz answers add up to 8 percentage points, applied activities up to 6, and recovery up to 4; gains taper as the topic score rises. Incorrect quiz answers subtract 3 points; a misconception in an activity or recovery answer subtracts 2. Partial, unclear, or self-reported understanding earns no points. Course mastery is an average of tracked topic scores weighted by practice evidence, not a percent of the syllabus completed. Topic scores and bounded evidence records persist locally; the same recent task cannot award credit repeatedly, including after refresh. Earlier saved estimates remain usable.
 
 For example, a learner studying photosynthesis can read a short explanation, say **“I lost you,”** request a visual of the inputs and outputs, and then check their understanding. If they answer incorrectly, Orbit offers an adapted explanation and a simpler follow-up before they decide whether to continue.
 
@@ -46,7 +48,7 @@ For example, a learner studying photosynthesis can read a short explanation, say
 
 - **“I lost you” is part of the lesson.** Ask for a new analogy, a familiar example, or smaller steps while staying with the same concept. The current learning flow remains available.
 - **Teaching preferences are editable.** Choose explanation length, example timing, visual support, next-step guidance, and return support. Setup is optional, and a current request takes priority over a saved preference.
-- **Course material shapes the starting point.** Add PDF syllabi or course documents to a learning space. Extracted topics, schedules, and upcoming work help suggest relevant lessons; learners can correct where their class actually is.
+- **Course material shapes the starting point.** Attach multiple PDFs or JPG/JPEG, PNG and WebP photos, and add or remove materials later. Choose **Syllabus / course outline** and **Read syllabus & find dates** to extract course topics and deadlines. Ordinary resources use **Use PDF for learning** to provide learning context without importing calendar dates. Photos currently retain filename/type only; Orbit does not yet read uploaded images.
 - **Practice goes beyond recall.** “Let me try it” offers a small prediction, comparison, explanation, or other applied task with focused feedback. “Quiz me” checks a topic and can follow a mistake with another approach.
 - **Conversation stays connected to learning.** “Talk it through” uses the current lesson, recent discussion, and relevant remembered connections, so a question can deepen the work already underway.
 - **Next steps stay revisable.** Orbit maintains a small learning path that can respond to new material, learner corrections, and learning context. Topic-level mastery helps distinguish areas that need another pass.
@@ -92,7 +94,7 @@ Meta Muse powers the teaching within Orbit's adaptive loop. The current server i
 | **Adapted teaching** | Re-explain the current concept after “I lost you” or produce a concrete worked example. |
 | **Activities and evaluation** | Create small applied tasks and respond to the learner's attempt with focused feedback. Generate topic-aware quiz questions, plus corrective explanations and easier follow-ups after incorrect answers. |
 | **Study conversation** | Answer questions in the context of the current lesson and recent exchanges, drawing on relevant saved learning connections. |
-| **PDF analysis** | Extract course information, topics, syllabus timing, assignments, and an initial recommended action from uploaded material. |
+| **PDF analysis** | On an explicit reading action, extract syllabus topics and dates, or summarize an ordinary resource for learning without calendar extraction. |
 | **Instructional visuals** | Spark can propose a visual when it helps explain a concept; Muse Image generates it. Learners can also request a visual through “Show me.” |
 
 Orbit supplies relevant context and applies its own rules around those responses. Learner corrections take priority over inferred course position. Quiz scoring and mastery updates are handled by application logic; Muse supplies the questions and adapted teaching. Home and course starting suggestions use saved context and local course-position rules, so opening a page or resuming a saved lesson does not trigger a fresh model request.
@@ -104,11 +106,13 @@ The request path is **React frontend → Vercel serverless API → Meta Muse →
 The current demo requires **no learner account** and uses bounded browser-local storage rather than an application database or cross-device sync.
 
 - **Saved here:** learning spaces, extracted course context, topic mastery, preferences, learner corrections, recent lessons, compact conversation history, and useful learning connections. Recent generated-image references are also saved so available visuals can be reused.
-- **Sent for AI processing:** uploaded PDFs and the relevant learning context needed for the requested teaching action are sent through Orbit's server to Meta. Local storage does not mean that AI features run offline.
-- **Material retention:** Orbit keeps processed filenames, metadata, and extracted context. It does not retain original PDF bytes for reopening or downloading. Full conversation transcripts, unfinished activity/quiz screens, and response drafts are not restored after a refresh.
+- **Sent for AI processing:** attaching a file makes no AI request. Choosing a PDF reading action sends that PDF through Orbit's server to Meta. Relevant extracted resource summaries can then accompany explicitly requested lessons, questions, activities, and discussion. Local storage does not mean that AI features run offline.
+- **Material retention:** Orbit keeps filenames, metadata, and bounded extracted context. Pending PDFs remain only in the live session; after refresh, select the same file again to read it. Original PDF/image bytes are never saved in localStorage or available for reopening/downloading. Removing a resource removes its summary from future course context; previously generated lessons remain. Removing a syllabus keeps its already imported topics and dates. Full conversations, unfinished activity/quiz screens, and response drafts are not restored after refresh.
 - **User control:** Library includes a control to clear local learning data. Teaching preferences can be edited or reset separately. Anyone using the same browser profile can access its saved learning data; clearing browser data removes it.
 
 API credentials remain server-side. The browser calls Orbit's API routes and never receives `MODEL_API_KEY`.
+
+The picker accepts multiple photos or files; a separate **Take a photo** control uses the browser's rear-camera preference where supported. PDFs are limited to 3 MB and photos to 20 MB. HEIC/HEIF receives a clear request to export as JPG, PNG or WebP. [Safari supports HEIC from version 17](https://webkit.org/blog/14445/webkit-features-in-safari-17-0/), but Orbit currently has no verified image-input analysis or portable conversion path; no conversion dependency was added. Real phone picker/camera behavior still needs device verification.
 
 ## Tech Stack
 

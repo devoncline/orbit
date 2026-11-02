@@ -1,3 +1,4 @@
+import { courseMaterialContext } from './courseMaterials.js'
 import { inferCoursePosition, isPositionTopicAllowed, normalizeLearnerPosition, normalizeSyllabusItems, localDate } from './coursePosition.js'
 import { retainLearningAnchors } from './studyLearningContext.js'
 
@@ -94,6 +95,7 @@ export function learningPathContextKey(course, today = localDate()) {
   const context = JSON.stringify({
     name: text(course.name || course.courseName, 200), today, nextTask: text(course.nextTask, 240),
     syllabus: normalizeSyllabusItems(course.syllabusItems), learner: normalizeLearnerPosition(course.learnerPosition),
+    materials: courseMaterialContext(course.files),
     topics: (Array.isArray(course.importantTopics) ? course.importantTopics : []).slice(0, 100).map((topic) => text(topic)),
     work: (Array.isArray(course.upcomingWork) ? course.upcomingWork : []).slice(0, 100)
       .map((item) => ({ title: text(item?.title, 200), topic: text(item?.topic), date: text(item?.date, 40) })),

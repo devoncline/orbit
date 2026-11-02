@@ -13,6 +13,7 @@ import {
 import { MAX_STUDY_MESSAGE_LENGTH, MAX_STUDY_EXCHANGES, retainStudyExchanges } from '../services/studyConversation'
 import { rememberLearningAnchor, anchorAfterFollowUp, retainLearningAnchors } from '../services/studyLearningContext'
 import { compactThreadResume } from '../services/learnerMemory'
+import { masteryEvidenceId } from '../services/mastery'
 import { applyPositionOverride, readPositionStatement } from '../services/coursePosition'
 import { selectStudyInteraction, studyThreadMetadata } from '../services/studyThreads'
 import { acceptPathLesson, learningPathContextKey, generatedLessonVisual, normalizeLearningPath, recommendStudyAction, studyPathView } from '../services/learningPath'
@@ -53,7 +54,6 @@ export default function StudySession({
     onNewThread,
     today,
     mastery,
-    setMastery,
     updateTopicMastery,
 }) {
     const [resume] = useState(() => compactThreadResume(initialThread?.resume))
@@ -432,6 +432,11 @@ export default function StudySession({
                 setActivityFeedback(null)
             } else {
                 rememberAnchor(result.anchor)
+                if (['applied_understanding', 'misconception'].includes(result.signal)) {
+                    updateTopicMastery(activity.topic, { kind: 'activity',
+                        outcome: result.signal === 'applied_understanding' ? 'success' : 'miss',
+                        id: masteryEvidenceId(activity.topic, activity.instruction) })
+                }
                 setActivityFeedback({ ...result, learnerResponse: response })
                 rememberVisualRecovery({ activeInteraction: 'activity', activity, activityResponse: response, activityFeedback: { ...result, learnerResponse: response } })
             }
@@ -634,8 +639,9 @@ export default function StudySession({
         setEvaluationError('')
         rememberVisualRecovery({ activeInteraction: 'quiz', lesson, studyQuestion, selectedAnswer: answer, answerResult: answer.correct ? 'correct' : 'incorrect' })
         if (!retry) {
-            if (studyQuestion.topic) updateTopicMastery(studyQuestion.topic, answer.correct ? 80 : 40)
-            else setMastery(answer.correct ? 80 : 40)
+            const topic = studyQuestion.topic || lesson?.topic || course.name
+            updateTopicMastery(topic, { kind: 'quiz', outcome: answer.correct ? 'success' : 'miss',
+                id: masteryEvidenceId(topic, studyQuestion.question) })
         }
         if (answer.correct) { if (!retry) celebrate(); return }
         setLoadingEvaluation(true)
@@ -870,8 +876,12 @@ export default function StudySession({
                             {evaluation.followUpAnswers.map((answer) => (
                                 <button className="study-answer"
                                     key={answer.text}
-                                    disabled={busy}
+                                    disabled={busy || followUpResult === 'correct'}
                                     onClick={() => {
+                                        if (followUpResult === 'correct') return
+                                        const topic = studyQuestion.topic || lesson?.topic || course.name
+                                        updateTopicMastery(topic, { kind: 'recovery', outcome: answer.correct ? 'success' : 'miss',
+                                            id: masteryEvidenceId(topic, studyQuestion.question) })
                                         setFollowUpAnswer(answer)
                                         rememberVisualRecovery({ activeInteraction: 'quiz', lesson, studyQuestion, evaluation,
                                             answerResult, followUpResult: answer.correct ? 'correct' : 'incorrect', followUpAnswer: answer })
@@ -879,18 +889,8 @@ export default function StudySession({
                                         if (answer.correct) {
                                             if (followUpResult !== 'correct') celebrate()
                                             setFollowUpResult('correct')
-                                            if (studyQuestion.topic) {
-                                                updateTopicMastery(studyQuestion.topic, 70)
-                                            } else {
-                                                setMastery(70)
-                                            }
                                         } else {
                                             setFollowUpResult('incorrect')
-                                            if (studyQuestion.topic) {
-                                                updateTopicMastery(studyQuestion.topic, 40)
-                                            } else {
-                                                setMastery(40)
-                                            }
                                         }
                                     }}
                                 >

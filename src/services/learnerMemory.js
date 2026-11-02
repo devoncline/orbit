@@ -4,6 +4,7 @@ import { generatedLessonVisual, normalizeLearningPath, normalizeLessonVisual } f
 import { normalizeLearningPreferences } from './learningProfile.js'
 import { normalizeLessonContext } from './lessonContext.js'
 import { normalizeCourseMaterials } from './courseMaterials.js'
+import { normalizeMastery } from './mastery.js'
 import { savedLessonImages } from './lessonImageRequest.js'
 import { savedStudyVisual, savedVisualRecovery } from './studyVisualRequest.js'
 
@@ -14,7 +15,6 @@ export const MAX_SAVED_EXCHANGES = 2
 const MAX_STORAGE_LENGTH = 1_000_000
 const text = (value, limit = 120) => typeof value === 'string' ? value.trim().slice(0, limit) : ''
 const list = (value, limit = 100) => Array.isArray(value) ? value.slice(-limit) : []
-const score = (value) => Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 40
 const timestamp = (value) => typeof value === 'string' && Number.isFinite(Date.parse(value)) ? new Date(value).toISOString() : ''
 export const learnerPositionKey = (course) => JSON.stringify(course.learnerPosition || null)
 
@@ -62,11 +62,7 @@ function cleanCourse(course) {
       title: text(item.title, 200), topic: text(item.topic), type: text(item.type, 40), date: text(item.date, 40),
     })),
     files: normalizeCourseMaterials(course.files),
-    mastery: {
-      overall: score(course.mastery?.overall),
-      topics: Object.fromEntries(Object.entries(course.mastery?.topics || {}).slice(0, 100)
-        .filter(([topic, value]) => text(topic) && Number.isFinite(value)).map(([topic, value]) => [text(topic), score(value)])),
-    },
+    mastery: normalizeMastery(course.mastery),
     ...(learnerPosition ? { learnerPosition } : {}),
     recentLearning: course.recentLearning && text(course.recentLearning.topic) && timestamp(course.recentLearning.updatedAt) ? {
       topic: text(course.recentLearning.topic), summary: text(course.recentLearning.summary, 160),

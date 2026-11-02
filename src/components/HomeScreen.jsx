@@ -28,7 +28,7 @@ export default function HomeScreen({
               <div className="home-entry-points" aria-label="Start learning">
                 <button className="orbit-button" onClick={() => onNewSpace('class')}><strong>I’m taking a class</strong></button>
                 <button className="orbit-button" onClick={() => onNavigate('learn')}><strong>I want to learn something</strong></button>
-                <button className="orbit-button" onClick={() => onNewSpace('material')}><span><strong>I already have material</strong><small>Add a PDF</small></span></button>
+                <button className="orbit-button" onClick={() => onNewSpace('material')}><span><strong>I already have material</strong><small>Add photos or files</small></span></button>
               </div>
             </>
           ) : (
