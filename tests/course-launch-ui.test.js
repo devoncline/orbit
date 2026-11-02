@@ -144,6 +144,59 @@ test('recommendations and recent work resume existing threads, classes stay isol
   assert.match(container.querySelector('#learn-heading').textContent, /What do you want to learn/)
 })
 
+test('Study back navigation returns to its own space with the rail open or collapsed', async t => {
+  t.mock.method(dom, 'matchMedia', query => ({ matches: query.includes('prefers-reduced-motion'), addEventListener() {}, removeEventListener() {} }))
+  t.mock.method(globalThis, 'fetch', () => assert.fail('Back navigation must not call a model'))
+  const otherCourse = { ...biologyCourse, name: 'Music theory' }
+  seed()
+  saveLearnerMemory({ ...read(), courses: [biologyCourse, otherCourse], threads: [
+    savedThread('bio', 'Photosynthesis', '2026-11-01T12:00:00Z'),
+    savedThread('music', 'Major scales', '2026-11-01T13:00:00Z', otherCourse.name),
+  ], activeId: 'bio' }, dom.localStorage)
+  await render()
+  for (const [space, collapse] of [[otherCourse, false], [biologyCourse, true]]) {
+    await click([...container.querySelectorAll('.shell-spaces button')].find(el => el.textContent === space.name))
+    await click(container.querySelector('.space-recent button'))
+    const room = container.querySelector('.study-room:not([hidden])')
+    if (collapse) await click(room.querySelector('[aria-label="Collapse topics and history"]'))
+    assert.equal(room.querySelector('.study-nav-rail').hidden, collapse)
+    const before = read()
+    await click(button(`Back to ${space.name}`, room))
+    assert.equal(container.querySelector('.space-page h1').textContent, space.name)
+    assert.ok(room.closest('[hidden]'), 'Returning to a space hides the mounted Study workspace')
+    assert.deepEqual(read().threads, before.threads)
+    assert.deepEqual(read().courses, before.courses)
+  }
+})
+
+test('Update class focus saves and clears the existing course correction without replacing current work', async t => {
+  seed()
+  saveLearnerMemory({ ...read(), threads: [savedThread('bio', 'Photosynthesis', '2026-11-01T12:00:00Z')], activeId: 'bio' }, dom.localStorage)
+  t.mock.method(globalThis, 'fetch', () => assert.fail('Updating class focus must not generate a lesson'))
+  await render(); await openSpace(); await click(container.querySelector('.space-recent button'))
+  const room = container.querySelector('.study-room:not([hidden])')
+  const before = read()
+  await click(room.querySelector('.study-nav-toggle'))
+  const guidance = room.querySelector('.study-course-guidance')
+  await act(async () => { guidance.open = true })
+  await click(button('Edit class focus', guidance))
+  await type(guidance.querySelector('input'), 'Cellular Respiration')
+  await click(button('Save class focus', guidance))
+  assert.equal(read().courses[0].learnerPosition.currentTopic, 'Cellular Respiration')
+  assert.equal(read().courses[0].learnerPosition.statement, "I'm currently on Cellular Respiration")
+  assert.equal(room.querySelector('h1').textContent, 'Photosynthesis')
+  assert.match(room.querySelector('.study-content').textContent, /Saved explanation bio/)
+  assert.deepEqual(read().threads, before.threads)
+  assert.deepEqual(read().courses[0].mastery, before.courses[0].mastery)
+  assert.equal(read().activeId, 'bio')
+  await click(button('Edit class focus', guidance))
+  await click(button('Clear class focus', guidance))
+  assert.equal(read().courses[0].learnerPosition, undefined)
+  assert.deepEqual(read().threads, before.threads)
+  assert.deepEqual(read().courses[0].mastery, before.courses[0].mastery)
+  assert.equal(read().activeId, 'bio')
+})
+
 test('empty and single-topic classes provide complete sections without invented progress', async t => {
   seed({ name: 'Biology 101', type: 'class', files: [] })
   t.mock.method(globalThis, 'fetch', () => assert.fail('Empty classes must not fetch'))

@@ -1,5 +1,11 @@
 .study-session { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(180px, .8fr); grid-template-rows: max-content auto auto; grid-template-areas: 'context companion' 'body companion' 'progress progress'; gap: 0 48px; align-items: start; }
 .study-context { grid-area: context; margin-bottom: 22px; }
+.study-context .study-back-space { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; min-height: 44px; margin-bottom: 16px; padding: 8px 12px; border: 1px solid rgb(190 179 245 / 16%); border-radius: 10px; background: rgb(190 179 245 / 5%); color: var(--orbit-text); font-size: 12px; }
+.study-back-space svg { width: 20px; height: 20px; flex: 0 0 20px; color: var(--orbit-accent); }
+.study-back-space span { min-width: 0; overflow-wrap: anywhere; }
+.study-context .study-back-space:hover { background: var(--orbit-control-hover); border-color: rgb(190 179 245 / 30%); }
+.study-context .study-back-space:active { background: var(--orbit-control-pressed); }
+.study-context .study-back-space:focus-visible { outline: 2px solid var(--orbit-focus); outline-offset: 3px; }
 .orbit-shell .study-session .study-context h1 { max-width: 28ch; margin: 0 0 12px; font-size: clamp(30px, 3.2vw, 44px); line-height: 1.14; }
 .study-subject { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 0 0 10px; color: var(--orbit-text); font-size: 14px; }
 .study-lesson-reason, .study-lesson-focus, .study-deadlines { max-width: 64ch; color: var(--orbit-muted); font-size: 13px; line-height: 1.65; margin: 8px 0 0; }

@@ -669,7 +669,7 @@ export default function StudySession({
     return (
         <div className="study-workspace">
         <StudyThreads {...(navigation || { courses: [course], threads: initialThread ? [initialThread] : [], activeId: threadId })}
-          courseGuidance={onPositionChange && <CoursePosition course={course} today={today} showSummary={false} onChange={changePosition} editLabel="Update course focus" saveLabel="Save course focus" />}>
+          courseGuidance={onPositionChange && <CoursePosition course={course} today={today} showSummary={false} onChange={changePosition} editLabel="Edit class focus" saveLabel="Save class focus" fieldLabel="What is your class covering?" placeholder="Enter a class topic" clearLabel="Clear class focus" />}>
           <section className="study-thread-history" aria-label="Work in this thread">
             <h3>In this thread</h3>
             <ul className="study-history-list">
@@ -681,7 +681,7 @@ export default function StudySession({
         </StudyThreads>
         <section className={`study-session study-mode-${presentation.mode}${presentation.splitVisual ? ' study-session-illustrated' : ''}${presentation.choiceDensity === 'low' ? ' study-choice-focused' : ''}`}
             data-presentation-mode={presentation.mode} data-presentation-reason={presentation.reason} data-choice-density={presentation.choiceDensity}>
-            <StudyLessonHeader course={course} lesson={lesson} step={learningPath.step} path={pathView} today={today} />
+            <StudyLessonHeader course={course} lesson={lesson} step={learningPath.step} path={pathView} today={today} onSelectSpace={navigation?.onSelectSpace} />
             {!inlineCompanion && companion}
             <div className="study-body">
             {review && <article className="study-history-review" tabIndex={-1} ref={reviewPanel} aria-label="Previous work">
@@ -694,8 +694,8 @@ export default function StudySession({
             <div hidden={Boolean(review)}>
             <section className="study-active-panel" data-study-interaction={activeInteraction} ref={panel} tabIndex={-1} aria-label="Current study interaction">
             {resumeSummary && <p className="orbit-muted study-resume-note" role="status">{resumeSummary}</p>}
-            {positionChanged && <div className="study-position-notice" role="status">Your course starting point is updated. Continue when you are ready to use it.
-                <button onClick={onNewThread}>Start a thread there</button>
+            {positionChanged && <div className="study-position-notice" role="status">Class focus updated for future recommendations.
+                <button onClick={onNewThread}>Study from class focus</button>
             </div>}
             <OrbitResponse pending={loadingLesson === 'next'} context="next" reveal={resultReveal}>
             <p className="study-presentation-label">{presentation.label}</p>
