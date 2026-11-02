@@ -13,6 +13,8 @@ import {
 import { MAX_STUDY_MESSAGE_LENGTH, MAX_STUDY_EXCHANGES, retainStudyExchanges } from '../services/studyConversation'
 import { rememberLearningAnchor, anchorAfterFollowUp, retainLearningAnchors } from '../services/studyLearningContext'
 import { compactThreadResume } from '../services/learnerMemory'
+import { resolveLessonReferences } from '../services/lessonReferences'
+import LessonReferences from './LessonReferences'
 import { masteryEvidenceId } from '../services/mastery'
 import { applyPositionOverride, readPositionStatement } from '../services/coursePosition'
 import { selectStudyInteraction, studyThreadMetadata } from '../services/studyThreads'
@@ -59,6 +61,7 @@ export default function StudySession({
     today,
     mastery,
     updateTopicMastery,
+    getMaterialFile,
 }) {
     const [resume] = useState(() => compactThreadResume(initialThread?.resume))
     const [threadContext, setThreadContext] = useState(() => ({
@@ -88,6 +91,11 @@ export default function StudySession({
     const studyTools = useRef(null)
     const id = useId()
     const [lesson, setLesson] = useState(resume.lesson)
+    const [lessonReferences, setLessonReferences] = useState([])
+    const [readingReferences, setReadingReferences] = useState(false)
+    const [referenceBaseline, setReferenceBaseline] = useState(null)
+    const [referenceEpoch, setReferenceEpoch] = useState(0)
+    const referenceContext = resolveLessonReferences(lessonReferences, course.files)
     const [recoveringLesson, setRecoveringLesson] = useState(resume.recoveringLesson)
     const [learningPath, setLearningPath] = useState(() => normalizeLearningPath(resume.learningPath))
     const [progressionError, setProgressionError] = useState('')
@@ -147,7 +155,7 @@ export default function StudySession({
         learnerResponse: activityFeedback?.learnerResponse || '',
         feedback: activityFeedback?.feedback || '',
     } : undefined
-    const busy = Boolean(loadingLesson || loadingConversation || loadingActivity || loadingQuestion || loadingEvaluation)
+    const busy = Boolean(readingReferences || loadingLesson || loadingConversation || loadingActivity || loadingQuestion || loadingEvaluation)
     const recommendation = recommendStudyAction({ lesson, activeInteraction, learningPath, example, lessonError, conversation,
         activity, activityError, activityFeedback, activityResponse, answerResult, followUpResult, evaluation, evaluationError, questionError, learningProfile: profile })
     const presentation = useStudyPresentation({ courseName: course.name, activeInteraction, lesson, conversationVisual, requestedVisual, learningProfile: profile,
@@ -186,7 +194,9 @@ export default function StudySession({
     }, [active, lesson, activeInteraction, learningPath.step])
 
     useEffect(() => {
-        if (!lesson) return
+        // Keep the last ordinary lesson resume while working with temporary pages.
+        // Neither uploaded content nor derived reference work becomes learner memory.
+        if (!lesson || referenceBaseline) return
         // Keep the current lesson/Show me/discussion references even when older
         // than the recent-image window. Other entries remain bounded by resume.
         const images = [...savedImages]
@@ -220,7 +230,7 @@ export default function StudySession({
         if (resumeOnly) { onThreadUpdate?.(threadId, { resume: snapshot }); return }
         onThreadUpdate?.(threadId, { ...metadata, resume: snapshot, courseName: initialContext.course.name,
             ...threadContext, updatedAt: new Date().toISOString() })
-    }, [threadId, onThreadUpdate, lesson, activeInteraction, conversation, activity, activityFeedback, questionNumber, answerResult, followUpResult, learningAnchors, learningPath, resume, initialContext, threadContext, savedImages, requestedVisual, recentVisualRecovery, conversationVisual, recoveringLesson, loadingLesson, course.name, lessonImageCache])
+    }, [threadId, onThreadUpdate, lesson, activeInteraction, conversation, activity, activityFeedback, questionNumber, answerResult, followUpResult, learningAnchors, learningPath, resume, initialContext, threadContext, savedImages, requestedVisual, recentVisualRecovery, conversationVisual, recoveringLesson, loadingLesson, course.name, lessonImageCache, referenceBaseline])
 
     useEffect(() => {
         if (active) panel.current?.focus({ preventScroll: false })
@@ -329,13 +339,31 @@ export default function StudySession({
     }, [])
 
     function rememberAnchor(anchor) {
-        if (anchor) setLearningAnchors((current) => rememberLearningAnchor(current, anchor))
+        if (anchor && !referenceBaseline) setLearningAnchors((current) => rememberLearningAnchor(current, anchor))
+    }
+
+    function changeReferences(next) {
+        if (next.length && !referenceBaseline) setReferenceBaseline({ lesson, learningPath, images: savedImages })
+        setLessonReferences(next)
+    }
+
+    function referenceIntent(intent) {
+        if (intent === 'Quiz me') { loadQuestion(lesson); return }
+        openInteraction('conversation')
+        const prompts = {
+            'Understand it': 'Help me understand the attached reference, connected to this lesson.',
+            'Work through it': 'Walk me through the attached reference one step at a time without giving me the answer.',
+            'Check my work': 'Check my work in the attached reference. Help me spot and correct a mistake.',
+        }
+        // Prepare an editable learner request; only Send starts a model call.
+        if (!learnerMessage.trim()) setLearnerMessage(prompts[intent])
+        queueMicrotask(() => panel.current?.querySelector('textarea')?.focus())
     }
 
     async function sendMessage(event) {
         event.preventDefault()
         const message = learnerMessage.trim()
-        if (!lesson || stage !== 'learn' || !message || loadingLesson ||
+        if (!lesson || stage !== 'learn' || !message || loadingLesson || readingReferences ||
             loadingQuestion || activityRequest.current || conversationRequest.current) return
 
         const controller = new AbortController()
@@ -369,6 +397,7 @@ export default function StudySession({
                 activityContext,
                 currentVisual: conversationVisual || lessonVisual,
                 learningProfile: profile,
+                lessonReferences: referenceContext,
                 anchors: learningAnchors,
                 signal: controller.signal,
                 onDelta: display.append,
@@ -412,7 +441,7 @@ export default function StudySession({
 
     async function runActivity(action) {
         const response = activityResponse.trim()
-        if (!lesson || loadingLesson || loadingQuestion || loadingEvaluation ||
+        if (!lesson || readingReferences || loadingLesson || loadingQuestion || loadingEvaluation ||
             conversationRequest.current || activityRequest.current ||
             (action === 'evaluate' && (!activity || !response))) return
 
@@ -425,7 +454,7 @@ export default function StudySession({
         setQuestionError('')
 
         try {
-            const options = { history: conversation, example, signal: controller.signal, anchors: learningAnchors, learningProfile: profile }
+            const options = { history: conversation, example, signal: controller.signal, anchors: learningAnchors, learningProfile: profile, lessonReferences: referenceContext }
             const result = action === 'generate'
                 ? await generateStudyActivity(course, lesson, { ...options, activityContext })
                 : await evaluateStudyActivity(course, lesson, activity, response, options)
@@ -478,7 +507,7 @@ export default function StudySession({
     }
 
     async function changeLesson(action) {
-        if (loadingLesson || loadingQuestion || loadingConversation || loadingActivity) return
+        if (readingReferences || loadingLesson || loadingQuestion || loadingConversation || loadingActivity) return
         openInteraction(action === 'example' ? 'example' : 'lesson')
         if (action === 'simplify') setRecoveringLesson(true)
         setLoadingLesson(action)
@@ -487,8 +516,8 @@ export default function StudySession({
 
         try {
             const result = action === 'simplify'
-                ? await explainStudyLessonDifferently(course, lesson, example, { anchors: learningAnchors, learningProfile: profile })
-                : await generateStudyExample(course, lesson, example, { anchors: learningAnchors, learningProfile: profile })
+                ? await explainStudyLessonDifferently(course, lesson, example, { anchors: learningAnchors, learningProfile: profile, lessonReferences: referenceContext })
+                : await generateStudyExample(course, lesson, example, { anchors: learningAnchors, learningProfile: profile, lessonReferences: referenceContext })
             await showResult(action, result.content)
 
             if (action === 'simplify') {
@@ -517,8 +546,8 @@ export default function StudySession({
         setLoadingLesson('next')
         setProgressionError('')
         try {
-            const result = await generateNextStudyLesson(course, mastery, lesson, {
-                path: learningPath, anchors: learningAnchors, signal: controller.signal, learningProfile: profile,
+            const result = await generateNextStudyLesson(course, mastery, referenceBaseline?.lesson || lesson, {
+                path: referenceBaseline?.learningPath || learningPath, anchors: learningAnchors, signal: controller.signal, learningProfile: profile,
             })
             if (!controller.signal.aborted && latestContextKey.current === requestedContextKey) {
                 await showResult('next', result.content, controller.signal)
@@ -535,7 +564,11 @@ export default function StudySession({
             if (studyQuestion) rememberInteraction('quiz', studyQuestion.topic || 'Practice', studyQuestion.question, evaluation?.feedback || studyQuestion.explanation || '')
             const positionKey = coursePositionKey ?? JSON.stringify(course.learnerPosition || null)
             setThreadContext((current) => ({ positionKey, requestedTopic: current.positionKey === positionKey ? current.requestedTopic : '' }))
-            setLearningPath(acceptPathLesson(result, learningPath, lesson, requestedContextKey))
+            setLearningPath(acceptPathLesson(result, referenceBaseline?.learningPath || learningPath, referenceBaseline?.lesson || lesson, requestedContextKey))
+            if (referenceBaseline) lessonImageCache.retain(referenceBaseline.images)
+            setLessonReferences([])
+            setReferenceBaseline(null)
+            setReferenceEpoch(current => current + 1)
             setLesson(result)
             loadLessonVisual(lessonImageCache, course.name, result)
             setConversationVisual(null)
@@ -585,7 +618,7 @@ export default function StudySession({
     }
 
     async function loadQuestion(lessonContext) {
-        if (loadingQuestion || loadingLesson || loadingEvaluation) return
+        if (readingReferences || loadingQuestion || loadingLesson || loadingEvaluation) return
         if (studyQuestion) rememberInteraction('quiz', studyQuestion.topic || 'Practice', studyQuestion.question, `${answerResult || 'Not answered'}${evaluation ? `\n${evaluation.feedback}\n${evaluation.adaptedExplanation}\nFollow-up: ${followUpResult || 'Not answered'}` : studyQuestion.explanation ? `\n${studyQuestion.explanation}` : ''}`)
         openInteraction('quiz')
         setConversationError('')
@@ -599,7 +632,7 @@ export default function StudySession({
         setEvaluationError('')
 
         try {
-            const question = await generateStudyQuestion(course, mastery, lessonContext, { anchors: learningAnchors, learningProfile: profile })
+            const question = await generateStudyQuestion(course, mastery, lessonContext, { anchors: learningAnchors, learningProfile: profile, lessonReferences: referenceContext })
             await showResult('quiz', question.question)
             setStudyQuestion(question)
             setAnswerResult('')
@@ -654,7 +687,7 @@ export default function StudySession({
         if (answer.correct) { if (!retry) celebrate(); return }
         setLoadingEvaluation(true)
         try {
-            const result = await evaluateStudyAnswer(course, studyQuestion, answer, mastery, { anchors: learningAnchors, learningProfile: profile })
+            const result = await evaluateStudyAnswer(course, studyQuestion, answer, mastery, { anchors: learningAnchors, learningProfile: profile, lessonReferences: referenceContext })
             await showResult('evaluation', `${result.feedback}\n\n${result.adaptedExplanation}\n\n${result.followUpQuestion}`)
             setEvaluation(result)
             rememberVisualRecovery({ activeInteraction: 'quiz', lesson, studyQuestion, selectedAnswer: answer, answerResult: 'incorrect', evaluation: result })
@@ -761,7 +794,7 @@ export default function StudySession({
                                         <button
                                             className={presentation.primary === 'activity' ? 'study-primary-action' : undefined}
                                             type="submit"
-                                            disabled={!activityResponse.trim() || Boolean(loadingLesson || loadingActivity) ||
+                                            disabled={readingReferences || !activityResponse.trim() || Boolean(loadingLesson || loadingActivity) ||
                                                 loadingQuestion || loadingConversation}
                                         >
                                             {activityError?.action === 'evaluate' ? 'Try again' : 'Share response'}
@@ -780,7 +813,7 @@ export default function StudySession({
                             {activityError && <p role="alert">{activityError.message}</p>}
                             {activityError?.action === 'generate' && (
                                 <button
-                                    disabled={Boolean(loadingLesson || loadingActivity) || loadingQuestion || loadingConversation}
+                                    disabled={readingReferences || Boolean(loadingLesson || loadingActivity) || loadingQuestion || loadingConversation}
                                     onClick={() => runActivity('generate')}
                                 >
                                     Try again
@@ -839,7 +872,7 @@ export default function StudySession({
                                 <button
                                     className={presentation.primary === 'conversation' ? 'study-primary-action' : undefined}
                                     type="submit"
-                                    disabled={!learnerMessage.trim() || Boolean(loadingLesson || loadingActivity) ||
+                                    disabled={readingReferences || !learnerMessage.trim() || Boolean(loadingLesson || loadingActivity) ||
                                         loadingQuestion || loadingConversation}
                                 >
                                     {conversationError ? 'Try again' : 'Send'}
@@ -959,6 +992,8 @@ export default function StudySession({
                 <summary>Lesson context</summary>
                 <StudyContent content={lesson.content} />
             </details>}
+            {lesson && <LessonReferences key={referenceEpoch} references={lessonReferences} files={course.files} getMaterialFile={getMaterialFile}
+                onChange={changeReferences} onReadingChange={setReadingReferences} onIntent={referenceIntent} disabled={busy} temporaryWork={Boolean(referenceBaseline)} />}
             {lesson && <details className="study-tools" key={presentation.choiceDensity} open={presentation.choiceDensity === 'expanded'} ref={studyTools}>
                 <summary>Study tools <span>· {{ lesson: 'Lesson', visual: 'Show me', example: 'Example', activity: 'Activity', conversation: 'Talk it through', quiz: 'Quiz', history: 'Earlier work' }[activeInteraction]}</span></summary>
                 <div className="study-lesson-actions" role="group" aria-label="Choose a study interaction">
@@ -967,7 +1002,7 @@ export default function StudySession({
                 <button disabled={busy} aria-pressed={activeInteraction === 'example'} onClick={() => example ? openInteraction('example') : changeLesson('example')}>Give me an example</button>
                 <button disabled={busy} aria-pressed={activeInteraction === 'activity'} onClick={() => activity ? openInteraction('activity') : runActivity('generate')}>Let me try it</button>
                 <button disabled={busy} aria-pressed={activeInteraction === 'conversation'} onClick={() => openInteraction('conversation')}>Talk it through</button>
-                <button disabled={Boolean(loadingLesson || loadingQuestion || loadingEvaluation)} aria-pressed={activeInteraction === 'quiz'} onClick={() => studyQuestion ? openInteraction('quiz') : loadQuestion(lesson)}>Quiz me</button>
+                <button disabled={Boolean(readingReferences || loadingLesson || loadingQuestion || loadingEvaluation)} aria-pressed={activeInteraction === 'quiz'} onClick={() => studyQuestion ? openInteraction('quiz') : loadQuestion(lesson)}>Quiz me</button>
                 </div>
             </details>}
             {lesson && <nav className="study-continuation" aria-label="Lesson progression" aria-busy={busy}>

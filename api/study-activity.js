@@ -1,3 +1,4 @@
+import { lessonReferenceInput } from './_lib/lessonReferenceInput.js'
 import { formatMaterialContext } from '../src/services/courseMaterials.js'
 import process from 'node:process'
 import { enforceDemoRateLimit } from './_lib/demoRateLimit.js'
@@ -100,8 +101,9 @@ Return ONLY valid JSON: {"feedback":"", "signal":"neutral"}`
       },
       body: JSON.stringify({
         model: 'muse-spark-1.3',
+        ...(req.body.lessonReferences ? { store: false } : {}),
         max_output_tokens: MODEL_OUTPUT_TOKENS.activity,
-        input: `
+        input: lessonReferenceInput(`
 You are Orbit, an adaptive learning partner helping a learner apply one concept.
 ${instruction}
 ${formatMaterialContext(req.body.materialContext)}
@@ -120,7 +122,7 @@ ${action === 'evaluate'
               : 'No previous activity.'}
 ${action === 'evaluate' ? `${anchorSuggestionPrompt}
 Applied Learning is a strong source of anchors when the learner actually applies the concept. Preserve the specific action or prediction, not generic praise. Partial or mistaken responses must not become success anchors.` : ''}
-        `,
+        `, req.body.lessonReferences),
       }),
     }
     const allowance = await enforceDemoRateLimit(req, res)

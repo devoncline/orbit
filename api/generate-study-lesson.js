@@ -1,3 +1,4 @@
+import { lessonReferenceInput } from './_lib/lessonReferenceInput.js'
 import { formatMaterialContext } from '../src/services/courseMaterials.js'
 import process from 'node:process'
 import { enforceDemoRateLimit } from './_lib/demoRateLimit.js'
@@ -91,8 +92,9 @@ If an example was already shown, use a different situation. Do not add a quiz or
       },
       body: JSON.stringify({
         model: 'muse-spark-1.3',
+        ...(req.body.lessonReferences ? { store: false } : {}),
         max_output_tokens: MODEL_OUTPUT_TOKENS.lesson,
-        input: `
+        input: lessonReferenceInput(`
 You are Orbit, an adaptive learning companion.
 
 ${instruction}
@@ -135,7 +137,7 @@ ${formatMaterialContext(req.body.materialContext)}
 ${formatLearningProfile(req.body.learningProfile, { visuals: true })}
 Do not tell the learner a visual is visible; the complete lesson text must stand alone.
 Return ONLY valid JSON with topic, concept, content, lessonContext (an object with lessonTitle, reasonForLesson, focusAreas)${advances ? ', nextLessons (one or two objects with topic and concept)' : ''}, and visual. Select visual using the teaching rules above, including a full generated_image specification when useful or {"type":"none"} otherwise.
-        `,
+        `, req.body.lessonReferences),
       }),
     }
     const allowance = await enforceDemoRateLimit(req, res)

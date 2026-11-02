@@ -81,3 +81,16 @@ export function normalizeCourseMaterials(files) {
   }
   return result
 }
+
+// Shared local reading for course PDFs and temporary lesson images/PDFs.
+export function readMaterialData(file) {
+  return new Promise((resolve, reject) => {
+    const type = materialType(file)?.type
+    if (!type) { reject(new Error('Unsupported material')); return }
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result).replace(/^data:[^;]*;base64,/, `data:${type};base64,`))
+    reader.onerror = () => reject(new Error('Could not read this file'))
+    reader.onabort = () => reject(new Error('File reading was interrupted'))
+    reader.readAsDataURL(file)
+  })
+}

@@ -1,3 +1,4 @@
+import { lessonReferenceInput } from './_lib/lessonReferenceInput.js'
 import { formatMaterialContext } from '../src/services/courseMaterials.js'
 import process from 'node:process'
 import { enforceDemoRateLimit } from './_lib/demoRateLimit.js'
@@ -31,9 +32,10 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'muse-spark-1.3',
+        ...(req.body.lessonReferences ? { store: false } : {}),
         max_output_tokens: MODEL_OUTPUT_TOKENS.question,
 
-        input: `
+        input: lessonReferenceInput(`
 You are Orbit, an adaptive learning agent.
 
 Generate ONE multiple-choice study question for this student.
@@ -79,7 +81,7 @@ Return ONLY valid JSON in this exact shape:
   ],
   "explanation": ""
 }
-        `,
+        `, req.body.lessonReferences),
       }),
     }
     const allowance = await enforceDemoRateLimit(req, res)

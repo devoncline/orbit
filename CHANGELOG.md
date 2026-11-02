@@ -4,6 +4,7 @@
 
 ### Improvements
 
+- Study now has **Add reference** for temporary homework photos, worksheets, PDFs, and existing course materials. Compact removable references stay with the current lesson across messages, with Understand it, Work through it, Check my work, and Quiz me shortcuts. Uploads do not enter the course curriculum or trigger AI automatically. References and work using them last for this visit and clear on refresh or when continuing to the next lesson; saved course materials remain intact.
 - Fixed mobile swipes freezing or jumping in Recommended next. Horizontal gestures now tolerate small vertical movement and continue through card changes, while vertical page scrolling, infinite looping and reduced motion remain available.
 - Learn’s Recommended next carousel now loops in either direction, with neighboring cards on both sides when enough suggestions are available. Dragging, swiping and arrow keys wrap through the same recommendations with smooth snapping and the existing soft edges; reduced motion remains supported.
 - Learn now leads with new-topic recommendations, followed by a compact, empty Study something new input and Your spaces. Recommendation cards support dragging, swiping and keyboard browsing, with soft edges and reduced-motion support. The freeform field shares Talk it through’s muted focus border and soft glow; Enter or the send button starts learning. Choose a topic in an existing space or review a suggested new space before creating it; browsing never starts AI requests.
@@ -58,6 +59,13 @@
 - Study answers now update mastery for the question's topic, with course mastery derived from topic scores. Questions without a topic use the current lesson topic or course name.
 
 ### Manual test checklist
+
+Lesson references (automated UI/API coverage completed; browser/device and live-provider review pending):
+
+1. In an active lesson, choose Add reference and attach a PDF plus a JPG/PNG/WebP photo. Verify selection makes no AI call, both names appear, and an unsupported/oversized file leaves successful attachments intact. Limits are four references and 3 MB combined; HEIC/HEIF needs conversion.
+2. Choose Work through it, edit the draft to ask about a specific question, and Send. Ask a follow-up without reattaching. Try Check my work, You lost me, an example, an activity and Quiz me. Confirm guidance uses the page while preserving the lesson and teaching style. A failed request should keep the files and draft retryable.
+3. Select an existing course material. In this visit its original can be used; after refresh, a saved summary is clearly labelled, or Orbit asks for the original. Remove the lesson link and confirm the course material remains. Switch threads and return: references belong only to their original lesson. Continue successfully or refresh: references clear and temporary discussion is not restored.
+4. At 1440, 768, 390 and 320px, attach long filenames and check wrapping, scrolling, visible core controls, Tab/Enter/Space, focus after removal, screen-reader status and reduced motion. On physical phones, verify the picker and camera. Browser access approval timed out during implementation, so these are manual checks, not completed visual verification.
 
 Learn recommendations (automated interaction, routing and sizing/CSS checks completed; desktop/mobile visual review pending):
 

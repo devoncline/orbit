@@ -447,7 +447,7 @@ test('mixed attachments keep supported files, identify photos honestly, reject H
     new dom.File(['photo'], 'phone.heic', { type: 'image/heic' }), new dom.File(['text'], 'script.html', { type: 'text/html' })])
   assert.equal(container.querySelectorAll('.course-material-list li').length, 3)
   assert.match(container.querySelector('.course-material-errors').textContent, /phone.heic.*Export.*script.html/)
-  assert.match(container.querySelector('.course-material-list').textContent, /PNG.*Class material.*cannot read images yet/)
+  assert.match(container.querySelector('.course-material-list').textContent, /PNG.*Class material.*saved by name only.*Add reference in Study/)
   const picker = container.querySelector('[aria-label="Choose course materials"]')
   assert.equal(picker.multiple, true)
   for (const type of ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']) assert.ok(picker.accept.includes(type))
@@ -457,6 +457,43 @@ test('mixed attachments keep supported files, identify photos honestly, reject H
   assert.equal(picker.hasAttribute('capture'), false, 'The regular picker still offers files/photos')
   await reload(); await openSpace()
   assert.match(container.querySelector('.course-material-list').textContent, /board.png/)
+})
+
+test('Study reuses a course PDF original after analysis, keeps the source, and forgets references on reload', async t => {
+  seed()
+  saveLearnerMemory({ ...read(), threads: [savedThread('bio', 'Photosynthesis', '2026-11-01T12:00:00Z')], activeId: 'bio' }, dom.localStorage)
+  const requests = []
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    const body = JSON.parse(options.body)
+    requests.push({ url, body })
+    if (url === '/api/analyze-course') return json({ summary: 'Light powers sugar production.', importantTopics: ['Photosynthesis'] })
+    assert.equal(url, '/api/respond-to-study-message')
+    const response = 'Which input do you recognize on the worksheet?'
+    return new Response([{ type: 'delta', text: response }, { type: 'complete', response, signal: 'neutral' }].map(event => JSON.stringify(event) + '\n').join(''), { headers: { 'Content-Type': 'application/x-ndjson' } })
+  })
+  await render(); await openSpace(); await upload([pdf('Worksheet.pdf')]); await analyze('Worksheet.pdf')
+  const originalFiles = read().courses[0].files
+  await click(container.querySelector('.space-recent button'))
+  const room = container.querySelector('.study-room:not([hidden])')
+  await click(button('Add reference', room))
+  await act(async () => {
+    const select = room.querySelector('.lesson-reference-course select')
+    select.value = [...select.options].find(option => option.textContent === 'Worksheet.pdf').value
+    select.dispatchEvent(new dom.Event('change', { bubbles: true }))
+    await dom.happyDOM.waitUntilComplete()
+  })
+  assert.equal(requests.length, 1)
+  assert.equal(room.querySelectorAll('.lesson-reference-list li').length, 1)
+  assert.doesNotMatch(room.querySelector('.lesson-reference-list').textContent, /Saved summary only/)
+  await click(button('Understand it', room)); await click(button('Send', room))
+  assert.match(requests[1].body.lessonReferences[0].data, /^data:application\/pdf;base64,/)
+  assert.deepEqual(read().courses[0].files, originalFiles)
+  assert.doesNotMatch(JSON.stringify(read()), /file_data|lessonReferences|Which input|JVBER/)
+  await click(room.querySelector('[aria-label="Remove reference Worksheet.pdf"]'))
+  assert.deepEqual(read().courses[0].files, originalFiles)
+  await reload()
+  assert.equal(container.querySelectorAll('.lesson-reference-list li').length, 0)
+  assert.equal(requests.length, 2, 'Reload must not replay reference or lesson work')
 })
 
 test('failed PDF reading retains attachments and can retry explicitly', async t => {

@@ -31,6 +31,11 @@ export function createLessonImageCache(saved) {
     get: (key) => entries.get(key)?.snapshot || EMPTY_IMAGE,
     getSaved: () => snapshot,
     subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener) },
+    retain(saved) {
+      const keys = new Set(savedLessonImages(saved).map(image => JSON.stringify(image.request)))
+      for (const key of entries.keys()) if (!keys.has(key)) entries.delete(key)
+      notify()
+    },
     fail(key) {
       const entry = entries.get(key)
       if (entry) { entry.snapshot = { status: 'error' }; notify() }

@@ -106,7 +106,7 @@ export default function App() {
     const previous = existing.files?.find(item => sameMaterial(item, materialMetadata(file)))
     if (!previous && existing.files?.length >= MAX_COURSE_MATERIALS) throw new Error('Material limit reached')
     const metadata = previous || materialMetadata(file, new Date().toISOString(), kind)
-    if (canAnalyzeMaterial(file)) sessionFiles.current.set(materialKey(targetCourseName, metadata), file)
+    sessionFiles.current.set(materialKey(targetCourseName, metadata), file)
     setCourses(current => current.map(course => course.name === targetCourseName
       ? { ...course, files: normalizeCourseMaterials([...(course.files || []), metadata]) } : course))
   }
@@ -161,7 +161,8 @@ export default function App() {
         return course
       })
     )
-    sessionFiles.current.delete(key)
+    // Keep the original available for an explicit lesson-reference selection this visit.
+    // This in-memory file map is cleared on refresh/reset; it is never persisted.
   }
 
   function navigate(next) {
@@ -348,6 +349,7 @@ export default function App() {
             return <div className="study-room" key={thread.id} hidden={thread.id !== activeId}>
               <StudySession
                 course={course}
+                getMaterialFile={material => sessionFiles.current.get(materialKey(course.name, material))}
                 navigation={{ threads, activeId, courses, onSwitch: switchThread, onCreate: openTopic, onSelectSpace: selectSpace }}
                 learningProfile={learningPreferences.profile}
                 threadId={thread.id}

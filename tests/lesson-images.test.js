@@ -15,6 +15,21 @@ const visual = { type: 'generated_image', composition: 'process', purpose: 'Conn
   links: [{ from: 0, to: 1, label: 'An update requests a render' }] }
 const context = { courseName: 'React', lesson, visual }
 const imageUrl = 'https://images.example.test/lesson.webp?expires=example'
+
+test('temporary lesson imagery can be discarded without losing prior saved visuals or restoring late completions', async t => {
+  let complete
+  t.mock.method(globalThis, 'fetch', () => new Promise(resolve => { complete = resolve }))
+  const saved = { request: lessonImageRequest(context), status: 'ready', url: imageUrl }
+  const cache = createLessonImageCache([saved])
+  const temporary = lessonImageRequest({ ...context, lesson: { ...lesson, content: 'Temporary page details.' } })
+  const pending = cache.load(JSON.stringify(temporary))
+  cache.retain([saved])
+  complete(new Response(JSON.stringify({ url: 'https://images.example.test/temporary.webp' })))
+  await pending
+  assert.equal(cache.getSaved().length, 1)
+  assert.equal(cache.getSaved()[0].url, imageUrl)
+  assert.equal(cache.get(JSON.stringify(temporary)).status, 'idle')
+})
 function response() {
   return { headers: {}, setHeader(key, value) { this.headers[key] = value },
     status(code) { this.code = code; return this }, json(body) { this.body = body; return this } }

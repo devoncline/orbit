@@ -1,3 +1,4 @@
+import { lessonReferenceInput } from './_lib/lessonReferenceInput.js'
 import { formatMaterialContext } from '../src/services/courseMaterials.js'
 import process from 'node:process'
 import { enforceDemoRateLimit } from './_lib/demoRateLimit.js'
@@ -94,9 +95,10 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'muse-spark-1.3',
+        ...(req.body.lessonReferences ? { store: false } : {}),
         max_output_tokens: MODEL_OUTPUT_TOKENS.conversation,
         ...(streaming ? { stream: true, store: false } : {}),
-        input: `
+        input: lessonReferenceInput(`
 You are Orbit, a thoughtful learning partner in a focused lesson conversation.
 
 Answer the learner's actual message first, using their wording when it helps.
@@ -155,7 +157,7 @@ Return ONLY valid JSON with this text response shape, plus optional visual or re
 {"response": "", "signal": "neutral"}
 ${anchorSuggestionPrompt}
 ${streaming ? 'Write the "response" property FIRST, followed by "signal" and optional "anchor", "visual", or "reuseVisual". Keep all metadata outside the response string.' : ''}
-        `,
+        `, req.body.lessonReferences),
       }),
     }
     const allowance = await enforceDemoRateLimit(req, res)

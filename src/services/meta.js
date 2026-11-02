@@ -1,15 +1,16 @@
+import { lessonReferenceRequest } from './lessonReferences.js'
 import { retainStudyExchanges } from './studyConversation.js'
 import { readStudyConversationStream } from './studyConversationStream.js'
 import { learningAnchorRequest } from './studyLearningContext.js'
 import { coursePositionRequest, inferCoursePosition, localDate } from './coursePosition.js'
 import { learningPathContextKey, generatedLessonVisual, normalizeLearningPath } from './learningPath.js'
 import { learningProfileRequest } from './learningProfile.js'
-import { canAnalyzeMaterial, courseMaterialContext, materialValidationError } from './courseMaterials.js'
+import { canAnalyzeMaterial, courseMaterialContext, materialValidationError, readMaterialData } from './courseMaterials.js'
 import { demoAiFetch } from './demoUsage.js'
 
 export async function analyzeCourseFile(file, materialKind = 'syllabus') {
     if (!canAnalyzeMaterial(file) || materialValidationError(file)) throw new Error('Unsupported course material')
-    const base64File = await fileToBase64(file)
+    const base64File = await readMaterialData(file)
 
     const response = await demoAiFetch('/api/analyze-course', {
         method: 'POST',
@@ -51,7 +52,7 @@ export function generateStudyExample(course, lesson, example = '', options = {})
     return requestStudyLesson(course, course.mastery?.overall ?? 40, 'example', lesson, example, options)
 }
 
-async function requestStudyLesson(course, mastery, action, lesson, example, { anchors = [], path, signal, learningProfile } = {}) {
+async function requestStudyLesson(course, mastery, action, lesson, example, { anchors = [], path, signal, learningProfile, lessonReferences } = {}) {
     const response = await demoAiFetch('/api/generate-study-lesson', {
         method: 'POST',
         headers: {
@@ -61,6 +62,7 @@ async function requestStudyLesson(course, mastery, action, lesson, example, { an
         body: JSON.stringify({
             courseName: course.name,
             ...learningProfileRequest(learningProfile),
+            ...lessonReferenceRequest(lessonReferences),
             nextTask: course.nextTask,
             importantTopics: course.importantTopics,
             upcomingWork: course.upcomingWork,
@@ -99,7 +101,7 @@ export async function respondToStudyMessageStream(course, lesson, options) {
 async function requestStudyConversation(
     course,
     lesson,
-    { message, history = [], example = '', activityContext, signal, anchors = [], currentVisual, learningProfile },
+    { message, history = [], example = '', activityContext, signal, anchors = [], currentVisual, learningProfile, lessonReferences },
     streaming = false,
 ) {
     const visual = generatedLessonVisual(currentVisual)
@@ -113,6 +115,7 @@ async function requestStudyConversation(
         body: JSON.stringify({
             ...(streaming ? { stream: true } : {}),
             ...learningProfileRequest(learningProfile),
+            ...lessonReferenceRequest(lessonReferences),
             courseName: course.name,
             nextTask: course.nextTask,
             importantTopics: course.importantTopics,
@@ -152,7 +155,7 @@ async function requestStudyActivity(
     course,
     lesson,
     action,
-    { history = [], example = '', activity, learnerResponse, activityContext, signal, anchors = [], learningProfile }
+    { history = [], example = '', activity, learnerResponse, activityContext, signal, anchors = [], learningProfile, lessonReferences }
 ) {
     const response = await demoAiFetch('/api/study-activity', {
         method: 'POST',
@@ -177,6 +180,7 @@ async function requestStudyActivity(
             action,
             activity,
             ...learningProfileRequest(learningProfile),
+            ...lessonReferenceRequest(lessonReferences),
             learnerResponse,
             activityContext,
             ...learningAnchorRequest(anchors, { topic: lesson.topic, concept: lesson.concept, text: lesson.content }),
@@ -190,7 +194,7 @@ async function requestStudyActivity(
     return response.json()
 }
 
-export async function generateStudyQuestion(course, mastery, lesson, { anchors = [], learningProfile } = {}) {
+export async function generateStudyQuestion(course, mastery, lesson, { anchors = [], learningProfile, lessonReferences } = {}) {
     const response = await demoAiFetch('/api/generate-study-question', {
         method: 'POST',
         headers: {
@@ -206,6 +210,7 @@ export async function generateStudyQuestion(course, mastery, lesson, { anchors =
             ...coursePositionRequest(course),
             ...(lesson ? { lesson } : {}),
             ...learningProfileRequest(learningProfile),
+            ...lessonReferenceRequest(lessonReferences),
             ...learningAnchorRequest(anchors, { topic: lesson?.topic, concept: lesson?.concept, text: lesson?.content || course.nextTask }),
         }),
     })
@@ -222,7 +227,7 @@ export async function evaluateStudyAnswer(
     studyQuestion,
     selectedAnswer,
     mastery,
-    { anchors, learningProfile } = {}
+    { anchors, learningProfile, lessonReferences } = {}
 ) {
     const correctAnswer = studyQuestion.answers.find(
         (answer) => answer.correct
@@ -239,6 +244,7 @@ export async function evaluateStudyAnswer(
             ...(courseMaterialContext(course.files).length ? { materialContext: courseMaterialContext(course.files, studyQuestion.topic) } : {}),
             selectedAnswer: selectedAnswer.text,
             ...learningProfileRequest(learningProfile),
+            ...lessonReferenceRequest(lessonReferences),
             correctAnswer: correctAnswer.text,
             importantTopics: course.importantTopics,
             mastery: mastery,
@@ -288,18 +294,4 @@ export async function recommendCourse(courses, { signal, currentDate = localDate
     }
 
     return response.json()
-}
-
-function fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader()
-
-        reader.onload = () => {
-            resolve(String(reader.result).replace(/^data:[^;]*;base64,/, 'data:application/pdf;base64,'))
-        }
-
-        reader.onerror = reject
-
-        reader.readAsDataURL(file)
-    })
 }

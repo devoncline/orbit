@@ -1,3 +1,4 @@
+import { lessonReferenceInput } from './_lib/lessonReferenceInput.js'
 import { formatMaterialContext } from '../src/services/courseMaterials.js'
 import process from 'node:process'
 import { enforceDemoRateLimit } from './_lib/demoRateLimit.js'
@@ -34,9 +35,10 @@ export default async function handler(req, res) {
             },
             body: JSON.stringify({
                 model: 'muse-spark-1.3',
+        ...(req.body.lessonReferences ? { store: false } : {}),
             max_output_tokens: MODEL_OUTPUT_TOKENS.evaluateAnswer,
 
-                input: `
+                input: lessonReferenceInput(`
 You are Orbit, an adaptive learning agent.
 
 A student answered a study question incorrectly.
@@ -80,7 +82,7 @@ ${topic ? `${anchorSuggestionPrompt}
 Current topic: ${JSON.stringify(topic)}
 Only suggest a misconception anchor if this particular mistake reveals a specific useful misunderstanding. Use medium confidence and describe it as suspected or still needing a check.
 A multiple-choice selection does not demonstrate the learner's reasoning. Do not claim the correction worked or create an understanding/preference anchor from your own adapted explanation.` : ''}
-        `,
+        `, req.body.lessonReferences),
             }),
         }
         const allowance = await enforceDemoRateLimit(req, res)
