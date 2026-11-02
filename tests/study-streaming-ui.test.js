@@ -103,6 +103,58 @@ async function renderStudy(onThreadUpdate) {
   await click('Talk it through')
 }
 
+for (const method of ['Enter', 'Send button']) test(`Talk it through sends once via ${method}`, async (t) => {
+  const requests = mockRequests(t)
+  await renderStudy()
+  await enterMessage('  Are props like function arguments?  ')
+  const field = container.querySelector('.study-composer textarea')
+  await act(async () => {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      if (method === 'Send button') button('Send').click()
+      else {
+        const event = new dom.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+        field.dispatchEvent(event)
+        assert.equal(event.defaultPrevented, true)
+      }
+    }
+  })
+  assert.equal(requests.length, 1, 'Rapid submission must not duplicate the request')
+  assert.equal(requests[0].body.message, 'Are props like function arguments?')
+  assert.equal(field.value, '')
+  assert.equal(field.readOnly, true)
+  assert.equal(button('Send').disabled, true)
+  assert.equal(container.querySelector('.study-message-learner p').textContent, requests[0].body.message)
+})
+
+test('Talk it through preserves modified/composing Enter and ignores blank or repeated sends', async (t) => {
+  const requests = mockRequests(t)
+  await renderStudy()
+  const field = container.querySelector('.study-composer textarea')
+  const pressEnter = async (options = {}) => {
+    const event = new dom.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true, ...options })
+    await act(async () => field.dispatchEvent(event))
+    return event
+  }
+  for (const value of ['', '   ']) {
+    await enterMessage(value)
+    await pressEnter()
+    assert.equal(requests.length, 0)
+  }
+  await enterMessage('First thought')
+  for (const options of [{ shiftKey: true }, { altKey: true }, { ctrlKey: true }, { metaKey: true }, { isComposing: true }, { keyCode: 229 }]) {
+    assert.equal((await pressEnter(options)).defaultPrevented, false, 'Keep native editing/composition behavior')
+    assert.equal(requests.length, 0)
+    assert.equal(field.value, 'First thought')
+  }
+  assert.equal((await pressEnter({ repeat: true })).defaultPrevented, true)
+  assert.equal(requests.length, 0)
+  // Happy DOM does not insert native line breaks; verify a multiline draft reaches the same send handler intact.
+  await enterMessage('First thought\nSecond thought')
+  await pressEnter()
+  assert.equal(requests.length, 1)
+  assert.equal(requests[0].body.message, 'First thought\nSecond thought')
+})
+
 test('generated visuals follow the active lesson across tool switches without duplicate generation', async (t) => {
   const visual = { type: 'comparison', purpose: 'Compare component inputs.', focus: '', data: [
     { label: 'Props', detail: 'Supplied by a parent.' }, { label: 'State', detail: 'Remembered by the component.' },

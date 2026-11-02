@@ -131,7 +131,7 @@ test('New space recommendations prefill the existing editable create flow withou
   assert.equal(container.querySelector('.new-space-page input').value, '', 'Ordinary creation does not retain a recommendation prefill')
 })
 
-test('Learn freeform starts empty without a pseudo-dropdown and preserves explicit Start learning for any topic', async t => {
+for (const method of ['send button', 'native form submission']) test(`Learn freeform starts empty and launches once via ${method}`, async t => {
   seed({ name: 'Orbital motion', type: 'topic' })
   const requests = []
   t.mock.method(globalThis, 'fetch', async (url, options) => {
@@ -144,14 +144,21 @@ test('Learn freeform starts empty without a pseudo-dropdown and preserves explic
   assert.equal(field.value, '')
   assert.equal(field.placeholder, 'What do you want to learn?')
   assert.equal(field.autocomplete, 'off')
+  assert.equal(field.type, 'text')
   assert.equal(field.hasAttribute('list'), false)
   assert.ok(!container.querySelector('datalist'))
-  assert.equal(container.querySelector('[aria-label="Start learning"]').disabled, true)
+  const submit = container.querySelector('[aria-label="Start learning"]')
+  assert.equal(submit.type, 'submit')
+  assert.ok(submit.form === field.form)
+  assert.equal(submit.disabled, true)
   await type(field, '   ')
-  assert.equal(container.querySelector('[aria-label="Start learning"]').disabled, true)
+  assert.equal(submit.disabled, true)
+  await act(async () => field.form.requestSubmit())
   assert.equal(requests.length, 0)
   await type(field, '  Gravity waves  ')
-  await click(container.querySelector('[aria-label="Start learning"]'))
+  if (method === 'send button') await click(submit)
+  // Happy DOM does not emulate implicit Enter key activation. Exercise the native form-submit path it uses.
+  else await act(async () => field.form.requestSubmit(submit))
   assert.equal(requests.length, 1)
   assert.ok(read().courses.some(course => course.name === 'Gravity waves'))
   assert.equal(container.querySelector('.study-room:not([hidden]) h1').textContent, 'Gravity waves')

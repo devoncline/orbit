@@ -826,6 +826,12 @@ export default function StudySession({
                                     onChange={(event) => {
                                         setLearnerMessage(event.target.value)
                                     }}
+                                    onKeyDown={(event) => {
+                                        if (event.key !== 'Enter' || event.shiftKey || event.altKey || event.ctrlKey || event.metaKey ||
+                                            event.nativeEvent.isComposing || event.keyCode === 229) return
+                                        event.preventDefault()
+                                        if (!event.repeat) event.currentTarget.form.requestSubmit()
+                                    }}
                                     readOnly={loadingConversation}
                                     disabled={Boolean(loadingLesson || loadingActivity) || loadingQuestion}
                                     required

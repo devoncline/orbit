@@ -14,10 +14,9 @@
 .learn-page .learn-empty { font-size: 14px; color: var(--orbit-muted); max-width: 48ch; }
 .learn-page .learn-freeform { margin-top: 30px; }
 .learn-page .learn-topic-form { display: flex; align-items: center; gap: 4px; padding: 4px; width: 100%; max-width: 500px; border: 1px solid var(--orbit-border); border-radius: var(--orbit-radius); background: rgb(16 25 42 / 80%); transition: border-color 160ms ease, box-shadow 160ms ease; }
-.learn-page .learn-topic-form:focus-within { border-color: rgb(174 158 235 / 65%); box-shadow: 0 0 0 3px rgb(174 158 235 / 10%), 0 0 18px rgb(127 150 235 / 12%); }
+.learn-page .learn-topic-form:focus-within, .learn-page .learn-topic-form:has(input:focus-visible) { border-color: #8980b6; box-shadow: 0 0 0 2px rgb(162 151 223 / 10%); }
 .learn-page .learn-topic-form input { flex: 1; min-width: 0; width: 100%; min-height: 44px; padding: 8px 10px; border: 0; border-radius: 10px; background: transparent; color: var(--orbit-text); font: inherit; font-size: 14px; }
 .learn-page .learn-topic-form input:focus { outline: none; box-shadow: none; }
-.learn-page .learn-topic-form:has(input:focus-visible) { outline: 2px solid var(--orbit-control-rail); outline-offset: 3px; }
 .learn-topic-form input::placeholder { color: var(--orbit-muted); }
 .learn-page .learn-topic-form button { flex: 0 0 44px; width: 44px; height: 44px; padding: 10px; border-radius: 10px; background: rgb(190 179 245 / 12%); color: var(--orbit-accent); }
 .learn-page .learn-topic-form button:hover:not(:disabled) { background: var(--orbit-control-selected-hover); }
