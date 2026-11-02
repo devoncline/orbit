@@ -83,7 +83,7 @@ test('saved structured context renders below the topic while the teaching and pa
   assert.match(container.querySelector('.study-lesson-focus').textContent, /Stored values · Renders/)
   assert.equal(container.querySelector('.study-deadlines'), null)
   assert.match(container.querySelector('.study-content').textContent, /State remembers a value/)
-  assert.equal(container.querySelector('.study-path').open, false)
+  assert.equal(container.querySelector('.study-path'), null)
 })
 
 test('legacy saved lessons use topic as heading and concept as focus without adding a deadline', async (t) => {
@@ -120,13 +120,113 @@ test('desktop history rail collapses and resumes the selected session', async (t
   const threads = ['one', 'two'].map(id => ({ id, topic: id, title: id, courseName: course.name, createdAt: '2026-10-30T10:00:00Z' }))
   await act(async () => root.render(createElement(StudyThreads, { courses: [course], threads, activeId: 'one', onSwitch: id => switches.push(id) })))
   const rail = container.querySelector('.study-nav-rail')
+  const close = container.querySelector('[aria-label="Collapse topics and history"]')
+  const trigger = container.querySelector('.study-nav-toggle')
   assert.equal(rail.hidden, false)
-  await act(async () => container.querySelector('[aria-label="Collapse topics and history"]').click())
+  assert.ok(close.querySelector('svg[aria-hidden="true"]'))
+  assert.ok(trigger.querySelector('svg[aria-hidden="true"]'))
+  assert.equal(close.textContent, '')
+  await act(async () => close.click())
   assert.equal(rail.hidden, true)
-  await act(async () => container.querySelector('.study-nav-toggle').click())
+  assert.equal(dom.document.activeElement, trigger)
+  assert.equal(trigger.getAttribute('aria-expanded'), 'false')
+  await act(async () => trigger.click())
   assert.equal(rail.hidden, false)
+  assert.equal(dom.document.activeElement, close)
+  await act(async () => close.dispatchEvent(new dom.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+  assert.equal(rail.hidden, true)
+  assert.equal(dom.document.activeElement, trigger)
+  await act(async () => trigger.click())
   await act(async () => [...rail.querySelectorAll('.topic-item-open')].find(el => el.textContent.startsWith('two')).click())
   assert.deepEqual(switches, ['two'])
+})
+
+test('the back row keeps its class destination and has a named icon control', async t => {
+  t.mock.method(dom, 'matchMedia', () => ({ matches: false, addEventListener() {}, removeEventListener() {} }))
+  const destinations = []
+  await act(async () => root.render(createElement(StudyThreads, { courses: [course], onSelectSpace: name => destinations.push(name) })))
+  const back = container.querySelector('.study-nav-course')
+  assert.equal(back.getAttribute('aria-label'), `Back to ${course.name}`)
+  assert.ok(back.querySelector('svg[aria-hidden="true"]'))
+  assert.equal(back.querySelector('span').textContent, course.name)
+  back.focus()
+  assert.equal(dom.document.activeElement, back)
+  await act(async () => back.click())
+  assert.deepEqual(destinations, [course.name])
+})
+
+test('previous work expands and collapses without losing saved lessons or closing the mobile drawer', async t => {
+  t.mock.method(dom, 'matchMedia', () => ({ matches: true, addEventListener() {}, removeEventListener() {} }))
+  t.mock.method(globalThis, 'fetch', () => assert.fail('History navigation is read-only'))
+  const visited = Array.from({ length: 8 }, (_, i) => ({ topic: lesson.topic, concept: `Previous lesson ${i} ${'long title '.repeat(6)}`, understood: i === 0 }))
+  const initialThread = { resume: { lesson, learningPath: { visited, step: 9 } } }
+  const before = JSON.stringify(initialThread)
+  await act(async () => root.render(createElement(StudySession, { course, mastery: 40, initialThread, onThreadUpdate: () => assert.fail('Review does not write progress') })))
+  await act(async () => container.querySelector('.study-nav-toggle').click())
+  const drawer = container.querySelector('.study-nav-drawer')
+  const list = () => container.querySelectorAll('.study-history-list [data-study-navigation-select]')
+  const previous = () => container.querySelectorAll('.study-history .study-history-list button')
+  const more = container.querySelector('.study-history-toggle')
+  assert.equal(previous().length, 5)
+  assert.equal(list().length, 6, 'Current lesson stays separate from the five-item history preview')
+  assert.equal(more.textContent, 'Show more (3)')
+  await act(async () => more.click())
+  assert.equal(drawer.open, true)
+  assert.equal(previous().length, 8)
+  assert.equal(more.getAttribute('aria-expanded'), 'true')
+  assert.equal(more.textContent, 'Show less')
+  await act(async () => more.click())
+  assert.equal(previous().length, 5)
+  assert.equal(drawer.open, true)
+  await act(async () => more.click())
+  await act(async () => previous()[7].click())
+  assert.equal(drawer.open, false)
+  const review = container.querySelector('.study-history-review')
+  assert.ok(review.textContent.includes(visited[0].concept))
+  assert.match(review.textContent, /felt ready/)
+  assert.equal(dom.document.activeElement, review)
+  assert.equal(JSON.stringify(initialThread), before)
+})
+
+test('course correction lives in rail guidance while New topic and lightweight lesson actions remain available', async t => {
+  const corrections = [], creations = []
+  t.mock.method(globalThis, 'fetch', () => assert.fail('Course navigation must not call a model'))
+  await mount(t, { onPositionChange: value => corrections.push(value), navigation: { courses: [course], onCreate: (...args) => creations.push(args) } })
+  const panel = container.querySelector('.study-active-panel')
+  assert.equal(panel.querySelector('.course-position'), null)
+  assert.doesNotMatch(panel.textContent, /Change starting point|I lost you/)
+  const recovery = button('You lost me')
+  assert.ok(recovery.classList.contains('study-secondary-action'))
+  assert.equal(recovery.disabled, false)
+  recovery.focus()
+  assert.equal(dom.document.activeElement, recovery)
+  for (const label of ['I understand', 'Continue to next lesson']) {
+    const action = button(label)
+    assert.ok(action.classList.contains('study-secondary-action'))
+    action.focus()
+    assert.equal(dom.document.activeElement, action)
+  }
+  assert.equal(container.querySelectorAll('.study-lesson-actions button').length, 6)
+  const guidance = container.querySelector('.study-course-guidance')
+  assert.equal(guidance.open, false)
+  await act(async () => { guidance.open = true })
+  await click('Update course focus')
+  const input = guidance.querySelector('input')
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(dom.HTMLInputElement.prototype, 'value').set.call(input, 'Events')
+    input.dispatchEvent(new dom.Event('input', { bubbles: true }))
+  })
+  await click('Save course focus')
+  assert.deepEqual(corrections, [{ type: 'current', topic: 'Events', statement: "I'm currently on Events" }])
+  await act(async () => container.querySelector('.study-thread-new').click())
+  const form = container.querySelector('.thread-create')
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(dom.HTMLInputElement.prototype, 'value').set.call(form.querySelector('input'), 'State')
+    form.querySelector('input').dispatchEvent(new dom.Event('input', { bubbles: true }))
+    form.dispatchEvent(new dom.Event('submit', { bubbles: true, cancelable: true }))
+  })
+  assert.deepEqual(creations, [[course, 'State']])
+  assert.equal(corrections.length, 1)
 })
 
 test('mobile history uses a labelled modal drawer with close and focus return', async (t) => {
@@ -164,7 +264,7 @@ test('New thread keeps its labelled disclosure and existing course/topic submiss
   assert.equal(trigger.getAttribute('aria-expanded'), 'false')
 })
 
-test('Show me retains I lost you explanation and its request after That helps and tool switches', async (t) => {
+test('Show me retains You lost me explanation and its request after That helps and tool switches', async (t) => {
   const images = []
   const explanation = 'Think of state as a notebook. A click changes the notebook before React updates the screen.'
   t.mock.method(globalThis, 'fetch', async (path, options) => {
@@ -172,7 +272,7 @@ test('Show me retains I lost you explanation and its request after That helps an
     return json({ ...lesson, content: explanation })
   })
   await mount(t)
-  await click('I lost you')
+  await click('You lost me')
   assert.equal(mode(), 'recover')
   await click('Show me')
   assert.equal(mode(), 'visual')
@@ -251,7 +351,7 @@ test('continuing clears explicit image and recovery state; a late previous image
     return failNext ? new Response('{}', { status: 503 }) : json({ ...lesson, concept: 'Event handlers', content: 'A handler responds to a click.' })
   })
   await mount(t)
-  await click('I lost you')
+  await click('You lost me')
   await click('Show me')
   await click('Continue to next lesson')
   assert.equal(mode(), 'visual', 'Failed continuation keeps the current explicit visual')
@@ -270,13 +370,13 @@ test('continuing clears explicit image and recovery state; a late previous image
   assert.equal(image().src, 'https://images.example.test/new.webp')
 })
 
-test('I lost you enters recover while pending, retains it after completion, and That helps changes only presentation', async (t) => {
+test('You lost me enters recover while pending, retains it after completion, and That helps changes only presentation', async (t) => {
   let complete
   t.mock.method(globalThis, 'fetch', () => new Promise((resolve) => { complete = resolve }))
   const saved = []
   await mount(t, { onThreadUpdate: (_id, update) => saved.push(update) })
   assert.equal(mode(), 'focus')
-  await click('I lost you')
+  await click('You lost me')
   assert.equal(mode(), 'recover')
   await act(async () => { complete(json({ ...lesson, content: 'Think of state as the component’s notebook.' })); await setImmediate() })
   assert.equal(mode(), 'recover')
@@ -298,7 +398,7 @@ test('visual loading, decode, failure and retry keep requests deduplicated and n
   await click('Show me')
   assert.equal(mode(), 'visual')
   assert.ok(container.querySelector('.lesson-image-surface'))
-  button('I lost you').focus()
+  button('You lost me').focus()
   const focused = dom.document.activeElement
   await act(async () => { complete(json({ url: 'https://images.example.test/lesson.webp' })); await setImmediate() })
   assert.equal(mode(), 'visual')
@@ -383,7 +483,7 @@ test('a successful continuation clears recovery while failure retains the curren
     return failNext ? new Response('{}', { status: 502 }) : json({ ...lesson, concept: 'Responding to an event', content: 'A click can request a state update.' })
   })
   await mount(t)
-  await click('I lost you')
+  await click('You lost me')
   assert.equal(mode(), 'recover')
   await click('Continue to next lesson')
   assert.equal(mode(), 'recover')

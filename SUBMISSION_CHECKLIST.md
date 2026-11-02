@@ -17,7 +17,7 @@ Before recording the syllabus-based flow, run the local API runtime (`npm.cmd ru
 | Area | Completed evidence | Remaining limit |
 | --- | --- | --- |
 | Automated gates | 282 tests pass; lint, production build and diff check pass | Parallel Vite tests report a non-failing HMR port 24678 warning; Git reports Windows line-ending conversion warnings |
-| Real learning journey | In Chrome, created an Orbital motion space, started a Spark lesson, loaded Muse imagery, used I lost you and Show me, submitted a partial/wrong activity response, received targeted feedback, answered a quiz incorrectly then its follow-up correctly, continued and returned | Full journey used the local serverless runtime, not production |
+| Real learning journey | In Chrome, created an Orbital motion space, started a Spark lesson, loaded Muse imagery, used You lost me and Show me, submitted a partial/wrong activity response, received targeted feedback, answered a quiz incorrectly then its follow-up correctly, continued and returned | Full journey used the local serverless runtime, not production |
 | Teaching and mastery | Recovery changed the analogy; activity feedback corrected the gravity misconception without scoring it; quiz evidence changed mastery; continuation and preference edits did not | No exhaustive curriculum/factual-quality evaluation |
 | Presentation | All five real desktop modes inspected, including text-only lesson and conversation Focus; real text-only lesson and conversation inspected at tablet width; phone lesson, activity input and tool wrapping inspected at 390/320px. At 320px, generated imagery fit without cropping and the navigation drawer/Home worked | Responsive Chrome viewports are not physical devices; no exhaustive mode-by-width matrix in this pass. Small embedded image labels need zoom on narrow phones |
 | Image quality | Real orbital, photosynthesis and React props/state images inspected. Final photosynthesis sample had correct input/output arrows and large labels; React parent state to child props flow was clear | Earlier orbital arrows remained ambiguous/inaccurate; an earlier photosynthesis sample reversed CO2 flow. Prompt changes improved the final sample but cannot guarantee future samples |
@@ -68,7 +68,7 @@ Contrasting profile for an optional comparison: **A little more detail** / **Exp
 1. Home → **Set up my preferences** → select the five recording answers → **Save preferences**.
 2. **New space** → enter **Photosynthesis** in **Topic or skill** → enter the topic above in **A starting point (optional)** → **Create space** → **Try this** to start the lesson. If using a prepared space, open it and begin from its genuine first lesson.
 3. Let Spark finish and the Muse image load. Explain that the lesson and image are separate requests; inspect the image before using it in the take.
-4. Click **I lost you**. Show the changed explanation and calmer Recover composition.
+4. Click **You lost me**. Show the changed explanation and calmer Recover composition.
 5. Open **Study tools → Show me**. Let the new image finish; describe how it addresses the current explanation/confusion. Use **That helps** if shown when ready to leave recovery.
 6. **Study tools → Let me try it**. Read the actual generated task, then submit a plausible partial answer. If relevant to that task, use: “Plants get their food from the soil; sunlight just warms them.” Do not give a rehearsed answer to an unrelated generated question.
 7. Click **Share response**. Show which part was understood and which misconception Orbit corrected.

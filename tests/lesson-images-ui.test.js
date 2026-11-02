@@ -63,7 +63,7 @@ test('Show me is a secondary Study tool, works without an automatic image, and n
   assert.ok(container.querySelector('.lesson-image-surface'))
   assert.ok(container.textContent.includes(lesson.content))
   const focused = dom.document.activeElement
-  for (const label of ['I lost you', 'Talk it through', 'Quiz me', 'Continue to next lesson']) assert.equal(button(label).disabled, false)
+  for (const label of ['You lost me', 'Talk it through', 'Quiz me', 'Continue to next lesson']) assert.equal(button(label).disabled, false)
   await mountStudy(null, extra)
   await click('Talk it through')
   await click('Show me')
@@ -133,7 +133,7 @@ test('lessons without visual requests use no image path and retain the lesson co
     assert.equal(image(), null)
     assert.equal(container.querySelector('.lesson-visual'), null)
     assert.ok(container.textContent.includes(lesson.content))
-    assert.equal(button('I lost you').disabled, false)
+    assert.equal(button('You lost me').disabled, false)
     await act(async () => root.render(null))
   }
 })
@@ -152,7 +152,7 @@ test('a restored brief waits for Show me then requests once across StrictMode, r
   assert.equal(mock.mock.callCount(), 1)
   assert.match(container.textContent, /Preparing a lesson image/)
   assert.ok(container.textContent.includes(lesson.content))
-  for (const label of ['I lost you', 'Talk it through', 'Quiz me', 'Continue to next lesson']) assert.equal(button(label).disabled, false)
+  for (const label of ['You lost me', 'Talk it through', 'Quiz me', 'Continue to next lesson']) assert.equal(button(label).disabled, false)
   assert.equal(container.querySelector('.lesson-visual-object'), null)
   await mountStudy()
   await click('Talk it through')

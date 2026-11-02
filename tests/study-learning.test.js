@@ -82,7 +82,7 @@ test('courses without topic scores can get a lesson using course context', async
   assert.equal(res.body.topic, 'Quadratic equations')
 })
 
-test('I lost you requests a changed teaching approach with the current lesson and example', async (t) => {
+test('You lost me requests a changed teaching approach with the current lesson and example', async (t) => {
   const fetchMock = mockModel(t, { ...lesson, content: 'Imagine getting one instruction card from each parent.' })
   const example = 'One parent gives A and the other gives a, producing Aa.'
   const res = await callHandler(lessonHandler, { ...courseContext, action: 'simplify', lesson, example })

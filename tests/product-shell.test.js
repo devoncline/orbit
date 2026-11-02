@@ -50,8 +50,8 @@ test('topic tiles support an optional mastery presentation without an empty plac
   assert.doesNotMatch(plain, /topic-item-mastery/)
   assert.match(ranked, /topic-item-mastery.*Future rank/)
   assert.equal((ranked.match(/<button/g) || []).length, 1)
-  assert.match(plain, /topic-item-action/)
-  assert.match(ranked, /topic-item-action/)
+  assert.doesNotMatch(plain, /topic-item-action/)
+  assert.doesNotMatch(ranked, /topic-item-action/)
 })
 
 test('thinking retains the existing asset, bounds decorative fragments, and exposes only one loading status', () => {
@@ -223,7 +223,7 @@ test('restored Study starts from its saved lesson and summary without replaying 
   assert.doesNotMatch(html, /Orbit is preparing a short lesson|Question 1|study-answer/)
 })
 
-test('guided Study exposes course, lesson, readiness and continuation while the wider path stays collapsed', () => {
+test('guided Study keeps progression near the lesson header without a duplicate path disclosure', () => {
   const course = { name: 'Introduction to Psychology', mastery: { overall: 40, topics: {} } }
   const lesson = { topic: 'Perspectives', concept: 'Explaining behavior', content: '## A useful lens\n**Perspectives** explain behavior.\n\n## Example\nCompare memory with social influence.' }
   const learningPath = acceptPathLesson({ ...lesson, nextLessons: [{ topic: 'Research', concept: 'Testing an idea' }, { topic: 'Research', concept: 'Comparing groups' }] }, undefined, undefined, learningPathContextKey(course))
@@ -239,13 +239,15 @@ test('guided Study exposes course, lesson, readiness and continuation while the 
   assert.match(html, />I understand<\/button>/)
   assert.match(html, />Continue to next lesson<\/button>/)
   assert.match(html, /Next idea<\/small><span>Testing an idea<\/span>/)
-  assert.match(html, /<details class="study-path"><summary><span class="study-path-label">Study path/)
-  assert.match(html, /aria-current="step"><small>Lesson 1 · Current lesson<\/small><strong>Explaining behavior/)
+  assert.match(html, /class="study-next-ideas"/)
+  assert.match(html, /Explaining behavior<\/strong><small>Current lesson/)
+  assert.match(html, /Then<\/small><span>Comparing groups/)
+  assert.doesNotMatch(html, /class="study-path"/)
   assert.match(html, /<details class="study-tools"><summary>Study tools/)
   assert.match(html, /Suggested next/)
   assert.match(html, /Start with the lesson above/)
   assert.equal((html.match(/class="study-primary-action"/g) || []).length, 1)
-  assert.ok(html.indexOf('study-path') < html.indexOf('study-active-panel'))
+  assert.ok(html.indexOf('study-next-ideas') < html.indexOf('study-active-panel'))
   assert.ok(html.indexOf('study-recommendation') > html.indexOf('A useful lens'))
   assert.doesNotMatch(html, /study-progress|study-mastery/)
   assert.match(html, /Let me try it/)
@@ -262,7 +264,7 @@ test('resuming after course evidence changes preserves the current lesson but hi
     course: { ...course, importantTopics: ['Memory'] }, mastery: 40, initialThread: { resume: { lesson, learningPath } },
   }))
   assert.match(html, /Explaining behavior/)
-  assert.match(html, /updated starting point/)
+  assert.doesNotMatch(html, /study-next-ideas/)
   assert.doesNotMatch(html, /STALE_SUGGESTION/)
 })
 
@@ -276,10 +278,11 @@ test('a resumed path shows visited, current and tentative next concepts without 
   const html = renderToStaticMarkup(createElement(StudySession, {
     course, mastery: 40, initialThread: { resume: { lesson, learningPath } },
   }))
-  assert.match(html, /<li><small>Visited<\/small><span>Explaining behavior/)
-  assert.match(html, /Lesson 2 · Current lesson<\/small><strong>Testing an idea/)
+  assert.match(html, /Explaining behavior<\/strong><small>Lesson · Saved summary/)
+  assert.match(html, /Testing an idea<\/strong><small>Current lesson/)
+  assert.match(html, /Lesson 2/)
   assert.match(html, /Next idea<\/small><span>Comparing groups/)
-  assert.match(html, /Visiting a lesson does not change your mastery/)
+  assert.match(html, /Previous work/)
   assert.doesNotMatch(html, /<details[^>]*open|Completed|Mastered/)
 })
 

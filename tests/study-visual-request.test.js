@@ -33,7 +33,7 @@ test('automatic recovery images also serve Show me before and after acknowledgin
   assert.deepEqual(createStudyVisualRequest({ ...current, recoveringLesson: false, recentVisualRecovery }).request, automatic)
 })
 
-test('I lost you context survives leaving or acknowledging recovery without changing its request', () => {
+test('You lost me context survives leaving or acknowledging recovery without changing its request', () => {
   const recovering = { ...state, lesson: { ...lesson, content: clarification }, recoveringLesson: true }
   const recentVisualRecovery = studyVisualContext(recovering)
   const direct = createStudyVisualRequest({ ...recovering, recentVisualRecovery })

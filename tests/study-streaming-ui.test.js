@@ -134,7 +134,7 @@ test('generated visuals follow the active lesson across tool switches without du
   assert.ok(container.querySelector('.lesson-visual-generated_image'))
   assert.match(container.querySelector('.lesson-visual-purpose').textContent, /Follow an input/)
   assert.match(container.querySelector('.study-subject').textContent, /Lesson 2/)
-  assert.match(container.querySelector('.study-path li').textContent, /VisitedInputs/)
+  assert.match(container.querySelector('.study-history-list').parentElement.textContent, /Inputs/)
   assert.equal(container.querySelector('.study-recommendation button').textContent, 'Give me an example')
 })
 
@@ -147,7 +147,7 @@ test('an illustrated lesson keeps one stable presenter through recovery and repl
   })
   await act(async () => root.render(createElement(StudySession, { ...props, initialThread: { resume: { lesson: { ...lesson, visual: nativeVisual } } } })))
   assert.ok(container.querySelector('.study-session > .orbit-stage'))
-  await click('I lost you')
+  await click('You lost me')
   assert.equal(container.querySelectorAll('.orbit-stage').length, 1)
   assert.ok(container.querySelector('.study-session > .orbit-stage'))
   assert.equal(thinking(), true)
@@ -164,7 +164,7 @@ test('conversation installs one visual only after completion and saves its bound
   const updates = []
   const visualLesson = { ...lesson, visual: nativeVisual }
   await act(async () => root.render(createElement(StudySession, { ...props, initialThread: { resume: { lesson: visualLesson } }, onThreadUpdate: (_id, update) => updates.push(update) })))
-  const pathBefore = container.querySelector('.study-path').textContent
+  const pathBefore = container.querySelector('.study-context').textContent
   await click('Talk it through')
   assert.equal(container.querySelector('.lesson-visual'), null, 'Text is the default; no automatic duplicate of the lesson visual')
   await enterMessage('Show me a visual')
@@ -180,7 +180,7 @@ test('conversation installs one visual only after completion and saves its bound
   assert.ok(figure)
   assert.equal(figure.previousElementSibling.className, 'study-transcript')
   assert.ok(figure.nextElementSibling.classList.contains('study-composer'))
-  assert.equal(container.querySelector('.study-path').textContent, pathBefore)
+  assert.equal(container.querySelector('.study-context').textContent, pathBefore)
   assert.equal(container.querySelector('.study-progress'), null)
   assert.deepEqual(updates.at(-1).resume.lesson, visualLesson)
   assert.deepEqual(updates.at(-1).resume.conversationVisual, generatedLessonVisual(nativeVisual))
@@ -495,7 +495,7 @@ test('initial lesson, simplification, examples and next lesson replace the local
   await complete(requests[0], lesson)
   assert.match(first.textContent, /Props supply inputs/)
 
-  await click('I lost you')
+  await click('You lost me')
   const simplified = checkSignal('simplify')
   assert.equal(simplified, first)
   assert.doesNotMatch(simplified.textContent, /Props supply inputs/)
@@ -676,7 +676,7 @@ test('a validated non-streamed explanation reveals briefly before final formatti
   const requests = structuredRequests(t)
   const updates = []
   await act(async () => root.render(createElement(StudySession, { ...props, onThreadUpdate: (_id, update) => updates.push(update) })))
-  await click('I lost you')
+  await click('You lost me')
   const text = '## Another angle\n' + 'A parent gives inputs to its child through props. '.repeat(6)
   const slot = responseSlot('simplify')
   assert.ok(signal())
@@ -694,7 +694,7 @@ test('a validated non-streamed explanation reveals briefly before final formatti
   assert.equal(slot.querySelector('h3').textContent, 'Another angle')
   assert.equal(updates.at(-1).resume.lesson.content, text.trim())
   assert.equal(requests.length, 1)
-  assert.ok(button('I lost you'))
+  assert.ok(button('You lost me'))
 })
 
 test('quiz controls wait for the instruction reveal and reduced motion skips structured and conversational pacing', async (t) => {
@@ -711,7 +711,7 @@ test('quiz controls wait for the instruction reveal and reduced motion skips str
   dom.happyDOM.settings.device.prefersReducedMotion = 'reduce'
   t.after(() => { dom.happyDOM.settings.device.prefersReducedMotion = original })
   await click('Lesson')
-  await click('I lost you')
+  await click('You lost me')
   await act(async () => requests[1].resolve(new Response(JSON.stringify({ ...lesson, content: 'A complete explanation of props. '.repeat(10) }))))
   assert.equal(container.querySelector('.study-result-reveal'), null)
   assert.equal(thinking(), false)

@@ -1,12 +1,22 @@
 .study-workspace { display: grid; grid-template-columns: 216px minmax(0, 1fr); gap: 28px; align-items: start; min-width: 0; }
-.study-workspace:has(.study-threads:not(.study-threads-expanded)) { grid-template-columns: minmax(0, 1fr); }
+.study-workspace:has(.study-threads:not(.study-threads-expanded)) { grid-template-columns: minmax(0, 1fr); row-gap: 12px; }
+.study-workspace > .study-threads:not(.study-threads-expanded) { position: static; }
 .study-threads { position: sticky; top: 24px; min-width: 0; margin: 0; padding: 0; border: 0; }
 .study-nav-rail { max-height: calc(100dvh - 48px); overflow-y: auto; scrollbar-width: thin; padding: 0 12px 12px 2px; }
 .study-threads-expanded > .study-nav-toggle { display: none; }
 .study-nav-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .study-nav-heading h2 { font-size: 14px; font-weight: 500; margin: 0; }
-.study-nav-heading button { font-size: 22px; min-width: 44px; }
-.study-nav-course { width: 100%; font-size: 12px !important; margin-bottom: 14px; overflow-wrap: anywhere; }
+.study-nav-heading .study-nav-close { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex: 0 0 44px; padding: 12px; color: var(--orbit-muted); background: rgb(169 179 201 / 5%); border-radius: 10px; }
+.study-nav-close svg { width: 20px; height: 20px; }
+.study-nav-toggle, .study-nav-course { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; border: 1px solid rgb(190 179 245 / 16%); border-radius: 10px; color: var(--orbit-text); background: rgb(190 179 245 / 5%); }
+.study-nav-toggle { width: fit-content; max-width: 100%; padding: 8px 12px; font-size: 12px !important; }
+.study-nav-toggle svg { width: 20px; height: 20px; flex: 0 0 20px; color: var(--orbit-accent); }
+.study-nav-course { width: 100%; font-size: 12px !important; margin: 6px 0 18px; padding: 9px 10px; }
+.study-nav-course svg { width: 18px; height: 18px; flex: 0 0 18px; color: var(--orbit-accent); }
+.study-nav-course span { min-width: 0; overflow-wrap: anywhere; }
+.study-threads :is(.study-nav-toggle, .study-nav-close, .study-nav-course):hover { background: var(--orbit-control-hover); color: var(--orbit-text); border-color: rgb(190 179 245 / 30%); }
+.study-threads :is(.study-nav-toggle, .study-nav-close, .study-nav-course):active { background: var(--orbit-control-pressed); }
+.study-threads :is(.study-nav-toggle, .study-nav-close, .study-nav-course):focus-visible { outline: 2px solid var(--orbit-focus); outline-offset: 3px; }
 .study-nav-topics { margin-top: 24px; }
 .study-threads h3 { font-size: 12px; font-weight: 500; color: var(--orbit-muted); margin: 0 0 10px; }
 .study-threads .topic-grid { gap: 6px; }
@@ -20,6 +30,10 @@
 .study-threads .topic-sessions { padding: 0 0 0 10px; }
 .study-threads .topic-sessions button { font-size: 12px; }
 .study-thread-new { margin-top: 16px; width: 100%; }
+.study-course-guidance { margin-top: 12px; font-size: 12px; }
+.orbit-shell .study-course-guidance > summary { border: 0; border-radius: 10px; padding-inline: 10px; }
+.study-course-guidance > p { margin: 6px 10px 12px; color: var(--orbit-muted); }
+.study-course-guidance .orbit-form { padding: 0 4px; }
 .study-threads .thread-create { padding: 12px 0; margin: 0; }
 .study-nav-note { font-size: 11px; color: var(--orbit-muted); line-height: 1.6; margin: 20px 8px 0; }
 .study-history-list { padding: 0; margin: 0; list-style: none; display: grid; gap: 4px; }
@@ -28,6 +42,7 @@
 .study-history-list strong { font-size: 13px; font-weight: 500; }
 .study-history-list small { font-size: 11px; color: var(--orbit-muted); }
 .study-history-list [aria-current] { background: var(--orbit-control-selected); box-shadow: inset 2px 0 var(--orbit-control-rail); color: var(--orbit-text); }
+.study-history-toggle { margin-top: 6px; color: var(--orbit-accent); font-size: 12px !important; }
 .study-history-review { outline: none; max-width: 68ch; }
 .study-history-review h2 { font-size: 24px; line-height: 1.35; }
 .study-history-review > p:first-child { color: var(--orbit-accent); font-size: 12px; }
@@ -41,6 +56,6 @@
 .study-nav-drawer::backdrop { background: rgb(2 5 12 / 72%); }
 @media (max-width: 1100px) {
   .study-workspace { display: block; }
-  .study-threads { position: static; margin-bottom: 20px; }
+  .study-threads { position: static; margin-bottom: 12px; }
   .study-threads-expanded > .study-nav-toggle { display: inline-flex; }
 }

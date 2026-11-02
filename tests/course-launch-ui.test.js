@@ -100,6 +100,8 @@ test('class sections render recommendations, recent learning and searchable topi
   const page = container.querySelector('.space-page')
   for (const heading of ['Recommended next', 'Continue learning', 'Your topics']) assert.ok([...page.querySelectorAll('h2')].some(el => el.textContent === heading))
   assert.equal(page.querySelectorAll('.space-recent .topic-item').length, 3)
+  assert.equal(page.querySelector('.space-recent .topic-item-action'), null)
+  assert.equal(page.querySelector('.topic-browser .topic-item-action'), null)
   assert.match(page.querySelector('.space-recent .topic-item').textContent, /Photosynthesis.*Discussion.*Nov 1/)
   assert.equal(page.querySelectorAll('.topic-browser > .topic-grid > li').length, 8)
   await click([...page.querySelectorAll('button')].find(el => el.textContent.startsWith('Show more topics')))

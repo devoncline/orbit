@@ -31,6 +31,7 @@ import useResultReveal from './useResultReveal'
 import StudyContent from './StudyContent'
 import StudyLessonHeader from './StudyLessonHeader'
 import StudyThreads from './StudyThreads'
+import StudyHistory from './StudyHistory'
 import { studyContextLabels } from '../services/studyNavigation'
 import LessonVisual from './LessonVisual'
 import useStudyPresentation from './useStudyPresentation'
@@ -667,17 +668,15 @@ export default function StudySession({
 
     return (
         <div className="study-workspace">
-        <StudyThreads {...(navigation || { courses: [course], threads: initialThread ? [initialThread] : [], activeId: threadId })}>
+        <StudyThreads {...(navigation || { courses: [course], threads: initialThread ? [initialThread] : [], activeId: threadId })}
+          courseGuidance={onPositionChange && <CoursePosition course={course} today={today} showSummary={false} onChange={changePosition} editLabel="Update course focus" saveLabel="Save course focus" />}>
           <section className="study-thread-history" aria-label="Work in this thread">
             <h3>In this thread</h3>
             <ul className="study-history-list">
-              <li><button className="orbit-text-button" disabled={busy} aria-current={!review && activeInteraction === 'lesson' ? 'true' : undefined} onClick={() => { setReview(null); openInteraction('lesson') }}><strong>{lesson?.concept || 'Current lesson'}</strong><small>Current lesson</small></button></li>
-              {[['conversation', conversation.length && 'Discussion'], ['activity', activity?.title], ['quiz', studyQuestion && `Question ${questionNumber || 1}`], ['example', example && 'Example']].filter(([, title]) => title).map(([interaction, title]) => <li key={interaction}><button className="orbit-text-button" disabled={busy} aria-current={!review && activeInteraction === interaction ? 'true' : undefined} onClick={() => { setReview(null); openInteraction(interaction) }}><strong>{title}</strong><small>{studyContextLabels[interaction]} · Current lesson</small></button></li>)}
+              <li><button className="orbit-text-button" data-study-navigation-select disabled={busy} aria-current={!review && activeInteraction === 'lesson' ? 'true' : undefined} onClick={() => { setReview(null); openInteraction('lesson') }}><strong>{lesson?.concept || 'Current lesson'}</strong><small>Current lesson</small></button></li>
+              {[['conversation', conversation.length && 'Discussion'], ['activity', activity?.title], ['quiz', studyQuestion && `Question ${questionNumber || 1}`], ['example', example && 'Example']].filter(([, title]) => title).map(([interaction, title]) => <li key={interaction}><button className="orbit-text-button" data-study-navigation-select disabled={busy} aria-current={!review && activeInteraction === interaction ? 'true' : undefined} onClick={() => { setReview(null); openInteraction(interaction) }}><strong>{title}</strong><small>{studyContextLabels[interaction]} · Current lesson</small></button></li>)}
             </ul>
-            {(history.length > 0 || earlierLessons.length > 0) && <div className="study-history"><h3>Previous work</h3><ul className="study-history-list">
-              {[...history].reverse().map((entry, index) => <li key={`history-${index}`}><button className="orbit-text-button" aria-current={review === entry ? 'true' : undefined} onClick={() => { setReview(entry) }}><strong>{entry.title}</strong><small>{studyContextLabels[entry.type] || 'Lesson'}</small></button></li>)}
-              {[...earlierLessons].reverse().map((entry, index) => <li key={`outline-${index}`}><button className="orbit-text-button" onClick={() => { setReview({ type: 'lesson', title: entry.concept, content: `You visited ${entry.concept} in ${entry.topic}.${entry.understood ? ' You said you felt ready to continue.' : ''}`, summaryOnly: true }) }}><strong>{entry.concept}</strong><small>Lesson · Saved summary</small></button></li>)}
-            </ul></div>}
+            <StudyHistory history={history} earlierLessons={earlierLessons} visitedLessons={learningPath.visited} review={review} onReview={setReview} />
           </section>
         </StudyThreads>
         <section className={`study-session study-mode-${presentation.mode}${presentation.splitVisual ? ' study-session-illustrated' : ''}${presentation.choiceDensity === 'low' ? ' study-choice-focused' : ''}`}
@@ -723,8 +722,7 @@ export default function StudySession({
                             <div className="study-lesson-support">
                             {presentation.primary === 'recovery_done' && <button className="study-primary-action" disabled={busy}
                                 onClick={() => { setRecoveringLesson(false); panel.current?.focus({ preventScroll: true }) }}>That helps</button>}
-                            <button disabled={busy} onClick={() => changeLesson('simplify')}>I lost you</button>
-                            <CoursePosition course={course} today={today} showSummary={false} onChange={onPositionChange ? changePosition : undefined} />
+                            <button className="study-secondary-action" disabled={busy} onClick={() => changeLesson('simplify')}>You lost me</button>
                             </div>
                             </>}
                         </div>
@@ -976,10 +974,10 @@ export default function StudySession({
                     </button>}
                 </div>
                 <div className="study-continue-actions">
-                    {activeInteraction === 'lesson' && <button disabled={busy} aria-pressed={learningPath.understood} onClick={() => setLearningPath((current) => ({ ...current, understood: !current.understood }))}>
+                    {activeInteraction === 'lesson' && <button className="study-secondary-action" disabled={busy} aria-pressed={learningPath.understood} onClick={() => setLearningPath((current) => ({ ...current, understood: !current.understood }))}>
                         {learningPath.understood ? 'Feeling ready' : 'I understand'}
                     </button>}
-                    {(!showRecommendationAction || recommendation.action !== 'continue') && <button disabled={busy} onClick={continueLesson}>
+                    {(!showRecommendationAction || recommendation.action !== 'continue') && <button className="study-secondary-action" disabled={busy} onClick={continueLesson}>
                         {loadingLesson === 'next' ? 'Preparing next lesson…' : progressionError ? 'Try next lesson again' : 'Continue to next lesson'}
                     </button>}
                 </div>

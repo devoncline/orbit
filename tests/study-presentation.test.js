@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+import { readFileSync } from 'node:fs'
 import { selectStudyPresentation, studyPresentationImageKey } from '../src/services/studyPresentation.js'
 
 const lesson = { topic: 'State', concept: 'Remembering a value', content: 'State remembers a value between renders.' }
@@ -8,6 +9,16 @@ const visual = { type: 'generated_image', purpose: 'Follow a state update into a
 const base = { courseName: 'React', lesson, activeInteraction: 'lesson' }
 const illustrated = { ...base, lesson: { ...lesson, visual } }
 const recovery = { answerResult: 'incorrect', showAdaptedLesson: true, evaluation: { adaptedExplanation: 'Think of state as memory.' } }
+
+test('Study tools retain content-sized wrapping and focusable lightweight actions without a fixed tablet grid', () => {
+  // CSS contract only: actual browser geometry is measured by the navigation-review fixture.
+  const css = readFileSync(new URL('../src/components/StudySession.css', import.meta.url), 'utf8')
+  assert.match(css, /\.study-lesson-actions\s*\{[^}]*display: flex;[^}]*flex-wrap: wrap;/)
+  assert.match(css, /\.study-body \.study-lesson-actions button\s*\{[^}]*min-width: 0;[^}]*max-width: 100%;/)
+  assert.doesNotMatch(css, /\.study-lesson-actions\s*\{[^}]*(?:grid-template-columns|min-width: \d)/)
+  assert.match(css, /\.orbit-shell \.study-tools > summary\s*\{[^}]*border-radius:/)
+  assert.match(css, /\.study-body button\.study-secondary-action:focus-visible\s*\{[^}]*outline:/)
+})
 
 test('a normal lesson defaults to focus and authored metadata ignores model layout instructions', () => {
   const result = selectStudyPresentation({ ...base, mode: 'practice', className: 'unsafe', layout: '<script />' })
@@ -49,7 +60,7 @@ test('quiz and pending questions select check without borrowing lesson imagery o
   assert.equal(selectStudyPresentation({ ...base, activeInteraction: 'quiz', answerResult: 'incorrect' }).mode, 'check')
 })
 
-test('I lost you retains recover through loading and the new explanation, including helpful imagery', () => {
+test('You lost me retains recover through loading and the new explanation, including helpful imagery', () => {
   for (const extra of [{ loadingLesson: 'simplify' }, { recoveringLesson: true }, { recoveringLesson: true, loadingLesson: 'next' }]) {
     const result = selectStudyPresentation({ ...illustrated, ...extra }, 'pending')
     assert.equal(result.mode, 'recover')

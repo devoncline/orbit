@@ -42,11 +42,11 @@ The learner controls the pace. Continuing does not require a quiz, and reading a
 
 New spaces start at zero evidence. Successful quiz answers add up to 8 percentage points, applied activities up to 6, and recovery up to 4; gains taper as the topic score rises. Incorrect quiz answers subtract 3 points; a misconception in an activity or recovery answer subtracts 2. Partial, unclear, or self-reported understanding earns no points. Course mastery is an average of tracked topic scores weighted by practice evidence, not a percent of the syllabus completed. Topic scores and bounded evidence records persist locally; the same recent task cannot award credit repeatedly, including after refresh. Earlier saved estimates remain usable.
 
-For example, a learner studying photosynthesis can read a short explanation, say **“I lost you,”** request a visual of the inputs and outputs, and then check their understanding. If they answer incorrectly, Orbit offers an adapted explanation and a simpler follow-up before they decide whether to continue.
+For example, a learner studying photosynthesis can read a short explanation, say **“You lost me,”** request a visual of the inputs and outputs, and then check their understanding. If they answer incorrectly, Orbit offers an adapted explanation and a simpler follow-up before they decide whether to continue.
 
 ## What Makes Orbit Different
 
-- **“I lost you” is part of the lesson.** Ask for a new analogy, a familiar example, or smaller steps while staying with the same concept. The current learning flow remains available.
+- **“You lost me” is part of the lesson.** Ask for a new analogy, a familiar example, or smaller steps while staying with the same concept. The current learning flow remains available.
 - **Teaching preferences are editable.** Choose explanation length, example timing, visual support, next-step guidance, and return support. Setup is optional, and a current request takes priority over a saved preference.
 - **Course material shapes the starting point.** Attach multiple PDFs or JPG/JPEG, PNG and WebP photos, and add or remove materials later. Choose **Syllabus / course outline** and **Read syllabus & find dates** to extract course topics and deadlines. Ordinary resources use **Use PDF for learning** to provide learning context without importing calendar dates. Photos currently retain filename/type only; Orbit does not yet read uploaded images.
 - **Practice goes beyond recall.** “Let me try it” offers a small prediction, comparison, explanation, or other applied task with focused feedback. “Quiz me” checks a topic and can follow a mistake with another approach.
@@ -91,7 +91,7 @@ Meta Muse powers the teaching within Orbit's adaptive loop. The current server i
 | Capability | How Orbit uses Muse |
 | --- | --- |
 | **Lessons and continuation** | Generate a short explanation and a few possible next concepts using course position, prior learning, mastery context, and preferences. |
-| **Adapted teaching** | Re-explain the current concept after “I lost you” or produce a concrete worked example. |
+| **Adapted teaching** | Re-explain the current concept after “You lost me” or produce a concrete worked example. |
 | **Activities and evaluation** | Create small applied tasks and respond to the learner's attempt with focused feedback. Generate topic-aware quiz questions, plus corrective explanations and easier follow-ups after incorrect answers. |
 | **Study conversation** | Answer questions in the context of the current lesson and recent exchanges, drawing on relevant saved learning connections. |
 | **PDF analysis** | On an explicit reading action, extract syllabus topics and dates, or summarize an ordinary resource for learning without calendar extraction. |

@@ -646,7 +646,7 @@ The learner should feel steady progress without being overwhelmed.
 
 A key future interaction is:
 
-**I lost you**
+**You lost me**
 
 This should allow the learner to tell Orbit that the explanation stopped making sense.
 
@@ -662,7 +662,7 @@ Orbit:
 
 Learner:
 
-> I lost you.
+> You lost me.
 
 Orbit might respond:
 
@@ -680,7 +680,7 @@ During a lesson, the learner should eventually be able to ask for alternate teac
 
 Potential actions:
 
-- I lost you
+- You lost me
 - Explain that simpler
 - Give me an example
 - Show me visually
