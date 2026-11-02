@@ -9,11 +9,13 @@ import { parseWorkDate } from '../services/upcomingWork'
 import './SpaceScreen.css'
 import TopicItem from './TopicItem'
 import TopicBrowser from './TopicBrowser'
-import { courseThreads, findTopicThread, threadDate, threadDescription, threadTopic } from '../services/studyNavigation'
+import { courseThreads, findTopicThread, startedTopics, threadDate, threadDescription, threadTopic } from '../services/studyNavigation'
+import { masteryRankDistribution } from '../services/masteryRanks'
 
 export default function SpaceScreen({ course, threads = [], onOpenThread, onStartLesson, onAddFile, onAnalyzeFile, onRemoveFile, hasFile, today, onPositionChange }) {
   const { primary, recommendations } = courseLaunchRecommendations(course, today)
   const recent = courseThreads(threads, course.name).slice(0, 3)
+  const rankDistribution = masteryRankDistribution(course.mastery, startedTopics(threads, course.name).map(group => group.topic))
   const [topic, setTopic] = useState('')
   const id = useId()
   const validTopic = topic.trim().length > 0 && topic.trim().length <= 120
@@ -51,14 +53,16 @@ export default function SpaceScreen({ course, threads = [], onOpenThread, onStar
       </section>
       <section className="space-learning-section" aria-labelledby={`${id}-topics`}>
         <h2 id={`${id}-topics`}>Your topics</h2>
-        <TopicBrowser threads={threads} courseName={course.name} onOpen={onOpenThread} />
+        <TopicBrowser threads={threads} courseName={course.name} mastery={course.mastery} onOpen={onOpenThread} />
       </section>
       {manual}
       <section className="calendar-group space-coming-up"><h2>Coming up in this space</h2><UpcomingWork courses={[course]} preview today={today} /></section>
       <AddCourseFile files={course.files} onAddFile={(file, kind) => onAddFile(file, course.name, kind)} onAnalyzeFile={file => onAnalyzeFile(file, course.name)} onRemoveFile={onRemoveFile && (file => onRemoveFile(file, course.name))} hasFile={hasFile} />
-      <details className="space-details"><summary>Learning details</summary><p>Current mastery: {course.mastery?.overall ?? 0}%</p>
-        <p className="orbit-muted">An estimate from quiz answers and applied activities. Topics with more practice carry more weight in the course average. Reading and “I understand” do not raise it. Older saved estimates are kept.</p>
-        {Object.keys(course.mastery?.topics || {}).length > 0 && <ul>{Object.entries(course.mastery.topics).map(([topicName, score]) => <li key={topicName}>{topicName}: {score}%</li>)}</ul>}
+      <details className="space-details"><summary>Learning details</summary>
+        <p>Topic mastery</p>
+        {rankDistribution.length ? <ul className="space-mastery-distribution" aria-label="Topic mastery ranks">{rankDistribution.map(({ rank, count }) => <li key={rank.id}>{count} {rank.label}</li>)}</ul>
+          : <p className="orbit-muted">Start a topic to begin at Launch Pad.</p>}
+        <p className="orbit-muted">Each topic has its own rank. Build understanding through quiz answers, applied activities, and practice after mistakes. Reading or choosing “I understand” does not raise your rank. Your saved practice still counts.</p>
         <CourseDetails course={course} showMaterials={false} />
         {onPositionChange && <CoursePosition course={course} today={today} onChange={onPositionChange} showSummary={false} />}
       </details>

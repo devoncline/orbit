@@ -4,6 +4,7 @@
 
 ### Improvements
 
+- Topic mastery now uses five space-themed ranks—Launch Pad, In Orbit, Cruising, Deep Space, and Mission Ready—with badges beside started topics. Learning details shows a breakdown of topic ranks instead of percentages. Saved progress, recommendations, topic search and separate saved sessions remain available; reading alone does not raise a rank.
 - Study now has **Add reference** for temporary homework photos, worksheets, PDFs, and existing course materials. Compact removable references stay with the current lesson across messages, with Understand it, Work through it, Check my work, and Quiz me shortcuts. Uploads do not enter the course curriculum or trigger AI automatically. References and work using them last for this visit and clear on refresh or when continuing to the next lesson; saved course materials remain intact.
 - Fixed mobile swipes freezing or jumping in Recommended next. Horizontal gestures now tolerate small vertical movement and continue through card changes, while vertical page scrolling, infinite looping and reduced motion remain available.
 - Learn’s Recommended next carousel now loops in either direction, with neighboring cards on both sides when enough suggestions are available. Dragging, swiping and arrow keys wrap through the same recommendations with smooth snapping and the existing soft edges; reduced motion remains supported.
@@ -60,6 +61,12 @@
 
 ### Manual test checklist
 
+Topic mastery ranks (automated checks passed; browser/device review pending):
+
+1. Run `npm.cmd run dev` and open `/tests/fixtures/navigation-review.html`. At 1440, 768, 390 and 320px, inspect Your topics, Show more topics, long names, all five compact badges and Learning details. Confirm the artwork/glow is visible, text wraps beside the badge, and there is no horizontal overflow. The fixture uses no learner storage or provider calls.
+2. Search for Photosynthesis, expand/collapse saved sessions, and resume both the latest and an older session. Check Tab, Enter/Space, visible focus and screen-reader names: topic and rank should be announced without a duplicate badge label. Repeat with reduced motion and a physical phone.
+3. In the full app, compare topics in two classes, return to saved work, and refresh. Ranks and sessions should persist without a celebration or new request. With deliberate practice, verify crossing a rank boundary updates the topic badge; ordinary score changes leave the rank unchanged. Incorrect evidence can currently lower a rank at a boundary. Confirm Learning details has a topic distribution and no mastery percentages.
+
 Lesson references (automated UI/API coverage completed; browser/device and live-provider review pending):
 
 1. In an active lesson, choose Add reference and attach a PDF plus a JPG/PNG/WebP photo. Verify selection makes no AI call, both names appear, and an unsupported/oversized file leaves successful attachments intact. Limits are four references and 3 MB combined; HEIC/HEIF needs conversion.
@@ -77,7 +84,7 @@ Learn recommendations (automated interaction, routing and sizing/CSS checks comp
 Learn and topic navigation (automated behavior and CSS-contract checks completed; browser/device review pending):
 
 1. Run `npm.cmd run dev`, then open `/tests/fixtures/navigation-review.html`. This isolated fixture uses no learner storage or provider calls. Compare 1440, 768, 390, and 320px using the width controls. Viewport and document widths should match, drawer overflow should be false, and runtime errors/requests should remain zero while browsing.
-2. Try 0, 1, and 15 topics, long names, search, Show more topics, both classes, and the optional mastery-slot preview. Open a recent topic, its saved lesson summary and discussion, then return to current work.
+2. Try 0, 1, and 15 topics, long names, search, Show more topics, both classes, and the topic mastery badges. Open a recent topic, its saved lesson summary and discussion, then return to current work.
 3. On desktop, collapse/reopen the history rail using its matching panel icons and Escape. Tab to each control and activate with Enter/Space; focus should return to the opener when collapsed. Confirm Back to your space stays above the lesson with history open or closed and opens the correct class. On tablet/mobile, open Topics & history, use Tab/Shift+Tab, dismiss with Escape and Hide topics and history, and verify focus returns to the trigger. Expand Previous work past five items, collapse it, then reopen an older lesson. Show more should keep the drawer open; selecting work should close it and focus the review. Check the back control after dismissing the drawer, full mascot visibility, readable wrapping, scrolling and no horizontal overflow; repeat with reduced motion and a physical phone.
 4. Expand Study tools at each width: all six tools should stay in one row when their labels fit; the fixture’s unnecessary-wrap counter should remain false. Check hover, focus and pressed states for You lost me, I understand and Continue to next lesson. In the full app, use Topics & history → Update class focus to save/clear what the class is covering. Confirm the current lesson stays in place and no lesson is generated; use the separate New topic action to start or resume a session.
 5. In the full app, open a class, resume a recommendation already started, and confirm it reuses the session. Start a different topic, switch classes and return, then refresh. Saved lesson summaries and recent discussion should remain; full earlier activities/exchanges are limited to the current visit. Confirm mastery is unchanged by browsing.

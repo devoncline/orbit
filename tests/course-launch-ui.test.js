@@ -200,7 +200,7 @@ for (const method of ['send button', 'native form submission']) test(`Learn free
 test('class sections render recommendations, recent learning and searchable topics with separate sessions', async t => {
   const threads = Array.from({ length: 12 }, (_, i) => savedThread(`topic-${i}`, i === 0 ? 'Photosynthesis' : `Topic ${i} ${'long name '.repeat(7)}`, `2026-10-${String(i + 1).padStart(2, '0')}T12:00:00Z`))
   threads.push(savedThread('latest', 'Photosynthesis', '2026-11-01T12:00:00Z'))
-  seed()
+  seed({ ...biologyCourse, mastery: { topics: { PHOTOSYNTHESIS: 63 } } })
   saveLearnerMemory({ ...read(), threads, activeId: 'latest' }, dom.localStorage)
   t.mock.method(globalThis, 'fetch', () => assert.fail('Browsing and resuming must not fetch'))
   await render(); await openSpace()
@@ -213,15 +213,89 @@ test('class sections render recommendations, recent learning and searchable topi
   assert.equal(page.querySelectorAll('.topic-browser > .topic-grid > li').length, 8)
   await click([...page.querySelectorAll('button')].find(el => el.textContent.startsWith('Show more topics')))
   assert.equal(page.querySelectorAll('.topic-browser > .topic-grid > li').length, 12)
+  assert.equal(page.querySelectorAll('.topic-browser .mastery-badge').length, 12)
+  assert.equal(page.querySelectorAll('.topic-browser .topic-item-rank').length, 12)
   await type(page.querySelector('input[type="search"]'), 'photosynthesis')
   assert.equal(page.querySelectorAll('.topic-browser > .topic-grid > li').length, 1)
+  assert.equal(page.querySelector('.topic-item-rank').textContent, 'Deep Space')
   await click(page.querySelector('.topic-sessions > button'))
+  assert.equal(page.querySelector('.topic-sessions > button').getAttribute('aria-expanded'), 'true')
   const sessions = page.querySelectorAll('.topic-sessions li button')
   assert.equal(sessions.length, 2)
-  await click(sessions[1])
+  await click(page.querySelector('.topic-sessions > button'))
+  assert.equal(page.querySelector('.topic-sessions > button').getAttribute('aria-expanded'), 'false')
+  assert.equal(page.querySelector('.topic-sessions ul'), null)
+  await click(page.querySelector('.topic-sessions > button'))
+  await click(page.querySelectorAll('.topic-sessions li button')[1])
   assert.equal(read().activeId, 'topic-0')
   assert.equal(read().threads.length, threads.length)
   assert.match(container.querySelector('.study-room:not([hidden]) .study-active-panel').textContent, /Saved explanation topic-0/)
+})
+
+test('Your topics uses each course score, falls back for new topics, and preserves ranks and saves on reload', async t => {
+  const topics = ['First steps', 'Orbits', 'Gravity', 'Light', 'Stars', 'New topic']
+  const mastery = { topics: { 'FIRST STEPS': 14, ORBITS: 15, Gravity: 48, Light: 63, Stars: 80 } }
+  const course = { name: 'Astronomy', mastery }
+  const otherCourse = { name: 'Other class', mastery: { topics: { Gravity: 90 } } }
+  seed(course)
+  saveLearnerMemory({ ...read(), courses: [course, otherCourse], threads: [
+    ...topics.map((topic, index) => savedThread(`rank-${index}`, topic, `2026-11-01T12:00:0${index}Z`, course.name)),
+    savedThread('other-rank', 'Gravity', '2026-11-01T12:00:00Z', otherCourse.name),
+  ] }, dom.localStorage)
+  t.mock.method(globalThis, 'fetch', () => assert.fail('Rank display and navigation must not fetch'))
+  const before = read().courses.map(item => item.mastery)
+  await render(); await openSpace()
+  const rows = [...container.querySelectorAll('.topic-browser .topic-item-open')]
+  const expected = ['Launch Pad', 'In Orbit', 'Cruising', 'Deep Space', 'Mission Ready', 'Launch Pad']
+  for (const [index, topic] of topics.entries()) {
+    const row = rows.find(item => item.querySelector('strong').textContent === topic)
+    assert.equal(row.querySelector('.topic-item-rank').textContent, expected[index])
+    assert.equal(row.querySelector('img').getAttribute('alt'), '')
+    assert.equal(row.querySelector('img').getAttribute('aria-hidden'), 'true')
+    assert.equal(row.querySelector('.topic-orbit'), null)
+    assert.match(row.textContent, /Discussion/)
+  }
+  assert.deepEqual([...container.querySelectorAll('.space-mastery-distribution li')].map(el => el.textContent), ['1 Mission Ready', '1 Deep Space', '1 Cruising', '1 In Orbit', '2 Launch Pad'])
+  assert.doesNotMatch(container.querySelector('.space-page').textContent, /%|weighted|course average|Current mastery:/)
+  assert.match(container.querySelector('.space-details').textContent, /Reading or choosing “I understand” does not raise your rank/)
+  await click(rows.find(item => item.querySelector('strong').textContent === 'Gravity'))
+  assert.equal(read().activeId, 'rank-2')
+  await click([...container.querySelectorAll('.shell-spaces button')].find(el => el.textContent === otherCourse.name))
+  assert.equal(container.querySelector('.topic-item-rank').textContent, 'Mission Ready')
+  await reload(); await openSpace()
+  assert.equal([...container.querySelectorAll('.topic-browser .topic-item-open')].find(item => item.querySelector('strong').textContent === 'Gravity').querySelector('.topic-item-rank').textContent, 'Cruising')
+  assert.doesNotMatch(container.textContent, /reached (?:In Orbit|Cruising|Deep Space|Mission Ready)/)
+  assert.deepEqual(read().courses.map(item => item.mastery), before)
+})
+
+test('an empty legacy course estimate does not become a course-wide rank or percentage', async t => {
+  seed({ name: 'Legacy class', mastery: { overall: 90 } })
+  t.mock.method(globalThis, 'fetch', () => assert.fail('Opening learning details must not fetch'))
+  await render(); await openSpace()
+  const details = container.querySelector('.space-details')
+  assert.match(details.textContent, /Start a topic to begin at Launch Pad/)
+  assert.doesNotMatch(details.textContent, /%|Mission Ready/)
+  assert.equal(details.querySelector('.space-mastery-distribution'), null)
+  assert.equal(read().courses[0].mastery.overall, 90)
+})
+
+test('new quiz evidence updates the visible topic rank and refresh does not replay a rank-up', async t => {
+  seed({ name: 'Physics', importantTopics: ['Gravity'], mastery: { topics: { Gravity: 14 } } })
+  t.mock.method(globalThis, 'fetch', async url => {
+    if (url === '/api/generate-study-lesson') return json({ topic: 'Gravity', concept: 'Attraction', content: 'Masses attract.' })
+    assert.equal(url, '/api/generate-study-question')
+    return json({ topic: 'Gravity', question: 'What attracts?', answers: [{ text: 'Mass', correct: true }], explanation: 'Masses attract.' })
+  })
+  await render(); await openSpace(); await click(container.querySelector('.space-recommendation button'))
+  await click(button('Quiz me')); await click(button('Mass'))
+  assert.equal(read().courses[0].mastery.topics.Gravity, 21)
+  await openSpace()
+  assert.equal(container.querySelector('.topic-item-rank').textContent, 'In Orbit')
+  const saved = read().courses[0].mastery
+  await reload(); await openSpace()
+  assert.equal(container.querySelector('.topic-item-rank').textContent, 'In Orbit')
+  assert.doesNotMatch(container.textContent, /reached In Orbit/)
+  assert.deepEqual(read().courses[0].mastery, saved)
 })
 
 test('recommendations and recent work resume existing threads, classes stay isolated, and refresh preserves history', async t => {

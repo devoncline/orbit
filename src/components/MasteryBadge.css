@@ -1,0 +1,3 @@
+.mastery-badge { display: block; flex: 0 0 auto; height: auto; object-fit: contain; overflow: visible; }
+.mastery-badge-compact { width: 32px; }
+.mastery-badge-standard { width: 52px; }

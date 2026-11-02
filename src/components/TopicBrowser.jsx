@@ -1,8 +1,9 @@
 import { useId, useState } from 'react'
 import { startedTopics, threadDate, threadDescription } from '../services/studyNavigation'
 import TopicItem from './TopicItem'
+import { topicMasteryRank } from '../services/masteryRanks'
 
-export default function TopicBrowser({ threads, courseName, activeId, onOpen }) {
+export default function TopicBrowser({ threads, courseName, mastery, activeId, onOpen }) {
   const [query, setQuery] = useState('')
   const [limit, setLimit] = useState(8)
   const [expanded, setExpanded] = useState(null)
@@ -14,7 +15,7 @@ export default function TopicBrowser({ threads, courseName, activeId, onOpen }) 
     {!topics.length ? <p className="orbit-muted">Your topics will appear here after you start learning.</p> : <>
       <ul className="topic-grid">{filtered.slice(0, limit).map(group => {
         const latest = group.threads[0]
-        return <li key={group.id}><TopicItem topic={group.topic} detail={threadDescription(latest)} meta={threadDate(latest)} current={group.threads.some(thread => thread.id === activeId)} onClick={() => onOpen(latest.id)}>
+        return <li key={group.id}><TopicItem topic={group.topic} rank={topicMasteryRank(mastery, group.topic)} detail={threadDescription(latest)} meta={threadDate(latest)} current={group.threads.some(thread => thread.id === activeId)} onClick={() => onOpen(latest.id)}>
           {group.threads.length > 1 && <div className="topic-sessions">
             <button className="orbit-text-button" aria-expanded={expanded === group.id} aria-controls={`${id}-${latest.id}`} onClick={() => setExpanded(expanded === group.id ? null : group.id)}>{group.threads.length} saved sessions</button>
             {expanded === group.id && <ul id={`${id}-${latest.id}`}>{group.threads.map(thread => <li key={thread.id}><button className="orbit-text-button" aria-current={thread.id === activeId ? 'true' : undefined} onClick={() => onOpen(thread.id)}><strong>{thread.title || group.topic}</strong><small>{threadDescription(thread)} · {threadDate(thread)}</small>{thread.summary && <span>{thread.summary}</span>}</button></li>)}</ul>}

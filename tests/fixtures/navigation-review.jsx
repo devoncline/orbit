@@ -4,12 +4,11 @@ import { createRoot } from 'react-dom/client'
 import AppShell from '../../src/components/AppShell'
 import SpaceScreen from '../../src/components/SpaceScreen'
 import StudySession from '../../src/components/StudySession'
-import TopicItem from '../../src/components/TopicItem'
 import { biologyCourse } from './courseLaunch'
 import { learningPathContextKey } from '../../src/services/learningPath'
 import '../../src/index.css'
 
-const courses = [biologyCourse, { name: 'Astronomy', importantTopics: ['Stars'], mastery: { overall: 0, topics: {} } }]
+const courses = [{ ...biologyCourse, mastery: { topics: { Photosynthesis: 75, 'Biology topic 3': 55, 'Biology topic 4': 35, 'Biology topic 5': 15 } } }, { name: 'Astronomy', importantTopics: ['Stars'], mastery: { overall: 0, topics: {} } }]
 const threads = Array.from({ length: 15 }, (_, i) => {
   const topic = i < 2 ? 'Photosynthesis' : i === 2 ? 'How extraordinarily long topic names wrap without losing the meaning of the lesson or overflowing a narrow phone screen' : `Biology topic ${i}`
   return { id: String(i), topic, title: `${topic} · session ${i + 1}`, courseName: biologyCourse.name, context: i % 2 ? 'activity' : 'conversation', updatedAt: `2026-10-${String(30 - i).padStart(2, '0')}T12:00:00Z`,
@@ -30,7 +29,6 @@ export function Fixture() {
   </div><AppShell courses={courses} destination={active ? 'study' : 'space'} selectedSpace={course.name} onNavigate={() => setActive(null)} onSelectSpace={name => { setCourse(courses.find(item => item.name === name)); setActive(null) }} onNewSpace={() => setNotice('New space selected')}>
     {active ? <div className="orbit-page study-page"><div className="study-room"><StudySession key={active.id} course={course} today="2026-11-01" mastery={40} threadId={active.id} initialThread={active} onPositionChange={() => setNotice('Class focus saved')} learningProfile={{ visualPreference: 'on_request' }} navigation={{ threads: threads.slice(0, count), activeId: active.id, courses, onSwitch: id => setActive(threads.find(thread => thread.id === id)), onSelectSpace: () => setActive(null), onCreate: () => setNotice('Start topic selected') }} /></div></div>
       : <SpaceScreen course={course} threads={threads.slice(0, count)} onOpenThread={id => setActive(threads.find(thread => thread.id === id))} onStartLesson={() => setNotice('Lesson launch selected')} today="2026-11-01" />}
-    {!active && <div style={{ maxWidth: 460, marginBlock: 24 }}><TopicItem topic="Future mastery slot preview" detail="Optional presentation only" mastery={<><span aria-hidden="true">✦</span><span>Rank label</span></>} onClick={() => setNotice('Badge preview selected')} /></div>}
   </AppShell></>
 }
 

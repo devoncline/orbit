@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { after, before, test } from 'node:test'
+import { readFileSync } from 'node:fs'
 import { Children, createElement, isValidElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { createServer } from 'vite'
@@ -7,6 +8,7 @@ import { collectUpcomingWork, formatWorkDate, parseWorkDate } from '../src/servi
 import { learningAction } from '../src/components/learningAction.js'
 import { LEARNER_MEMORY_KEY, saveLearnerMemory } from '../src/services/learnerMemory.js'
 import { acceptPathLesson, learningPathContextKey } from '../src/services/learningPath.js'
+import { MASTERY_RANKS, masteryRank } from '../src/services/masteryRanks.js'
 
 let server
 let HomeScreen
@@ -19,6 +21,7 @@ let StudySession
 let StudyContent
 let OrbitStage
 let TopicItem
+let MasteryBadge
 
 before(async () => {
   server = await createServer({ server: { middlewareMode: true, watch: null }, appType: 'custom' })
@@ -32,6 +35,7 @@ before(async () => {
   StudyContent = (await server.ssrLoadModule('/src/components/StudyContent.jsx')).default
   OrbitStage = (await server.ssrLoadModule('/src/components/OrbitStage.jsx')).default
   TopicItem = (await server.ssrLoadModule('/src/components/TopicItem.jsx')).default
+  MasteryBadge = (await server.ssrLoadModule('/src/components/MasteryBadge.jsx')).default
 })
 after(async () => { await server?.close() })
 
@@ -42,16 +46,33 @@ const courses = Array.from({ length: 7 }, (_, index) => ({
 }))
 const renderHome = (spaces) => renderToStaticMarkup(createElement(HomeScreen, { courses: spaces, recommendedCourse: spaces[0] }))
 
-test('topic tiles support an optional mastery presentation without an empty placeholder or changing their action', () => {
+test('topic tiles replace the marker with a decorative badge and visible rank without changing their action', () => {
   const topic = 'A very long topic name '.repeat(5)
   const plain = renderToStaticMarkup(createElement(TopicItem, { topic, detail: 'Lesson', onClick() {} }))
-  const ranked = renderToStaticMarkup(createElement(TopicItem, { topic, detail: 'Lesson', onClick() {}, mastery: createElement('span', null, 'Future rank') }))
+  const ranked = renderToStaticMarkup(createElement(TopicItem, { topic, detail: 'Lesson', onClick() {}, rank: masteryRank(63) }))
   assert.ok(plain.includes(topic))
-  assert.doesNotMatch(plain, /topic-item-mastery/)
-  assert.match(ranked, /topic-item-mastery.*Future rank/)
+  assert.doesNotMatch(plain, /topic-item-rank|mastery-badge/)
+  assert.match(ranked, /topic-item-rank.*Deep Space/)
+  assert.match(ranked, /alt="" aria-hidden="true"/)
+  assert.doesNotMatch(ranked, /topic-orbit|%/)
   assert.equal((ranked.match(/<button/g) || []).length, 1)
   assert.doesNotMatch(plain, /topic-item-action/)
   assert.doesNotMatch(ranked, /topic-item-action/)
+})
+
+test('all mastery badges use the exported size-specific SVG with accessible or decorative text', () => {
+  for (const rank of MASTERY_RANKS) for (const size of ['compact', 'standard']) {
+    const html = renderToStaticMarkup(createElement(MasteryBadge, { rank, size }))
+    assert.ok(html.includes(`/src/assets/mastery/mastery-${rank.id}-${size}.svg`))
+    assert.ok(html.includes(`alt="${rank.label} mastery"`))
+    const svg = readFileSync(new URL(`../src/assets/mastery/mastery-${rank.id}-${size}.svg`, import.meta.url), 'utf8')
+    const dimensions = svg.match(/<svg width="(\d+)" height="(\d+)"/)
+    assert.ok(dimensions)
+    assert.ok(html.includes(`width="${dimensions[1]}" height="${dimensions[2]}"`))
+    assert.doesNotMatch(html, /aria-hidden|<svg/)
+    const decorative = renderToStaticMarkup(createElement(MasteryBadge, { rank, size, decorative: true }))
+    assert.match(decorative, /alt="" aria-hidden="true"/)
+  }
 })
 
 test('thinking retains the existing asset, bounds decorative fragments, and exposes only one loading status', () => {
