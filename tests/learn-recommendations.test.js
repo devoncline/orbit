@@ -102,3 +102,20 @@ test('carousel edge fading blends into the page without covering the centered ca
   assert.doesNotMatch(fading, /blur|animation|transition|pointer-events/)
   assert.doesNotMatch(css, /\[data-single='true'\][^{]*\{[^}]*(?:mask|filter)/)
 })
+
+test('four-card looping keeps both neighbors visible at desktop/mobile widths and preserves poses when rebased', () => {
+  for (const width of [240, 272, 288, 320, 390, 640, 768]) {
+    for (const reduced of [false, true]) {
+      const geometry = { ...carouselGeometry(width, 4), count: 4, loop: true, reduced }
+      assert.equal(carouselPose(3, 0, geometry).visible, true, `Left neighbor at ${width}px`)
+      assert.equal(carouselPose(1, 0, geometry).visible, true, `Right neighbor at ${width}px`)
+      assert.match(carouselPose(3, 0, geometry).transform, /translate3d\(-/)
+      assert.doesNotMatch(carouselPose(1, 0, geometry).transform, /translate3d\(-/)
+      for (let index = 0; index < 4; index++) {
+        for (const position of [-8, -4, 0, 4, 8]) {
+          assert.deepEqual(carouselPose(index, position, geometry), carouselPose(index, 0, geometry))
+        }
+      }
+    }
+  }
+})

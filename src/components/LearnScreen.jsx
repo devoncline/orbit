@@ -17,7 +17,7 @@ export default function LearnScreen({ courses, threads = [], today, onStart, onS
       <div className="orbit-page-content">
         <section className="learn-recommendations" aria-labelledby="learn-recommendations-heading">
           <h2 id="learn-recommendations-heading">Recommended next</h2>
-          {recommendations.length ? <Carousel items={recommendations} renderItem={(item, active) => <button type="button"
+          {recommendations.length ? <Carousel items={recommendations} loop renderItem={(item, active) => <button type="button"
             className="learn-recommendation" tabIndex={active ? 0 : -1} onClick={() => {
               if (item.kind === 'new') onNewSpace?.('topic', item.topic)
               else onOpenTopic?.(courses.find(course => course.name === item.courseName), item.topic)

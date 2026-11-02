@@ -1,14 +1,14 @@
 // React Bits Carousel, adapted for Orbit. Source and license: ./NOTICE.md.
 // Retains the pointer/velocity/spring engine; removes demo cards, autoplay and 3D effects.
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
-import { carouselGeometry, carouselPose, clamp, rubberBand } from './carouselMotion'
+import { carouselGeometry, carouselPose, clamp, nearest, rubberBand, wrap } from './carouselMotion'
 import './Carousel.css'
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 const STIFFNESS = 150
 const DAMPING = 24
 
-export default function Carousel({ items = [], renderItem, label = 'Recommended topics', initialIndex = 0, onChange }) {
+export default function Carousel({ items = [], renderItem, label = 'Recommended topics', initialIndex = 0, loop = false, onChange }) {
   const count = items.length
   const hasItems = count > 0
   const [width, setWidth] = useState(300)
@@ -20,14 +20,15 @@ export default function Carousel({ items = [], renderItem, label = 'Recommended 
   const engineRef = useRef(null)
   const startRef = useRef(active)
   const instructionsId = useId()
-  const geometry = carouselGeometry(width, count)
+  const looping = loop && count > 1
+  const geometry = { ...carouselGeometry(width, count), count, loop: looping }
 
   useIsomorphicLayoutEffect(() => { startRef.current = clamp(active, 0, Math.max(0, count - 1)) }, [active, count])
 
   useIsomorphicLayoutEffect(() => {
-    settingsRef.current = { ...carouselGeometry(width, count), count, onChange }
+    settingsRef.current = { ...carouselGeometry(width, count), count, loop: looping, onChange }
     engineRef.current?.sync()
-  }, [width, count, onChange])
+  }, [width, count, looping, onChange])
 
   // React updates slide semantics as selection changes; keep its styles at the live drag position.
   useIsomorphicLayoutEffect(() => { engineRef.current?.paint() })
@@ -41,7 +42,7 @@ export default function Carousel({ items = [], renderItem, label = 'Recommended 
       reduced: media.matches, drag: null, wheeling: false, wheelTimer: 0, suppress: false, suppressTimer: 0, last: 0 }
     let raf = 0
     let alive = true
-    const limit = value => clamp(value, 0, Math.max(0, settingsRef.current.count - 1))
+    const limit = value => settingsRef.current.loop ? value : clamp(value, 0, Math.max(0, settingsRef.current.count - 1))
 
     const apply = () => {
       const settings = { ...settingsRef.current, reduced: state.reduced }
@@ -57,7 +58,8 @@ export default function Carousel({ items = [], renderItem, label = 'Recommended 
       }
     }
     const announce = () => {
-      const index = limit(Math.round(state.target))
+      const { count, loop } = settingsRef.current
+      const index = loop ? wrap(Math.round(state.target), count) : limit(Math.round(state.target))
       if (index === state.shown) return
       state.shown = index
       const focused = root.ownerDocument.activeElement
@@ -83,6 +85,11 @@ export default function Carousel({ items = [], renderItem, label = 'Recommended 
           if (Math.abs(state.target - state.p) < .0004 && Math.abs(state.v) < .004) { state.p = state.target; state.v = 0 }
           else busy = true
         }
+        // Rebase only after settling; wrapped poses are identical on either side of the seam.
+        if (!busy && settingsRef.current.loop) {
+          state.target = wrap(Math.round(state.target), settingsRef.current.count)
+          state.p = state.target
+        }
       }
       apply()
       if (busy) raf = window.requestAnimationFrame(tick)
@@ -91,7 +98,10 @@ export default function Carousel({ items = [], renderItem, label = 'Recommended 
     const wake = () => { if (!raf && alive) raf = window.requestAnimationFrame(tick) }
     const moveTo = value => {
       state.target = limit(Math.round(value))
-      if (state.reduced) { state.p = state.target; state.v = 0 }
+      if (state.reduced) {
+        if (settingsRef.current.loop) state.target = wrap(state.target, settingsRef.current.count)
+        state.p = state.target; state.v = 0
+      }
       announce()
       apply()
       if (!state.reduced) wake()
@@ -114,7 +124,8 @@ export default function Carousel({ items = [], renderItem, label = 'Recommended 
         viewport.setPointerCapture?.(event.pointerId)
         viewport.dataset.dragging = 'true'
       }
-      state.p = rubberBand(drag.p - dx / settingsRef.current.span, settingsRef.current.count - 1)
+      const raw = drag.p - dx / settingsRef.current.span
+      state.p = settingsRef.current.loop ? raw : rubberBand(raw, settingsRef.current.count - 1)
       state.v = 0
       state.target = limit(Math.round(state.p))
       drag.samples.push([event.timeStamp, event.clientX])
@@ -142,7 +153,7 @@ export default function Carousel({ items = [], renderItem, label = 'Recommended 
         if (Math.abs(velocity) > .8) target += Math.sign(velocity)
         else if (Math.abs(travelled) > .18) target += Math.sign(travelled)
       }
-      state.v = state.p >= 0 && state.p <= settingsRef.current.count - 1 ? velocity : 0
+      state.v = settingsRef.current.loop || (state.p >= 0 && state.p <= settingsRef.current.count - 1) ? velocity : 0
       moveTo(target)
     }
     const onClickCapture = event => {
@@ -155,7 +166,8 @@ export default function Carousel({ items = [], renderItem, label = 'Recommended 
     const onWheel = event => {
       if (settingsRef.current.count < 2 || Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return
       event.preventDefault()
-      state.p = clamp(state.p + event.deltaX / settingsRef.current.span, -.15, settingsRef.current.count - .85)
+      const raw = state.p + event.deltaX / settingsRef.current.span
+      state.p = settingsRef.current.loop ? raw : clamp(raw, -.15, settingsRef.current.count - .85)
       state.v = 0
       state.wheeling = true
       state.target = limit(Math.round(state.p))
@@ -166,7 +178,9 @@ export default function Carousel({ items = [], renderItem, label = 'Recommended 
     }
     const onKeyDown = event => {
       if (event.target.closest('input, textarea, select, [contenteditable="true"]')) return
-      const keys = { ArrowRight: state.target + 1, ArrowLeft: state.target - 1, Home: 0, End: settingsRef.current.count - 1 }
+      const { count, loop } = settingsRef.current
+      const goTo = goal => loop ? state.target + nearest(goal - wrap(state.target, count), count) : goal
+      const keys = { ArrowRight: state.target + 1, ArrowLeft: state.target - 1, Home: goTo(0), End: goTo(count - 1) }
       if (!(event.key in keys)) return
       event.preventDefault()
       moveTo(keys[event.key])

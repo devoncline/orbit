@@ -6,14 +6,14 @@ import LearnScreen from '../../src/components/LearnScreen'
 import '../../src/index.css'
 
 export function Preview() {
-  const [count, setCount] = useState(12)
+  const [count, setCount] = useState(4)
   const [notice, setNotice] = useState('')
-  const courses = count ? Array.from({ length: count > 1 ? 2 : 1 }, (_, index) => ({
+  const courses = count ? Array.from({ length: Math.ceil(count / 6) }, (_, index) => ({
     name: index ? 'Orbital motion' : 'A class with a long name about light, energy, living systems and their connections',
-    importantTopics: Array.from({ length: count > 1 ? 6 : 1 }, (_, i) => i === 0 ? 'How energy travels through interconnected living systems and changes along the way' : `Explore idea ${index * 6 + i + 1}`),
+    importantTopics: Array.from({ length: Math.min(6, count - index * 6) }, (_, i) => i === 0 ? 'How energy travels through interconnected living systems and changes along the way' : `Explore idea ${index * 6 + i + 1}`),
   })) : []
   return <><div style={{ padding: 8, background: '#20283c', color: 'white' }}>
-    {[0, 1, 12].map(value => <button key={value} onClick={() => setCount(value)}>{value} suggestions</button>)}<output>{notice}</output>
+    {[0, 1, 2, 4, 12].map(value => <button key={value} onClick={() => setCount(value)}>{value} suggestions</button>)}<output>{notice}</output>
   </div><AppShell courses={courses} destination="learn" onNavigate={() => {}} onSelectSpace={name => setNotice(`Open ${name}`)} onNewSpace={() => setNotice('Create a space')}>
     <LearnScreen courses={courses} today="2026-11-02" onStart={topic => setNotice(`Start ${topic}`)}
       onSelectSpace={name => setNotice(`Open ${name}`)} onOpenTopic={(course, topic) => setNotice(`Study ${topic} in ${course.name}`)}
@@ -30,7 +30,7 @@ export function Review() {
       const doc = frame.current?.contentDocument
       if (!doc) return
       const card = doc.querySelector('.carousel-slide[data-current] button')
-      setMeasurement(`Viewport ${frame.current.clientWidth} / document ${doc.documentElement.scrollWidth} / overflow ${doc.documentElement.scrollWidth > frame.current.clientWidth + 1} / card width ${Math.round(card?.getBoundingClientRect().width || 0)} / errors ${doc.documentElement.dataset.errors || 0} / requests ${doc.documentElement.dataset.requests || 0}`)
+      setMeasurement(`Viewport ${frame.current.clientWidth} / document ${doc.documentElement.scrollWidth} / overflow ${doc.documentElement.scrollWidth > frame.current.clientWidth + 1} / slides ${doc.querySelectorAll('.carousel-slide').length} / current ${card?.closest('.carousel-slide').getAttribute('aria-label') || 'none'} / card width ${Math.round(card?.getBoundingClientRect().width || 0)} / errors ${doc.documentElement.dataset.errors || 0} / requests ${doc.documentElement.dataset.requests || 0}`)
     }, 300)
     return () => clearInterval(timer)
   }, [])

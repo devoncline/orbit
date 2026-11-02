@@ -887,6 +887,13 @@ The targeted effect trace before implementation was:
 - Added integration coverage for isolation, resume/deduplication, many/long topics, history, drawer behavior and the badge slot, plus an isolated responsive fixture at `/tests/fixtures/navigation-review.html`. Browser review remains pending: automatic approval rejected Chrome access. No live provider or physical-device testing is claimed. No database changes, migrations, dependencies, deployment or commit were required.
 - Validation: all 439 tests passed, including the existing provider-mocked client/API tests; lint, production build and diff checks passed. Updated the obsolete dropdown/footer assertions and the stale course-position wording assertion.
 
+## Learn recommendation looping — November 2, 2026
+
+- Restored the official React Bits `loop` option in Orbit’s existing carousel engine and enabled it in Learn. Wrapped nearest-card offsets, unbounded gesture targets and settle-time rebasing keep the active card continuous across both boundaries. Four available recommendations remain four slides, with visible left/right neighbors at startup; no duplicate app data, extra recommendations or autoplay.
+- Kept the existing mask, card styling, clipping, click suppression, pointer/touch momentum, wheel handling, keyboard focus/announcements and live reduced-motion behavior. Home/End use the nearest wrapped destination. Recommendation selection, navigation, persistence, learning behavior and dependencies are unchanged; no database changes, migrations or manual SQL.
+- Expanded carousel and Learn interaction tests for repeated wrapping in both directions, frame-by-frame seam continuity, mouse/touch momentum, reduced motion, resizing, empty/small lists, exact four-card counts and unchanged topic routing. Geometry checks cover narrow/mobile and desktop containers; they are not browser layout measurements. Updated the existing review fixture with four suggestions by default, zero/one/two/four/many choices and slide/overflow counters, plus the Unreleased changelog and manual checklist.
+- Validation: full `npm.cmd test` 481/481 passed; lint, production build and diff checks passed. No automated failures; shared Vite HMR port warnings remain non-failing. Browser access host was unavailable and automatic approval review rejected Google Chrome access (Computer Use was not approved to use Google Chrome). Desktop/mobile visual appearance, physical swipe and page-level overflow checks remain manual at 1440/768/390/320px using `/tests/fixtures/learn-carousel-review.html`; no live-provider requests, commit or deployment.
+
 # Next
 
 ## Learn and Study navigation polish — November 1, 2026

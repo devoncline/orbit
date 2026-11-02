@@ -1,5 +1,7 @@
 // Adapted from React Bits Carousel (David Haz). See NOTICE.md for source and license.
 export const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
+export const wrap = (value, count) => ((value % count) + count) % count
+export const nearest = (offset, count) => wrap(offset + count / 2, count) - count / 2
 
 export function carouselGeometry(width, count) {
   const available = Math.max(0, Number.isFinite(width) ? width : 0)
@@ -8,8 +10,8 @@ export function carouselGeometry(width, count) {
   return { width: available, cardWidth, span: Math.max(1, cardWidth + 12) }
 }
 
-export function carouselPose(index, position, { width, cardWidth, span, reduced }) {
-  const offset = index - position
+export function carouselPose(index, position, { width, cardWidth, span, reduced, loop, count }) {
+  const offset = loop && count > 1 ? nearest(index - position, count) : index - position
   const distance = Math.abs(offset)
   const near = Math.min(distance, 1)
   const x = offset * span - (reduced ? 0 : Math.sign(offset) * near * cardWidth * .02)

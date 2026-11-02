@@ -114,6 +114,35 @@ test('Learn recommends unstudied topics and launches them in the existing space 
   assert.deepEqual(read().courses[0].mastery.topics, course.mastery.topics)
 })
 
+test('Learn loops its four available recommendations without adding data or changing their launch destination', async t => {
+  const topics = ['Cell membranes', 'Energy transfer', 'Cell division', 'Inheritance']
+  const course = { name: 'Biology class', importantTopics: topics }
+  seed(course)
+  const requests = lessonMock(t)
+  await render(); await click(button('Learn'))
+  const carousel = container.querySelector('.learn-recommendations .orbit-carousel')
+  const slides = [...carousel.querySelectorAll('.carousel-slide')]
+  assert.equal(slides.length, 4)
+  assert.deepEqual(slides.map(slide => slide.querySelector('strong').textContent), topics)
+  assert.equal(slides[3].style.visibility, 'visible')
+  assert.match(slides[3].style.transform, /translate3d\(-/)
+  const before = JSON.stringify(read())
+  const key = async value => act(async () => carousel.dispatchEvent(new dom.KeyboardEvent('keydown', { key: value, bubbles: true, cancelable: true })))
+  await key('ArrowLeft')
+  assert.equal(carousel.querySelector('[data-current] strong').textContent, topics[3])
+  await key('ArrowRight')
+  assert.equal(carousel.querySelector('[data-current] strong').textContent, topics[0])
+  await key('End'); await key('ArrowRight')
+  assert.equal(carousel.querySelector('[data-current] strong').textContent, topics[0])
+  assert.equal(carousel.querySelectorAll('.carousel-slide').length, 4)
+  assert.equal(JSON.stringify(read()), before)
+  assert.equal(requests.length, 0)
+  await click(carousel.querySelector('[data-current] button'))
+  assert.equal(requests.length, 1)
+  assert.equal(requests[0].learnerPosition.currentTopic, topics[0])
+  assert.equal(read().threads.at(-1).courseName, course.name)
+})
+
 test('New space recommendations prefill the existing editable create flow without silently creating or generating', async t => {
   seed({ name: 'Orbital motion', type: 'topic' })
   t.mock.method(globalThis, 'fetch', () => assert.fail('New space suggestions require explicit creation, without AI'))

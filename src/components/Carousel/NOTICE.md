@@ -5,7 +5,7 @@ Adapted from the official [React Bits Carousel](https://reactbits.dev/components
 - https://github.com/DavidHDev/react-bits/blob/main/src/content/Components/Carousel/Carousel.jsx
 - https://github.com/DavidHDev/react-bits/blob/main/src/content/Components/Carousel/Carousel.css
 
-Orbit retains its pointer gestures, velocity projection, spring snapping and keyboard navigation. Local changes remove demo/image cards, autoplay, controls, looping and 3D effects; add live reduced-motion handling, fluid content height, scoped Orbit styles, custom recommendation cards and click suppression after dragging. The source is maintained locally rather than imported as a widget.
+Orbit retains its pointer gestures, velocity projection, spring snapping, loop/wrap behavior and keyboard navigation. Local changes remove demo/image cards, autoplay, controls and 3D effects; add live reduced-motion handling, fluid content height, scoped Orbit styles, custom recommendation cards and click suppression after dragging. The upstream wrap/nearest-offset behavior is enabled for Learn without duplicating recommendation data or slides. The source is maintained locally rather than imported as a widget.
 
 Upstream license follows in full.
 
