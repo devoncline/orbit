@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import process from 'node:process'
 import { test } from 'node:test'
 import { readFile, readdir } from 'node:fs/promises'
-import { createDemoRateLimiter, DEMO_AI_ACTION_LIMIT, DEMO_AI_ACTION_WINDOW_HOURS } from '../api/_lib/demoRateLimit.js'
+import { createDemoRateLimiter, DEMO_AI_ACTION_LIMIT, DEMO_AI_ACTION_WINDOW_HOURS, DEMO_GLOBAL_AI_ACTION_LIMIT, DEMO_GLOBAL_AI_ACTION_WINDOW_HOURS } from '../api/_lib/demoRateLimit.js'
 import { MODEL_OUTPUT_TOKENS } from '../api/_lib/modelLimits.js'
 import lessonHandler from '../api/generate-study-lesson.js'
 import questionHandler from '../api/generate-study-question.js'
@@ -42,6 +42,11 @@ function setEnv(t, values) {
 }
 async function exhaust(enforce, req = demoRequest(), count = 25) {
   for (let i = 0; i < count; i++) assert.equal((await enforce(req, demoResponse())).allowed, true)
+}
+async function fillGlobal(enforce, count = 750, offset = 0) {
+  for (let i = offset; i < offset + count; i++) {
+    assert.equal((await enforce(demoRequest({}, `198.51.100.${Math.floor(i / 25) + 1}`), demoResponse())).allowed, true)
+  }
 }
 function setup(t) {
   const env = demoEnv(), store = fakeDemoStore()
@@ -135,6 +140,7 @@ for (const [name, handler, body, result, ceiling] of routes) {
     await handler(demoRequest(body), allowed)
     assert.equal(allowed.code, 200)
     assert.equal(providerRequests.length, 1)
+    assert.equal(store.globalCount(), 1, 'A standalone paid action spends both allowances once')
     if (ceiling) assert.equal(providerRequests[0].max_output_tokens, MODEL_OUTPUT_TOKENS[ceiling])
     else { assert.equal(providerRequests[0].n, 1); assert.equal(providerRequests[0].size, '1536x1024') }
     await exhaust(enforce, demoRequest(), 24)
@@ -143,6 +149,7 @@ for (const [name, handler, body, result, ceiling] of routes) {
     assert.equal(blocked.code, 429)
     assert.equal(blocked.body.error, 'demo_limit_reached')
     assert.equal(providerRequests.length, 1)
+    assert.equal(store.globalCount(), 25, 'Visitor rejection must not spend a global action')
     assert.doesNotMatch(JSON.stringify(blocked.body), /192\.|fake-|Bearer|stack|redis/)
   })
 }
@@ -197,6 +204,7 @@ test('method and input validation and missing provider configuration do not cons
 test('the final lesson and its automatic image count once; replays, tampering and separate images cannot claim free work', async (t) => {
   const { store, enforce } = setup(t)
   await exhaust(enforce, demoRequest(), 24)
+  await fillGlobal(enforce, 725)
   let textCalls = 0, imageCalls = 0
   t.mock.method(globalThis, 'fetch', (url, options) => {
     if (url.startsWith('https://redis.example.test')) return store.fetch(url, options)
@@ -207,6 +215,7 @@ test('the final lesson and its automatic image count once; replays, tampering an
   const generated = demoResponse()
   await lessonHandler(demoRequest({ courseName: 'React' }), generated)
   assert.equal(generated.code, 200)
+  assert.equal(store.globalCount(), 750)
   const imageContext = { courseName: 'React', lesson: generated.body, visual: generated.body.visual }
   const tampered = demoResponse()
   await imageHandler(demoRequest({ ...imageContext, lesson: { ...lesson, content: 'Different image instructions.' }, automatic: true }), tampered)
@@ -217,6 +226,7 @@ test('the final lesson and its automatic image count once; replays, tampering an
   assert.deepEqual(images.map(res => res.code).sort(), [200, 429])
   assert.equal(textCalls, 1)
   assert.equal(imageCalls, 1)
+  assert.equal(store.globalCount(), 750, 'Included image and rejected replays do not spend global actions')
   const next = demoResponse()
   await lessonHandler(demoRequest({ courseName: 'React' }), next)
   assert.equal(next.code, 429)
@@ -249,6 +259,7 @@ test('included image allowances expire, bind to the visitor and never survive a 
 test('stream completion includes one server-authorized supporting image in the conversation action', async (t) => {
   const { store, enforce } = setup(t)
   await exhaust(enforce, demoRequest(), 24)
+  await fillGlobal(enforce, 725)
   const payload = JSON.stringify({ ...reply, visual })
   const events = [
     { type: 'response.output_text.delta', item_id: 'message', output_index: 0, content_index: 0, delta: payload },
@@ -269,7 +280,135 @@ test('stream completion includes one server-authorized supporting image in the c
   await imageHandler(demoRequest({ ...context, visual: completed.visual }), imageRes)
   assert.equal(imageRes.code, 200)
   assert.equal(imageCalls, 1)
+  assert.equal(store.globalCount(), 750, 'A streamed reply and its image share the final global action')
   assert.equal((await enforce(demoRequest(), demoResponse())).allowed, false)
+})
+
+test('global ceiling allows action 750, rejects 751 with a safe capacity error, and expires at 24 hours', async () => {
+  assert.equal(DEMO_GLOBAL_AI_ACTION_LIMIT, 750)
+  assert.equal(DEMO_GLOBAL_AI_ACTION_WINDOW_HOURS, 24)
+  const store = fakeDemoStore(), enforce = createDemoRateLimiter({ env: demoEnv(), fetch: store.fetch })
+  await fillGlobal(enforce, 749)
+  assert.equal(store.globalCount(), 749)
+  assert.equal((await enforce(demoRequest({}, '198.51.100.30'), demoResponse())).allowed, true)
+  const blocked = demoResponse()
+  assert.deepEqual(await enforce(demoRequest(), blocked), { allowed: false, reason: 'global_capacity' })
+  assert.equal(store.globalCount(), 750)
+  assert.equal(blocked.code, 429)
+  assert.deepEqual(blocked.body, { error: 'demo_capacity_reached', message: "Orbit's public demo has reached its current AI capacity.", retryAfterSeconds: 86400 })
+  assert.equal(blocked.headers['retry-after'], '86400')
+  assert.equal(blocked.headers['cache-control'], 'no-store')
+  assert.doesNotMatch(JSON.stringify(blocked.body), /750|Redis|192\.|198\.|fake-|token|budget|stack/i)
+  store.advance(86399)
+  const almostExpired = demoResponse()
+  await enforce(demoRequest(), almostExpired)
+  assert.equal(almostExpired.body.retryAfterSeconds, 1)
+  store.advance(1)
+  assert.equal((await enforce(demoRequest(), demoResponse())).allowed, true)
+  assert.equal(store.globalCount(), 1)
+})
+
+test('global usage is a rolling log: later actions remain after the first actions age out', async () => {
+  const store = fakeDemoStore(), enforce = createDemoRateLimiter({ env: demoEnv(), fetch: store.fetch })
+  await fillGlobal(enforce, 375)
+  store.advance(3600)
+  await fillGlobal(enforce, 375, 375)
+  store.advance(23 * 3600)
+  assert.equal(store.globalCount(), 375)
+  await fillGlobal(enforce, 375)
+  assert.equal(store.globalCount(), 750)
+  const blocked = demoResponse()
+  await enforce(demoRequest(), blocked)
+  assert.equal(blocked.body.error, 'demo_capacity_reached')
+  assert.equal(blocked.body.retryAfterSeconds, 3600, 'Retry waits for the next action expiry, not a whole-day reset')
+  store.advance(3600)
+  assert.equal(store.globalCount(), 375)
+  assert.equal((await enforce(demoRequest(), demoResponse())).allowed, true)
+})
+
+test('neither rejection debits the other allowance or extends existing expiries', async () => {
+  const store = fakeDemoStore(), enforce = createDemoRateLimiter({ env: demoEnv(), fetch: store.fetch })
+  await exhaust(enforce)
+  const prior = structuredClone([...store.entries])
+  assert.deepEqual(await enforce(demoRequest(), demoResponse()), { allowed: false, reason: 'visitor_limit' })
+  assert.deepEqual([...store.entries], prior)
+  const partlyUsed = demoRequest({}, '192.0.2.9')
+  await enforce(partlyUsed, demoResponse())
+  await fillGlobal(enforce, 724)
+  const full = structuredClone([...store.entries])
+  for (const req of [partlyUsed, demoRequest({}, '192.0.2.10')]) {
+    assert.deepEqual(await enforce(req, demoResponse()), { allowed: false, reason: 'global_capacity' })
+    assert.deepEqual([...store.entries], full, 'Global denial cannot create/increment a visitor counter or extend TTLs')
+  }
+  const both = demoResponse()
+  await enforce(demoRequest(), both)
+  assert.equal(both.body.error, 'demo_limit_reached', 'Personal exhaustion retains priority when both apply')
+  assert.equal(store.globalCount(), 750)
+})
+
+test('concurrent traffic across visitors, aliases and instances cannot reserve more than 750 actions', async () => {
+  const store = fakeDemoStore()
+  const instances = Array.from({ length: 6 }, (_, i) => createDemoRateLimiter({ env: { ...demoEnv(), VERCEL_URL: `deployment-${i}.example.test` }, fetch: store.fetch }))
+  const results = await Promise.all(Array.from({ length: 900 }, async (_, i) => {
+    const req = demoRequest({}, `198.51.100.${Math.floor(i / 20) + 1}`)
+    req.headers.host = `alias-${i % 6}.example.test`
+    const res = demoResponse()
+    return { result: await instances[i % 6](req, res), res }
+  }))
+  assert.equal(results.filter(({ result }) => result.allowed).length, 750)
+  assert.equal(results.filter(({ res }) => res.body?.error === 'demo_capacity_reached').length, 150)
+  assert.equal(store.globalCount(), 750)
+  const visitorTotal = [...store.entries].filter(([key]) => key.endsWith(':actions') && !key.endsWith(':global:actions'))
+    .reduce((sum, [, value]) => sum + value.count, 0)
+  assert.equal(visitorTotal, 750)
+})
+
+test('global exhaustion blocks every paid route and streaming before any provider request', async (t) => {
+  const { store, enforce } = setup(t)
+  await fillGlobal(enforce)
+  t.mock.method(globalThis, 'fetch', (url, options) => {
+    assert.ok(url.startsWith('https://redis.example.test'), 'No paid provider call after global exhaustion')
+    return store.fetch(url, options)
+  })
+  for (const [, handler, body] of [...routes, ['stream', conversationHandler, { ...context, message: 'Why?', stream: true }]]) {
+    const res = demoResponse()
+    await handler(demoRequest(body), res)
+    assert.equal(res.code, 429)
+    assert.equal(res.body.error, 'demo_capacity_reached')
+    assert.equal(res.flushed, undefined)
+    assert.deepEqual(res.chunks, [])
+  }
+  assert.equal(store.globalCount(), 750)
+})
+
+test('separate paid images spend both allowances; the final image succeeds and the next stops', async (t) => {
+  const { store, enforce } = setup(t)
+  await fillGlobal(enforce, 749)
+  let providerCalls = 0
+  t.mock.method(globalThis, 'fetch', (url, options) => {
+    if (url.startsWith('https://redis.example.test')) return store.fetch(url, options)
+    providerCalls++
+    return new Response(JSON.stringify({ data: [{ url: 'https://images.example.test/separate.webp' }] }))
+  })
+  const allowed = demoResponse(), blocked = demoResponse()
+  await imageHandler(demoRequest(context), allowed)
+  assert.equal(allowed.code, 200)
+  assert.equal(store.globalCount(), 750)
+  const beforeDenial = structuredClone([...store.entries])
+  await imageHandler(demoRequest({ ...context, automatic: true }), blocked)
+  assert.equal(blocked.body.error, 'demo_capacity_reached')
+  assert.equal(providerCalls, 1)
+  assert.deepEqual([...store.entries], beforeDenial)
+})
+
+test('global key survives identity-secret rotation and production redeploys while preview stays isolated and protected', async () => {
+  const store = fakeDemoStore(), env = demoEnv()
+  await fillGlobal(createDemoRateLimiter({ env, fetch: store.fetch }))
+  const rotated = createDemoRateLimiter({ env: { ...env, DEMO_RATE_LIMIT_SECRET: 'another-fake-test-secret-at-least-32-characters', VERCEL_URL: 'new-deployment.example.test' }, fetch: store.fetch })
+  assert.equal((await rotated(demoRequest(), demoResponse())).reason, 'global_capacity')
+  const preview = createDemoRateLimiter({ env: { ...env, VERCEL_ENV: 'preview', NODE_ENV: 'test' }, fetch: store.fetch })
+  await fillGlobal(preview)
+  assert.equal((await preview(demoRequest(), demoResponse())).reason, 'global_capacity')
 })
 
 test('every current public API route is audited and every provider call follows the shared guard', async () => {

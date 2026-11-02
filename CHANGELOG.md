@@ -4,7 +4,7 @@
 
 ### Improvements
 
-- The public demo now includes 25 AI actions per visitor every six hours, with automatic supporting lesson images included in the lesson action. When the allowance is used, Orbit shows a friendly message and a link to the full demo; navigation and saved learning remain available.
+- The public demo includes 25 AI actions per visitor every six hours, plus an emergency ceiling of 750 actions across the demo in any 24-hour period. Automatic supporting images stay included in their parent action. When either allowance is used, Orbit shows a friendly message and a link to the full demo; navigation and saved learning remain available.
 - Course spaces now recommend a topic from upcoming work and course context, with one-click lessons and a few other starting options. Manual topic entry is optional. Course materials stay visible after processing, and learners can add multiple PDFs over time without losing earlier materials or duplicating matching deadlines.
 - Study lessons now lead with a concise topic, followed by quiet assignment dates and a short lesson focus. Compact thread controls and reduced introductory spacing bring teaching into view sooner, including on phones, while lessons retain their full syllabus context.
 - Opening Orbit or returning to saved lessons no longer starts AI requests automatically. Generated visuals are saved with recent threads and reused after refresh; unavailable images require **Retry visual** instead of regenerating when reopened.

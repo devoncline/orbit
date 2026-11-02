@@ -12,7 +12,7 @@ const lesson = { topic: 'State', concept: 'Remembering', content: 'State remembe
 const question = { topic: 'State', question: 'What remembers?', answers: [{ text: 'State', correct: true }, { text: 'Screen', correct: false }] }
 const activity = { title: 'Predict', instruction: 'Predict the next count.', topic: 'State', activityType: 'predict', successCriteria: 'Recognizes the update.' }
 const visual = { type: 'generated_image', purpose: 'Follow updates.', focus: 'State', data: [{ label: 'State', detail: 'Keeps a value.' }] }
-const limitResponse = () => new Response(JSON.stringify({ error: 'demo_limit_reached', retryAfterSeconds: 60 }), { status: 429, headers: { 'Content-Type': 'application/json', 'Retry-After': '60' } })
+const limitResponse = (error = 'demo_limit_reached') => new Response(JSON.stringify({ error, retryAfterSeconds: 60 }), { status: 429, headers: { 'Content-Type': 'application/json', 'Retry-After': '60' } })
 const button = (label, scope = container) => [...scope.querySelectorAll('button')].find(element => element.textContent === label)
 const click = async (element) => { assert.ok(element, 'Expected control'); await act(async () => element.click()) }
 const navigate = async label => click([...container.querySelectorAll('.shell-destinations button')].find(element => element.textContent === label))
@@ -39,7 +39,7 @@ beforeEach(t => {
 afterEach(async () => {
   await act(async () => root.unmount()); container.remove()
   // Expire through the public request boundary, without a production reset API.
-  const now = Date.now, fetch = globalThis.fetch, expired = usage.getDemoLimitSnapshot() + 1
+  const now = Date.now, fetch = globalThis.fetch, expired = (usage.getDemoLimitSnapshot()?.until || 0) + 1
   Date.now = () => expired
   globalThis.fetch = async () => new Response('{}')
   try { await usage.demoAiFetch('/test-only-reset', {}) } finally { Date.now = now; globalThis.fetch = fetch }
@@ -52,11 +52,12 @@ after(async () => {
   }
 })
 
-test('friendly notice and video link replace generic failures; saved content, local preferences and navigation remain available', async (t) => {
+for (const code of ['demo_limit_reached', 'demo_capacity_reached']) {
+test(`${code}: friendly notice and video link replace generic failures; saved content, local preferences and navigation remain available`, async (t) => {
   const thread = { id: 'one', courseName: course.name, positionKey: 'null', title: 'Remembering', topic: 'State', context: 'lesson', summary: 'Explore state.',
     createdAt: '2026-11-01T10:00:00Z', updatedAt: '2026-11-01T10:00:00Z', resume: { lesson } }
   saveLearnerMemory({ ...emptyLearnerMemory(), courses: [course], threads: [thread], activeId: 'one' }, dom.localStorage)
-  const fetchMock = t.mock.method(globalThis, 'fetch', async () => limitResponse())
+  const fetchMock = t.mock.method(globalThis, 'fetch', async () => limitResponse(code))
   await act(async () => root.render(createElement(StrictMode, null, createElement(App))))
   await navigate('Learn')
   assert.equal(fetchMock.mock.callCount(), 0)
@@ -65,12 +66,14 @@ test('friendly notice and video link replace generic failures; saved content, lo
   assert.equal(fetchMock.mock.callCount(), 1)
   const notice = container.querySelector('.demo-limit-notice[role="status"]')
   assert.ok(notice)
-  assert.match(notice.textContent, /You've reached the AI limit for Orbit's public demo/)
+  assert.match(notice.textContent, code === 'demo_capacity_reached'
+    ? /Orbit's public demo has reached its current AI capacity/
+    : /You've reached the AI limit for Orbit's public demo/)
   assert.match(notice.textContent, /You can still explore the app or watch the full demo/)
   const link = notice.querySelector('a')
   assert.equal(link.href, 'https://youtu.be/-xQGO-GYUVg')
   assert.match(link.textContent, /Watch the full demo/)
-  assert.doesNotMatch(activeRoom().textContent, /Orbit could not update this lesson|HTTP 429|rate limit|API quota|provider error/)
+  assert.doesNotMatch(activeRoom().textContent, /Orbit could not update this lesson|HTTP 429|rate limit|API quota|provider error|Redis|750|token usage|IP address/)
   assert.match(activeRoom().textContent, /State remembers a value/)
   await click(button('I lost you', activeRoom()))
   assert.equal(fetchMock.mock.callCount(), 1, 'Known exhaustion prevents another paid request')
@@ -83,7 +86,7 @@ test('friendly notice and video link replace generic failures; saved content, lo
   assert.equal(loadLearnerMemory(dom.localStorage).learningPreferences.profile.chunkSize, 'short')
 })
 
-test('all named paid services recognize the code, including streamed replies and images; provider 429 is not demo exhaustion', async (t) => {
+test(`${code}: all named paid services recognize the code, including streamed replies and images; provider 429 is not demo exhaustion`, async (t) => {
   const calls = [
     () => client.generateStudyLesson(course, 40),
     () => client.generateNextStudyLesson(course, 40, lesson),
@@ -101,25 +104,25 @@ test('all named paid services recognize the code, including streamed replies and
   ]
   let now = 0
   t.mock.method(Date, 'now', () => now)
-  const fetchMock = t.mock.method(globalThis, 'fetch', async () => limitResponse())
+  const fetchMock = t.mock.method(globalThis, 'fetch', async () => limitResponse(code))
   for (const call of calls) {
     now += 61000
-    await assert.rejects(call(), error => error.code === 'demo_limit_reached' && error.message === usage.DEMO_LIMIT_MESSAGE)
+    await assert.rejects(call(), error => error.code === code && error.message === usage.aiErrorMessage({ code }))
   }
   assert.equal(fetchMock.mock.callCount(), calls.length)
   now += 61000
   fetchMock.mock.mockImplementation(async () => new Response(JSON.stringify({ error: 'Failed to generate study lesson' }), { status: 429 }))
-  await assert.rejects(client.generateStudyLesson(course, 40), error => error.code !== 'demo_limit_reached')
-  assert.equal(usage.getDemoLimitSnapshot(), 0)
+  await assert.rejects(client.generateStudyLesson(course, 40), error => error.code !== code)
+  assert.equal(usage.getDemoLimitSnapshot(), null)
 })
 
-test('client expiry permits a retry and included images can finish while separate image actions stay blocked', async (t) => {
+test(`${code}: client expiry permits a retry and included images can finish while separate image actions stay blocked`, async (t) => {
   let now = 1000
   t.mock.method(Date, 'now', () => now)
-  const fetchMock = t.mock.method(globalThis, 'fetch', async () => limitResponse())
-  await assert.rejects(client.generateStudyLesson(course, 40), { code: 'demo_limit_reached' })
+  const fetchMock = t.mock.method(globalThis, 'fetch', async () => limitResponse(code))
+  await assert.rejects(client.generateStudyLesson(course, 40), { code })
   const imageContext = { courseName: course.name, lesson, visual }
-  await assert.rejects(images.generateLessonImage(imageContext), { code: 'demo_limit_reached' })
+  await assert.rejects(images.generateLessonImage(imageContext), { code })
   assert.equal(fetchMock.mock.callCount(), 1)
   fetchMock.mock.mockImplementation(async () => new Response(JSON.stringify({ url: 'https://images.example.test/included.webp' })))
   const included = await images.generateLessonImage(imageContext, { includedImage: true })
@@ -127,5 +130,6 @@ test('client expiry permits a retry and included images can finish while separat
   now += 61000
   fetchMock.mock.mockImplementation(async () => new Response(JSON.stringify(lesson)))
   assert.deepEqual(await client.generateStudyLesson(course, 40), lesson)
-  assert.equal(usage.getDemoLimitSnapshot(), 0)
+  assert.equal(usage.getDemoLimitSnapshot(), null)
 })
+}

@@ -37,7 +37,7 @@ export default function AddCourseFile({ files, onAddFile }) {
                 added++
             } catch (error) {
                 failures.push(aiErrorMessage(error, `${file.name} couldn’t be added. Choose it again to retry.`))
-                if (error?.code === 'demo_limit_reached' || error?.code === 'demo_temporarily_unavailable') break
+                if (['demo_limit_reached', 'demo_capacity_reached', 'demo_temporarily_unavailable'].includes(error?.code)) break
             }
         }
         setStatus([added ? `${added} ${added === 1 ? 'material added' : 'materials added'}. Your topics and dates are ready to review.` : '',

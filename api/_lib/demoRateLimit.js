@@ -1,15 +1,20 @@
 import process from 'node:process'
-import { createHmac } from 'node:crypto'
+import { createHmac, randomUUID } from 'node:crypto'
 import { isIP } from 'node:net'
 import { lessonImageRequest } from '../../src/services/lessonImageRequest.js'
 
 export const DEMO_AI_ACTION_LIMIT = 25
 export const DEMO_AI_ACTION_WINDOW_HOURS = 6
+export const DEMO_GLOBAL_AI_ACTION_LIMIT = 750
+export const DEMO_GLOBAL_AI_ACTION_WINDOW_HOURS = 24
 const WINDOW_SECONDS = DEMO_AI_ACTION_WINDOW_HOURS * 60 * 60
+const GLOBAL_WINDOW_SECONDS = DEMO_GLOBAL_AI_ACTION_WINDOW_HOURS * 60 * 60
 const IMAGE_ALLOWANCE_SECONDS = 10 * 60
 
-// One atomic operation across all routes, instances and regions. The window
-// starts with the first paid attempt; denials never extend it. No local fallback.
+// One atomic Upstash EVAL checks BOTH quotas before reserving either. Keep the
+// visitor's existing anchored window; the global sorted set is a true rolling
+// log using Redis time and unique server-generated members (at most 750 live).
+// Included images already belong to a reserved parent action in both quotas.
 export const CONSUME_ACTION_SCRIPT = `
 if ARGV[3] == '1' then
   local images = tonumber(redis.call('GET', KEYS[2]) or '0')
@@ -20,14 +25,24 @@ if ARGV[3] == '1' then
   end
 end
 local count = tonumber(redis.call('GET', KEYS[1]) or '0')
-if count == 0 then
-  redis.call('SET', KEYS[1], 1, 'EX', ARGV[2])
-  return {1, tonumber(ARGV[2])}
+local ttl = tonumber(ARGV[2])
+if count > 0 then
+  ttl = redis.call('TTL', KEYS[1])
+  if ttl <= 0 then return redis.error_reply('Invalid expiry') end
+  if count >= tonumber(ARGV[1]) then return {0, ttl} end
 end
-local ttl = redis.call('TTL', KEYS[1])
-if ttl <= 0 then return redis.error_reply('Invalid expiry') end
-if count >= tonumber(ARGV[1]) then return {0, ttl} end
-redis.call('INCR', KEYS[1])
+local clock = redis.call('TIME')
+local now = tonumber(clock[1]) * 1000 + math.floor(tonumber(clock[2]) / 1000)
+local window = tonumber(ARGV[5]) * 1000
+redis.call('ZREMRANGEBYSCORE', KEYS[3], '-inf', now - window)
+if redis.call('ZCARD', KEYS[3]) >= tonumber(ARGV[4]) then
+  local oldest = redis.call('ZRANGE', KEYS[3], 0, 0, 'WITHSCORES')
+  return {2, math.max(1, math.ceil((tonumber(oldest[2]) + window - now) / 1000))}
+end
+redis.call('ZADD', KEYS[3], now, ARGV[6])
+redis.call('EXPIRE', KEYS[3], ARGV[5])
+if count == 0 then redis.call('SET', KEYS[1], 1, 'EX', ARGV[2])
+else redis.call('INCR', KEYS[1]) end
 return {1, ttl}
 `
 
@@ -58,7 +73,7 @@ function visitorAddress(req, env) {
 
 function unavailable(res) {
   res.status(503).json({ error: 'demo_temporarily_unavailable', message: 'AI is temporarily unavailable. You can still explore Orbit. Please try again shortly.' })
-  return { allowed: false }
+  return { allowed: false, reason: 'unavailable' }
 }
 
 // Dependencies are injectable for tests; production uses only server environment
@@ -77,7 +92,8 @@ export function createDemoRateLimiter({ env = process.env, fetch: request = (...
       const digest = (value) => createHmac('sha256', secret).update(value).digest('hex')
       const visitor = digest(visitorAddress(req, env))
       // Do not include host/deployment IDs: aliases and redeploys share a budget.
-      const prefix = `orbit:demo:v1:${env.VERCEL_ENV || 'production'}:{${visitor}}`
+      const namespace = `orbit:demo:v1:${env.VERCEL_ENV || 'production'}`
+      const prefix = `${namespace}:{${visitor}}`
       const imageKey = (context) => {
         const bounded = lessonImageRequest(context)
         if (!bounded) throw new Error('Invalid image context')
@@ -93,15 +109,25 @@ export function createDemoRateLimiter({ env = process.env, fetch: request = (...
         if (data.error) throw new Error('Store unavailable')
         return data.result
       }
-      const result = await command(['EVAL', CONSUME_ACTION_SCRIPT, 2, `${prefix}:actions`,
+      // Existing visitor/image keys remain valid. Upstash's default script lock
+      // covers all declared keys, including this shared, non-visitor global key.
+      const result = await command(['EVAL', CONSUME_ACTION_SCRIPT, 3, `${prefix}:actions`,
         imageContext ? imageKey(imageContext) : `${prefix}:unused`,
-        DEMO_AI_ACTION_LIMIT, WINDOW_SECONDS, imageContext ? '1' : '0'])
-      if (!Array.isArray(result) || result.length !== 2 || ![0, 1].includes(result[0]) ||
-        !Number.isInteger(result[1]) || result[1] < 0 || result[1] > WINDOW_SECONDS || (!result[0] && !result[1])) throw new Error('Invalid store response')
-      if (!result[0]) {
+        `${namespace}:global:actions`, DEMO_AI_ACTION_LIMIT, WINDOW_SECONDS, imageContext ? '1' : '0',
+        DEMO_GLOBAL_AI_ACTION_LIMIT, GLOBAL_WINDOW_SECONDS, randomUUID()])
+      if (!Array.isArray(result) || result.length !== 2 || ![0, 1, 2].includes(result[0]) ||
+        !Number.isInteger(result[1]) || result[1] < 0 ||
+        result[1] > (result[0] === 2 ? GLOBAL_WINDOW_SECONDS : WINDOW_SECONDS) ||
+        (result[0] !== 1 && !result[1])) throw new Error('Invalid store response')
+      if (result[0] !== 1) {
+        const global = result[0] === 2
         res.setHeader?.('Retry-After', String(result[1]))
-        res.status(429).json({ error: 'demo_limit_reached', message: "You've reached the AI limit for Orbit's public demo.", retryAfterSeconds: result[1] })
-        return { allowed: false }
+        res.status(429).json({
+          error: global ? 'demo_capacity_reached' : 'demo_limit_reached',
+          message: global ? "Orbit's public demo has reached its current AI capacity." : "You've reached the AI limit for Orbit's public demo.",
+          retryAfterSeconds: result[1],
+        })
+        return { allowed: false, reason: global ? 'global_capacity' : 'visitor_limit' }
       }
       return {
         allowed: true,
