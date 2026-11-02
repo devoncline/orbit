@@ -111,6 +111,216 @@ test('keyboard arrows, Home and End select bounded cards with a focusable action
 const fourItems = items.slice(0, 4)
 const slideX = slide => Number(slide.style.transform.match(/translate3d\(([^p]+)px/)[1])
 
+// Direct touch implicitly captures the pressed button. Transferring capture to the
+// viewport fires a bubbling lostpointercapture from that button before the next move.
+function touchStream() {
+  const viewport = container.querySelector('.carousel-viewport')
+  let captured = null, pending = null, pressed = null
+  const captureEvent = (target, type) => target?.dispatchEvent(new dom.PointerEvent(type, { pointerId: 1, pointerType: 'touch', bubbles: true }))
+  const processCapture = () => {
+    if (captured === pending) return
+    const previous = captured
+    captured = pending
+    captureEvent(previous, 'lostpointercapture')
+    captureEvent(captured, 'gotpointercapture')
+  }
+  viewport.setPointerCapture = () => { pending = viewport }
+  viewport.hasPointerCapture = () => pending === viewport
+  viewport.releasePointerCapture = () => { pending = null }
+  return {
+    get captured() { return captured },
+    async send(type, x, y, time) {
+      const event = new dom.PointerEvent(type, { pointerId: 1, pointerType: 'touch', isPrimary: true,
+        button: type === 'pointermove' ? -1 : 0, clientX: x, clientY: y, bubbles: true, cancelable: true })
+      Object.defineProperty(event, 'timeStamp', { value: time })
+      await act(async () => {
+        if (type === 'pointerdown') {
+          pressed = container.querySelector('[data-current] button')
+          pending = pressed
+        } else processCapture()
+        ;(captured || pressed).dispatchEvent(event)
+        if (type === 'pointerup' || type === 'pointercancel') { pending = null; processCapture() }
+      })
+      return event
+    },
+    async loseCapture() { await act(async () => { pending = null; processCapture() }) },
+  }
+}
+
+for (const width of [320, 740]) test(`touch capture transfer keeps left/right swipes moving at ${width}px`, async () => {
+  viewportWidth = width
+  await render(fourItems, { loop: true })
+  await settle()
+  const touch = touchStream()
+  const viewport = container.querySelector('.carousel-viewport')
+  const { span } = carouselGeometry(width, 4)
+  let selected = 0, time = 0
+  for (const direction of [-1, 1, 1, 1, 1, 1, -1, -1, -1, -1]) {
+    const outgoing = container.querySelector('[data-current]')
+    const start = width / 2
+    await touch.send('pointerdown', start, 100, time)
+    await touch.send('pointermove', start - direction * 12, 102, time + 50)
+    const firstX = slideX(outgoing)
+    await touch.send('pointermove', start - direction * span * .35, 108, time + 100)
+    assert.equal(viewport.dataset.dragging, 'true', 'The child losing implicit capture must not end the drag')
+    assert.ok(touch.captured === viewport)
+    assert.ok(Math.abs(slideX(outgoing)) > Math.abs(firstX), 'The card follows the second touch move')
+    await touch.send('pointermove', start - direction * span * .7, 110, time + 250)
+    const beforeRelease = slideX(outgoing)
+    await touch.send('pointerup', start - direction * span * .7, 110, time + 400)
+    assert.equal(slideX(outgoing), beforeRelease, 'Release starts snapping from the live position')
+    assert.equal(viewport.dataset.dragging, undefined)
+    await settle()
+    selected = (selected + direction + 4) % 4
+    assert.equal(current(), `${selected + 1} of 4`)
+    assert.equal(slideX(container.querySelector('[data-current]')), 0)
+    time += 600
+  }
+})
+
+test('a small vertical wobble remains undecided, then locks horizontally without cancelling later diagonal movement', async () => {
+  await render(fourItems, { loop: true })
+  await settle()
+  const touch = touchStream()
+  await touch.send('pointerdown', 240, 100, 0)
+  await touch.send('pointermove', 234, 107, 30)
+  assert.equal(container.querySelector('.carousel-viewport').dataset.dragging, undefined)
+  await touch.send('pointermove', 215, 110, 60)
+  await touch.send('pointermove', 60, 170, 200)
+  assert.equal(container.querySelector('.carousel-viewport').dataset.dragging, 'true')
+  assert.notEqual(slideX(container.querySelectorAll('.carousel-slide')[0]), 0)
+  await touch.send('pointerup', 60, 170, 350)
+  await settle()
+  assert.equal(current(), '2 of 4')
+})
+
+test('touching an animating loop freezes the live position until the gesture is decided', async () => {
+  await render(fourItems, { loop: true })
+  await settle()
+  await key('ArrowLeft')
+  await act(async () => {
+    const pending = [...frames.values()]; frames.clear(); clock += 16
+    pending.forEach(callback => callback(clock))
+  })
+  const touch = touchStream()
+  const first = container.querySelectorAll('.carousel-slide')[0]
+  const before = slideX(first)
+  await touch.send('pointerdown', 160, 100, 100)
+  await settle()
+  assert.equal(slideX(first), before, 'The spring must not move or rebase underneath a held finger')
+  await touch.send('pointerup', 160, 100, 200)
+  await settle()
+  assert.equal(current(), '4 of 4')
+})
+
+test('an undecided mouse press released outside the viewport resumes snapping and allows another drag', async () => {
+  await render(fourItems, { loop: true })
+  await settle()
+  await key('ArrowRight')
+  await pointer('pointerdown', 1, 10, 0)
+  await act(async () => dom.dispatchEvent(new dom.PointerEvent('pointerup', { pointerId: 1, pointerType: 'mouse', clientX: -2, clientY: 10 })))
+  await settle()
+  assert.equal(slideX(container.querySelector('[data-current]')), 0)
+  await pointer('pointerdown', 200, 30, 200)
+  await pointer('pointermove', 30, 32, 350)
+  await pointer('pointerup', 30, 32, 500)
+  await settle()
+  assert.equal(current(), '3 of 4')
+})
+
+for (const width of [320, 740]) test(`short fast touch flicks snap across both loop edges at ${width}px`, async () => {
+  viewportWidth = width
+  await render(fourItems, { loop: true, initialIndex: 3 })
+  await settle()
+  const touch = touchStream()
+  const { span } = carouselGeometry(width, 4)
+  for (const [direction, startTime, expected] of [[1, 0, '1 of 4'], [-1, 400, '4 of 4']]) {
+    const start = width / 2
+    await touch.send('pointerdown', start, 100, startTime)
+    await touch.send('pointermove', start - direction * 12, 102, startTime + 15)
+    await touch.send('pointermove', start - direction * span * .15, 104, startTime + 30)
+    await touch.send('pointermove', start - direction * span * .25, 106, startTime + 40)
+    await touch.send('pointerup', start - direction * span * .25, 106, startTime + 50)
+    await settle()
+    assert.equal(current(), expected, 'A quick quarter-card flick advances in the intended direction')
+    await act(async () => container.querySelector('[data-current] button').dispatchEvent(new dom.MouseEvent('click', { detail: 1, bubbles: true, cancelable: true })))
+    assert.equal(chosen.length, 0)
+  }
+})
+
+for (const width of [320, 740]) test(`mostly vertical touch leaves page scrolling available at ${width}px`, async () => {
+  viewportWidth = width
+  await render(fourItems, { loop: true })
+  await settle()
+  const touch = touchStream()
+  const viewport = container.querySelector('.carousel-viewport')
+  const before = [...container.querySelectorAll('.carousel-slide')].map(slide => slide.style.transform)
+  await touch.send('pointerdown', 150, 100, 0)
+  const move = await touch.send('pointermove', 154, 140, 30)
+  assert.equal(move.defaultPrevented, false, 'Native vertical panning must not be prevented')
+  assert.ok(touch.captured !== viewport, 'A vertical gesture never transfers capture to the viewport')
+  assert.equal(viewport.dataset.dragging, undefined)
+  await touch.send('pointercancel', 154, 160, 50)
+  await settle()
+  assert.deepEqual([...container.querySelectorAll('.carousel-slide')].map(slide => slide.style.transform), before)
+  assert.equal(current(), '1 of 4')
+})
+
+for (const ending of ['pointercancel', 'lostpointercapture']) test(`${ending} cancels touch momentum once and permits the next gesture`, async () => {
+  await render(fourItems, { loop: true })
+  await settle()
+  const touch = touchStream()
+  await touch.send('pointerdown', 150, 100, 0)
+  await touch.send('pointermove', 170, 101, 10)
+  await touch.send('pointermove', 250, 102, 20)
+  if (ending === 'pointercancel') await touch.send(ending, 250, 102, 25)
+  else await touch.loseCapture()
+  assert.equal(container.querySelector('.carousel-viewport').dataset.dragging, undefined)
+  await settle()
+  assert.equal(current(), '1 of 4', 'Cancellation snaps to the closest card without projecting a fast flick')
+  await touch.send('pointerdown', 150, 100, 400)
+  await touch.send('pointermove', 170, 101, 450)
+  await touch.send('pointermove', 350, 104, 600)
+  await touch.send('pointerup', 350, 104, 750)
+  await settle()
+  assert.equal(current(), '4 of 4')
+  await touch.send('pointerdown', 150, 100, 900)
+  await touch.send('pointerup', 150, 100, 950)
+  await act(async () => container.querySelector('[data-current] button').dispatchEvent(new dom.MouseEvent('click', { detail: 1, bubbles: true, cancelable: true })))
+  assert.deepEqual(chosen, ['3'], 'A later deliberate tap still opens the selected card')
+})
+
+test('reduced-motion rerenders and portrait/landscape resize retain a fractional touch position', async () => {
+  motion.matches = true
+  await render(fourItems, { loop: true })
+  const touch = touchStream()
+  const first = container.querySelectorAll('.carousel-slide')[0]
+  await touch.send('pointerdown', 150, 100, 0)
+  await touch.send('pointermove', 170, 101, 40)
+  await touch.send('pointermove', 250, 102, 80)
+  const before = slideX(first)
+  await render(fourItems, { loop: true, onChange: () => {} })
+  assert.equal(slideX(first), before, 'A settings sync cannot snap the fractional drag to a card')
+  const fraction = before / carouselGeometry(viewportWidth, 4).span
+  for (const width of [740, 320]) {
+    viewportWidth = width
+    await act(async () => resize.notify())
+    assert.ok(Math.abs(slideX(first) / carouselGeometry(width, 4).span - fraction) < .0001)
+    const resized = slideX(first)
+    await touch.send('pointermove', 250, 102, 100)
+    assert.equal(slideX(first), resized, 'The next pointer event at the same coordinate cannot jump after resize')
+  }
+  await act(async () => motion.change({ matches: false }))
+  const livePosition = slideX(first)
+  await act(async () => motion.change({ matches: true }))
+  assert.notEqual(livePosition, 0)
+  assert.equal(slideX(first), before)
+  await touch.send('pointerup', 250, 102, 250)
+  assert.equal(current(), '4 of 4')
+  assert.equal(frames.size, 0)
+  assert.equal(slideX(container.querySelector('[data-current]')), 0)
+})
+
 test('looping four cards starts with neighbors on both sides without cloning slides or changing data', async () => {
   await render(fourItems, { loop: true })
   const slides = [...container.querySelectorAll('.carousel-slide')]

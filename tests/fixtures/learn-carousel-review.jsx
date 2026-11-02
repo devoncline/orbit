@@ -22,7 +22,7 @@ export function Preview() {
 }
 
 export function Review() {
-  const [width, setWidth] = useState(1440)
+  const [[width, height], setSize] = useState([1440, 900])
   const [measurement, setMeasurement] = useState('')
   const frame = useRef(null)
   useEffect(() => {
@@ -30,13 +30,13 @@ export function Review() {
       const doc = frame.current?.contentDocument
       if (!doc) return
       const card = doc.querySelector('.carousel-slide[data-current] button')
-      setMeasurement(`Viewport ${frame.current.clientWidth} / document ${doc.documentElement.scrollWidth} / overflow ${doc.documentElement.scrollWidth > frame.current.clientWidth + 1} / slides ${doc.querySelectorAll('.carousel-slide').length} / current ${card?.closest('.carousel-slide').getAttribute('aria-label') || 'none'} / card width ${Math.round(card?.getBoundingClientRect().width || 0)} / errors ${doc.documentElement.dataset.errors || 0} / requests ${doc.documentElement.dataset.requests || 0}`)
+      setMeasurement(`Viewport ${frame.current.clientWidth}×${frame.current.clientHeight} / document ${doc.documentElement.scrollWidth} / overflow ${doc.documentElement.scrollWidth > frame.current.clientWidth + 1} / slides ${doc.querySelectorAll('.carousel-slide').length} / current ${card?.closest('.carousel-slide').getAttribute('aria-label') || 'none'} / card width ${Math.round(card?.getBoundingClientRect().width || 0)} / errors ${doc.documentElement.dataset.errors || 0} / requests ${doc.documentElement.dataset.requests || 0}`)
     }, 300)
     return () => clearInterval(timer)
   }, [])
   return <div style={{ height: '100dvh', display: 'grid', gridTemplateRows: 'auto minmax(0, 1fr)', background: '#252a35' }}>
-    <header style={{ padding: 10, color: 'white', display: 'flex', gap: 10, flexWrap: 'wrap' }}>{[1440, 768, 390, 320].map(value => <button key={value} onClick={() => setWidth(value)}>{value}px</button>)}<output>{measurement}</output></header>
-    <div style={{ overflow: 'auto' }}><iframe ref={frame} title="Learn carousel preview" src="?frame" style={{ display: 'block', border: 0, width, height: '100%', marginInline: 'auto' }} /></div>
+    <header style={{ padding: 10, color: 'white', display: 'flex', gap: 10, flexWrap: 'wrap' }}>{[[1440, 900], [768, 1024], [390, 844], [844, 390], [320, 568]].map(size => <button key={size.join('x')} onClick={() => setSize(size)}>{size.join('×')}</button>)}<output>{measurement}</output></header>
+    <div style={{ overflow: 'auto' }}><iframe ref={frame} title="Learn carousel preview" src="?frame" style={{ display: 'block', border: 0, width, height, marginInline: 'auto' }} /></div>
   </div>
 }
 

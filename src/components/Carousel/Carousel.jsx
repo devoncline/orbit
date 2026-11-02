@@ -7,6 +7,8 @@ import './Carousel.css'
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 const STIFFNESS = 150
 const DAMPING = 24
+const DRAG_THRESHOLD = 8
+const AXIS_BIAS = 1.25
 
 export default function Carousel({ items = [], renderItem, label = 'Recommended topics', initialIndex = 0, loop = false, onChange }) {
   const count = items.length
@@ -73,7 +75,7 @@ export default function Carousel({ items = [], renderItem, label = 'Recommended 
       const dt = state.last ? Math.min(.05, (now - state.last) / 1000) : 1 / 60
       state.last = now
       let busy = false
-      if (!state.drag?.moved && !state.wheeling) {
+      if (!state.drag && !state.wheeling) {
         if (state.reduced) { state.p = state.target; state.v = 0 }
         else {
           const steps = Math.ceil(dt * 240)
@@ -107,24 +109,36 @@ export default function Carousel({ items = [], renderItem, label = 'Recommended 
       if (!state.reduced) wake()
     }
     const onPointerDown = event => {
-      if (settingsRef.current.count < 2 || event.isPrimary === false || event.button !== 0) return
+      if (settingsRef.current.count < 2 || state.drag || event.isPrimary === false || event.button !== 0) return
+      // Freeze the live, unwrapped position while the finger decides its direction.
+      window.cancelAnimationFrame(raf)
+      raf = 0
+      state.last = 0
+      state.v = 0
+      window.clearTimeout(state.wheelTimer)
+      state.wheeling = false
       window.clearTimeout(state.suppressTimer)
       state.suppress = false
       state.drag = { id: event.pointerId, x: event.clientX, y: event.clientY, p: state.p,
-        from: Math.round(state.target), moved: false, samples: [[event.timeStamp, event.clientX]] }
+        lastX: event.clientX, span: settingsRef.current.span,
+        from: Math.round(state.p), moved: false, samples: [[event.timeStamp, event.clientX]] }
     }
     const onPointerMove = event => {
       const drag = state.drag
       if (!drag || event.pointerId !== drag.id) return
       const dx = event.clientX - drag.x, dy = event.clientY - drag.y
+      drag.lastX = event.clientX
       if (!drag.moved) {
-        if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return
-        if (Math.abs(dy) > Math.abs(dx)) { state.drag = null; return }
+        if (Math.max(Math.abs(dx), Math.abs(dy)) < DRAG_THRESHOLD) return
+        // Leave diagonal jitter undecided. Once horizontal, small vertical drift
+        // must not release the gesture; pan-y still lets the browser scroll vertically.
+        if (Math.abs(dy) > Math.abs(dx) * AXIS_BIAS) { state.drag = null; moveTo(state.target); return }
+        if (Math.abs(dx) < Math.abs(dy) * AXIS_BIAS) return
         drag.moved = true
         viewport.setPointerCapture?.(event.pointerId)
         viewport.dataset.dragging = 'true'
       }
-      const raw = drag.p - dx / settingsRef.current.span
+      const raw = drag.p - dx / drag.span
       state.p = settingsRef.current.loop ? raw : rubberBand(raw, settingsRef.current.count - 1)
       state.v = 0
       state.target = limit(Math.round(state.p))
@@ -139,7 +153,7 @@ export default function Carousel({ items = [], renderItem, label = 'Recommended 
       state.drag = null
       delete viewport.dataset.dragging
       if (viewport.hasPointerCapture?.(event.pointerId)) viewport.releasePointerCapture(event.pointerId)
-      if (!drag.moved) return
+      if (!drag.moved) { moveTo(state.target); return }
       state.suppress = true
       window.clearTimeout(state.suppressTimer)
       state.suppressTimer = window.setTimeout(() => { state.suppress = false }, 350)
@@ -156,6 +170,12 @@ export default function Carousel({ items = [], renderItem, label = 'Recommended 
       state.v = settingsRef.current.loop || (state.p >= 0 && state.p <= settingsRef.current.count - 1) ? velocity : 0
       moveTo(target)
     }
+    const onLostPointerCapture = event => {
+      // Touch starts with implicit capture on the card button. Its loss bubbles
+      // when we capture the viewport and is not a cancellation of our drag.
+      if (event.target !== viewport || viewport.hasPointerCapture?.(event.pointerId)) return
+      finishDrag(event)
+    }
     const onClickCapture = event => {
       // Keyboard activation has detail=0 and must remain available after a swipe.
       if (!state.suppress || event.detail === 0) return
@@ -164,7 +184,7 @@ export default function Carousel({ items = [], renderItem, label = 'Recommended 
       state.suppress = false
     }
     const onWheel = event => {
-      if (settingsRef.current.count < 2 || Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return
+      if (state.drag || settingsRef.current.count < 2 || Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return
       event.preventDefault()
       const raw = state.p + event.deltaX / settingsRef.current.span
       state.p = settingsRef.current.loop ? raw : clamp(raw, -.15, settingsRef.current.count - .85)
@@ -186,7 +206,11 @@ export default function Carousel({ items = [], renderItem, label = 'Recommended 
       moveTo(keys[event.key])
       root.focus({ preventScroll: true })
     }
-    const onMotionChange = event => { state.reduced = event.matches; moveTo(state.target) }
+    const onMotionChange = event => {
+      state.reduced = event.matches
+      if (state.drag || state.wheeling) apply()
+      else moveTo(state.target)
+    }
     const measure = () => {
       const measured = viewport.getBoundingClientRect().width
       if (measured > 0) setWidth(measured)
@@ -197,13 +221,29 @@ export default function Carousel({ items = [], renderItem, label = 'Recommended 
     media.addEventListener('change', onMotionChange)
     viewport.addEventListener('pointerdown', onPointerDown)
     viewport.addEventListener('pointermove', onPointerMove)
-    viewport.addEventListener('pointerup', finishDrag)
-    viewport.addEventListener('pointercancel', finishDrag)
-    viewport.addEventListener('lostpointercapture', finishDrag)
+    // Also finish an undecided mouse gesture released outside the viewport.
+    window.addEventListener('pointerup', finishDrag)
+    window.addEventListener('pointercancel', finishDrag)
+    viewport.addEventListener('lostpointercapture', onLostPointerCapture)
     viewport.addEventListener('click', onClickCapture, true)
     viewport.addEventListener('wheel', onWheel, { passive: false })
     root.addEventListener('keydown', onKeyDown)
-    engineRef.current = { paint: apply, sync: () => { state.p = limit(state.p); moveTo(state.target) } }
+    engineRef.current = { paint: apply, sync: () => {
+      if (state.drag) {
+        // Resize/re-render must not round or wrap a finger-driven position.
+        if (state.drag.span !== settingsRef.current.span) {
+          if (state.drag.moved) {
+            state.drag.p = state.p
+            state.drag.x = state.drag.lastX
+          }
+          state.drag.span = settingsRef.current.span
+        }
+        apply()
+        return
+      }
+      state.p = limit(state.p)
+      moveTo(state.target)
+    } }
     measure()
     engineRef.current.sync()
     return () => {
@@ -217,9 +257,9 @@ export default function Carousel({ items = [], renderItem, label = 'Recommended 
       media.removeEventListener('change', onMotionChange)
       viewport.removeEventListener('pointerdown', onPointerDown)
       viewport.removeEventListener('pointermove', onPointerMove)
-      viewport.removeEventListener('pointerup', finishDrag)
-      viewport.removeEventListener('pointercancel', finishDrag)
-      viewport.removeEventListener('lostpointercapture', finishDrag)
+      window.removeEventListener('pointerup', finishDrag)
+      window.removeEventListener('pointercancel', finishDrag)
+      viewport.removeEventListener('lostpointercapture', onLostPointerCapture)
       viewport.removeEventListener('click', onClickCapture, true)
       viewport.removeEventListener('wheel', onWheel)
       root.removeEventListener('keydown', onKeyDown)
