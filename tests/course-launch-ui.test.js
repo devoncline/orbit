@@ -496,6 +496,109 @@ test('Study reuses a course PDF original after analysis, keeps the source, and f
   assert.equal(requests.length, 2, 'Reload must not replay reference or lesson work')
 })
 
+test('temporary references stay in their own mounted thread across messages, switches, new threads and continuation', async t => {
+  seed()
+  saveLearnerMemory({ ...read(), threads: [
+    savedThread('bio', 'Photosynthesis', '2026-11-01T12:00:00Z'),
+    savedThread('respiration', 'Cellular Respiration', '2026-11-01T13:00:00Z'),
+  ], activeId: 'bio' }, dom.localStorage)
+  const requests = []
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    const body = JSON.parse(options.body)
+    requests.push({ url, body })
+    if (url === '/api/generate-study-lesson') return json({
+      topic: body.lesson?.topic || body.learnerPosition.currentTopic,
+      concept: 'A new concept', content: 'Explore another part of this topic.', visual: { type: 'none' },
+    })
+    assert.equal(url, '/api/respond-to-study-message')
+    const response = 'What would you try first?'
+    return new Response([{ type: 'delta', text: response }, { type: 'complete', response, signal: 'neutral' }]
+      .map(event => JSON.stringify(event) + '\n').join(''), { headers: { 'Content-Type': 'application/x-ndjson' } })
+  })
+  const room = () => container.querySelector('.study-room:not([hidden])')
+  const referenceNames = () => [...room().querySelectorAll('.lesson-reference-list li > div > span')].map(item => item.textContent)
+  const resumeTopic = async topic => {
+    const before = requests.length
+    await openSpace()
+    await click([...container.querySelectorAll('.space-recent button')].find(item => item.textContent.startsWith(topic)))
+    assert.equal(requests.length, before, 'Navigation must not resend references or generate teaching')
+  }
+  const attachReference = async name => {
+    await click(button('Add reference', room()))
+    const before = requests.length
+    await act(async () => {
+      const transfer = new dom.DataTransfer()
+      transfer.items.add(pdf(name))
+      const input = room().querySelector('[aria-label="Choose lesson references"]')
+      input.files = transfer.files
+      input.dispatchEvent(new dom.Event('change', { bubbles: true }))
+      await dom.happyDOM.waitUntilComplete()
+    })
+    assert.equal(requests.length, before, 'Attaching a reference alone must not call AI')
+  }
+  const send = async message => {
+    await click(button('Talk it through', room()))
+    await act(async () => {
+      const field = room().querySelector('.study-composer textarea')
+      Object.getOwnPropertyDescriptor(dom.HTMLTextAreaElement.prototype, 'value').set.call(field, message)
+      field.dispatchEvent(new dom.Event('input', { bubbles: true }))
+    })
+    const before = requests.length
+    await click(button('Send', room()))
+    assert.equal(requests.length, before + 1)
+    return requests.at(-1).body
+  }
+
+  await render(); await resumeTopic('Photosynthesis')
+  const originalRoom = room()
+  await attachReference('photosynthesis-work.pdf')
+  for (const message of ['Help with question 3.', 'Explain that step again.']) {
+    const body = await send(message)
+    assert.equal(body.lesson.topic, 'Photosynthesis')
+    assert.deepEqual(body.lessonReferences.map(item => item.name), ['photosynthesis-work.pdf'])
+  }
+  await click(button('Home')); await resumeTopic('Photosynthesis')
+  assert.equal(room(), originalRoom)
+  assert.deepEqual(referenceNames(), ['photosynthesis-work.pdf'])
+
+  await resumeTopic('Cellular Respiration')
+  assert.deepEqual(referenceNames(), [])
+  assert.equal((await send('Explain this lesson.')).lessonReferences, undefined)
+  await attachReference('respiration-work.pdf')
+  assert.deepEqual((await send('Help with this page.')).lessonReferences.map(item => item.name), ['respiration-work.pdf'])
+
+  await resumeTopic('Photosynthesis')
+  assert.equal(room(), originalRoom, 'Returning must reuse the original mounted session')
+  assert.deepEqual(referenceNames(), ['photosynthesis-work.pdf'])
+  assert.deepEqual((await send('Return to my page.')).lessonReferences.map(item => item.name), ['photosynthesis-work.pdf'])
+
+  await openSpace()
+  const form = container.querySelector('.space-topic-entry form')
+  await type(form.querySelector('input'), 'Genetics')
+  await click(form.querySelector('button'))
+  assert.equal(read().threads.length, 3)
+  assert.notEqual(read().activeId, 'bio')
+  assert.notEqual(read().activeId, 'respiration')
+  assert.deepEqual(referenceNames(), [])
+  assert.equal(requests.at(-1).body.lessonReferences, undefined, 'Starting a new thread must omit old references')
+  assert.equal((await send('Explain this new lesson.')).lessonReferences, undefined)
+
+  await resumeTopic('Photosynthesis')
+  assert.deepEqual(referenceNames(), ['photosynthesis-work.pdf'])
+  await click(button('Continue to next lesson', room()))
+  assert.deepEqual(referenceNames(), [])
+  assert.equal(requests.at(-1).body.lessonReferences, undefined)
+  assert.equal((await send('Explain the next idea.')).lessonReferences, undefined)
+  await resumeTopic('Cellular Respiration')
+  assert.deepEqual(referenceNames(), ['respiration-work.pdf'], 'Continuing one thread must not clear another thread')
+
+  const beforeReload = requests.length
+  await reload()
+  assert.equal(container.querySelectorAll('.lesson-reference-list li').length, 0)
+  assert.equal(requests.length, beforeReload)
+  assert.doesNotMatch(JSON.stringify(read()), /photosynthesis-work\.pdf|respiration-work\.pdf|lessonReferences|JVBER/)
+})
+
 test('failed PDF reading retains attachments and can retry explicitly', async t => {
   seed()
   let fail = true, calls = 0
