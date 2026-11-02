@@ -127,6 +127,65 @@ test('store errors, malformed results, missing secrets/IP and missing model key 
   }
 })
 
+for (const environment of ['production', 'preview']) {
+  test(`${environment}: single IPv4/IPv6 headers are accepted; missing, chained or array identities fail closed`, async () => {
+    const store = fakeDemoStore()
+    const enforce = createDemoRateLimiter({ env: { ...demoEnv(), VERCEL_ENV: environment }, fetch: store.fetch })
+    for (const address of ['192.0.2.8', ' 192.0.2.9 ', '2001:db8::1', '2001:0db8:0000:0000:0000:0000:0000:0002']) {
+      assert.equal((await enforce(demoRequest({}, address), demoResponse())).allowed, true)
+    }
+    const before = store.commands.length
+    for (const address of [undefined, '', '192.0.2.8, 198.51.100.1', ['192.0.2.8'], '[2001:db8::1]', '192.0.2.8:443']) {
+      const req = demoRequest()
+      req.headers['x-vercel-forwarded-for'] = address
+      req.headers['x-forwarded-for'] = '192.0.2.8'
+      req.socket = { remoteAddress: '192.0.2.8' }
+      const res = demoResponse()
+      assert.equal((await enforce(req, res)).allowed, false)
+      assert.equal(res.code, 503)
+      assert.equal(res.body.error, 'demo_temporarily_unavailable')
+    }
+    assert.equal(store.commands.length, before, 'An invalid platform identity cannot reach Redis or use a spoofable fallback')
+  })
+}
+
+for (const action of ['example', 'next']) {
+  test(`${action}: configuration, identity and Redis failures return safe 503 before any Meta request`, async t => {
+    const cases = [
+      ...['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN', 'DEMO_RATE_LIMIT_SECRET', 'MODEL_API_KEY']
+        .map(key => ({ name: `missing ${key}`, env: { [key]: undefined } })),
+      { name: 'short secret', env: { DEMO_RATE_LIMIT_SECRET: 'short' } },
+      { name: 'missing platform IP', address: undefined },
+      { name: 'chained platform IP', address: '192.0.2.8, 198.51.100.1' },
+      { name: 'Redis token lacks permission', store: () => new Response('{}', { status: 403 }) },
+      { name: 'Redis unavailable', store: () => new Response('{}', { status: 503 }) },
+      { name: 'EVAL rejected', store: () => new Response(JSON.stringify({ error: 'PRIVATE_REDIS_ERROR' })) },
+      { name: 'invalid EVAL result', store: () => new Response(JSON.stringify({ result: [1, 'invalid'] })) },
+      { name: 'Redis timeout', store: () => { throw new DOMException('PRIVATE_TIMEOUT', 'TimeoutError') } },
+    ]
+    for (const scenario of cases) {
+      await t.test(scenario.name, async t => {
+        setEnv(t, { ...demoEnv(), VERCEL_TARGET_ENV: undefined, ...scenario.env })
+        let storeCalls = 0
+        t.mock.method(globalThis, 'fetch', async url => {
+          assert.equal(url, 'https://redis.example.test/', 'Infrastructure failure must stop before Meta')
+          assert.ok(scenario.store, 'Configuration/identity failure must stop before Redis')
+          storeCalls++
+          return scenario.store()
+        })
+        const req = demoRequest({ courseName: 'React', lesson, action }), res = demoResponse()
+        if (Object.hasOwn(scenario, 'address')) req.headers['x-vercel-forwarded-for'] = scenario.address
+        await lessonHandler(req, res)
+        assert.equal(res.code, 503)
+        assert.deepEqual(res.body, { error: 'demo_temporarily_unavailable',
+          message: 'AI is temporarily unavailable. You can still explore Orbit. Please try again shortly.' })
+        assert.equal(storeCalls, scenario.store ? 1 : 0)
+        assert.doesNotMatch(JSON.stringify(res.body), /PRIVATE|192\.|fake|redis|stack/i)
+      })
+    }
+  })
+}
+
 for (const [name, handler, body, result, ceiling] of routes) {
   test(`${name}: paid request below allowance reaches provider with bounded output; exhausted request never does`, async (t) => {
     const { store, enforce } = setup(t)

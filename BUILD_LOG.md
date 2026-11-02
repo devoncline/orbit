@@ -862,6 +862,16 @@ The targeted effect trace before implementation was:
 
 ---
 
+## November 1, 2026 - Study failure investigation and regression coverage
+
+- Investigated the reported generic Example/Next errors against `718dbc2`. Vercel management API requests returned a team-access 403; the user chose local investigation only. The incident's exact production response, root cause, deployed environment/scopes, real visitor header, Redis provisioning/EVAL permissions and provider invocation remain unverified. No production fix is claimed.
+- Traced both actions through the real named services, lesson route, limiter, response handling and mounted Study, faking only Redis/Meta. All three demo error codes already survive the service layers and render dedicated messages; blocked requests preserve the saved lesson/path/mastery and never call Meta. Provider 429/500, missing/malformed or invalid model output, and a non-JSON platform error retain the generic fallback. No runtime or UI changes were justified.
+- Added 50 regression checks across the two existing demo test files, including 24 nested infrastructure/configuration scenarios. Synthetic Production/Preview IPv4 and IPv6 are accepted; missing, chained and malformed identities fail closed without a spoofable fallback. Tests do not execute real Redis Lua or verify real edge headers.
+- Validation: focused demo checks 82/82 pass. Full `npm.cmd test`: 426 tests, 424 pass, two pre-existing copy assertions fail at `tests/product-shell.test.js:251` and `:317`. `npm.cmd run lint`, `npm.cmd run build`, and `git diff --check` pass. No live provider/Redis calls, browser/device testing, external dev server, deployment, commit or push.
+- Updated `DEMO_LIMIT.md` with the observed local response matrix, explicit production audit gaps and a bounded manual diagnosis procedure. `CHANGELOG.md` is unchanged because this adds internal regression coverage, not a product fix. No database/schema changes, migrations, historical migration edits or manual SQL.
+
+---
+
 # Next
 
 Feature development is frozen for submission. Review and deploy the hardening and control-polish changes, rehearse the production recording path in SUBMISSION_CHECKLIST.md, inspect the images used in the take, and record Orbit's adaptive teaching loop. Broader product expansion remains deferred until after the hackathon.

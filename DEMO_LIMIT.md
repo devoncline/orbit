@@ -90,3 +90,44 @@ Automated tests use fake Redis/provider responses and mounted Happy DOM componen
 2. In a controlled Preview environment with a provider stub, verify requests through Vercel identify one visitor consistently across routes and aliases. Confirm visitor action 25 succeeds and 26 returns `demo_limit_reached`. Across multiple simulated visitors, confirm global action 750 succeeds and 751 returns `demo_capacity_reached` without a provider call or visitor debit. Live AI attempts cost credits.
 3. Verify one new lesson and its automatic image use one action in BOTH quotas even at global capacity, a separate Show me/retry uses a new action in both, and saved lessons/images do not invoke the provider on navigation or reload. Verify streamed exhaustion returns JSON before any text is streamed. Check staggered global expiry so only actions older than 24 hours stop counting.
 4. Check both messages, video link, retained lesson, draft recovery, Home/Learn/Calendar/Library navigation, and expiry recovery on desktop and a narrow mobile viewport. Check keyboard and screen-reader access to the notice/link. Live provider quality under the existing ceilings and actual Redis expiry/failover remain deployment checks.
+
+## Investigating generic Example / Next failures
+
+Local investigation on November 1, 2026, against commit `718dbc2`: the reported production incident is **not diagnosed or fixed**. Vercel metadata requests returned a team-access `403`; investigation then continued locally at the user's request. That authorization failure is from the management API, not the Study endpoint. The tester's exact HTTP response, deployed commit and whether their request reached Meta remain unknown. Do not infer a limiter or provider failure from the screenshot alone.
+
+Both paths were exercised locally through the actual code: `generateStudyExample` / `generateNextStudyLesson` -> `requestStudyLesson` -> `/api/generate-study-lesson` -> `enforceDemoRateLimit` -> mocked Redis/Meta -> `demoAiFetch` -> mounted Study. The mocks replace external services; they do not execute Lua or prove deployment configuration.
+
+| Tested condition, for both actions | HTTP status and safe response body | Meta called in test? | Study behavior |
+| --- | --- | --- | --- |
+| Visitor allowance exhausted | `429`, `error: "demo_limit_reached"`, retry metadata | No | Dedicated visitor-limit message |
+| Global capacity exhausted | `429`, `error: "demo_capacity_reached"`, retry metadata | No | Dedicated capacity message |
+| Missing configuration, invalid identity, rejected/failed Redis request or malformed EVAL result | `503`, `error: "demo_temporarily_unavailable"`, safe unavailable message | No | Dedicated unavailable message |
+| Provider returns 429 | `429`, `error: "Failed to generate study lesson"` | Yes, mocked | Existing generic action error; no demo restriction |
+| Provider returns 500 | `500`, `error: "Failed to generate study lesson"` | Yes, mocked | Existing generic action error |
+| Missing/malformed provider output | `502`, `error: "Failed to generate study lesson"` | Yes, mocked | Existing generic action error |
+| Lesson output fails validation | `502`, `error: "Invalid study lesson response"` | Yes, mocked | Existing generic action error |
+| Non-JSON platform 503, injected at the client boundary | `503`, plain-text body | Not established by this simulation | Existing generic action error |
+
+`demoAiFetch` throws recognized demo codes before `requestStudyLesson` reaches its `!response.ok` branch. The latter therefore does not replace these errors. The mounted tests confirm the correct message and unchanged saved lesson, learning path and mastery for both actions. Genuine unrelated failures remain generic. No runtime, UI, prompt, token ceiling or quota change was justified by these local results. The initial limiter commit also introduced a 6,000-token lesson output ceiling; exhaustion of that ceiling is a possible cause of incomplete provider output, not an established cause of this incident.
+
+Production configuration audit remains open:
+
+| Required variable | Production / Preview presence and scope | Included in the active deployment? |
+| --- | --- | --- |
+| `UPSTASH_REDIS_REST_URL` | Unverified | Unverified |
+| `UPSTASH_REDIS_REST_TOKEN` | Unverified | Unverified |
+| `DEMO_RATE_LIMIT_SECRET` | Unverified | Unverified |
+| `MODEL_API_KEY` | Unverified | Unverified |
+
+Redis provisioning, actual token permissions, acceptance of the current multi-key EVAL, and deployment creation time relative to environment changes are also unverified. Local tests prove that failures stop paid work; they do not establish whether any of these conditions exists in production. No environment changes or redeployment were made, and no specific environment repair is established.
+
+Synthetic Production and Preview requests accept single IPv4 and IPv6 strings (including surrounding whitespace and equivalent IPv6 spellings). Missing, comma-separated, array, bracketed or port-bearing values are rejected with the structured unavailable response before Redis. Generic forwarded headers and socket addresses cannot substitute for an invalid Vercel identity. A chain would be rejected by `isIP(value.trim())`; whether Vercel actually supplied one in the failing request is unknown. Do not add a fallback to untrusted headers without evidence.
+
+To finish the production investigation:
+
+1. Check the four variables in Vercel's project settings for the correct Production/Preview targets, a valid HTTPS REST URL, a sufficiently long identity secret and the intended Redis database. Compare their modification times with the active deployment's creation time and commit. Environment corrections require a new deployment; tests-only changes do not repair a deployed failure. Keep all values private.
+2. In the browser Network panel, preserve the log and attempt Example once and Next once. Record the deployment, timestamp, action, HTTP status, safe error body and request correlation ID. Do not share a HAR containing request payloads, cookies, headers or learner data. Match the status/body to the table above; a provider-originated 429 is not a demo quota rejection.
+3. Correlate those requests with Vercel function logs and provider request evidence. A `502` with the generic body can represent multiple parsing/transport failures and does not by itself identify the cause. Check incomplete output and output-validation failures without logging prompts or response content. Confirm whether Meta was called instead of inferring this from the UI.
+4. Check Upstash provisioning, command errors and write/EVAL permissions. Exercise the exported Lua scripts against isolated test keys in a controlled Preview database, including the three-key reservation and image grant. Do not reset production counters or probe through hundreds of paid AI calls.
+5. Inspect the header **received by the function**, separately in Production/Preview and over IPv4/IPv6. Record only its classification (missing, single IPv4, single IPv6, chain or invalid), never the address. The browser's outgoing headers cannot establish what Vercel injected. Preserve fail-closed behavior while investigating.
+6. After any evidence-backed repair and redeployment, confirm both actions, the dedicated messages under controlled blocked states, retained lesson/progress, and zero provider calls for blocked requests. Check a freshly loaded client as well as an already-open tab to identify version skew.
