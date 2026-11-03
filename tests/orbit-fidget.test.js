@@ -6,7 +6,7 @@ import { Window } from 'happy-dom'
 import { createServer } from 'vite'
 
 let dom, server, createRoot, OrbitStage, HomeScreen, LearnScreen, StudySession, root, container
-let animations, frames, reduced, precise
+let animations, frames, reduced, precise, clock, captures, captureCalls, releaseCalls
 const globals = new Map()
 const course = { name: 'React', mastery: { overall: 40, topics: { Props: 20 } } }
 const lesson = { topic: 'Props', concept: 'Inputs', content: 'Props supply inputs to components.' }
@@ -32,6 +32,7 @@ before(async () => {
 
 beforeEach(t => {
   animations = []; frames = new Map()
+  clock = 0; captures = new Map(); captureCalls = []; releaseCalls = []
   const media = matches => ({ matches, listeners: new Set(),
     addEventListener(_event, fn) { this.listeners.add(fn) },
     removeEventListener(_event, fn) { this.listeners.delete(fn) },
@@ -42,6 +43,21 @@ beforeEach(t => {
   let nextFrame = 0
   t.mock.method(dom, 'requestAnimationFrame', fn => { frames.set(++nextFrame, fn); return nextFrame })
   t.mock.method(dom, 'cancelAnimationFrame', id => frames.delete(id))
+  for (const [name, value] of Object.entries({
+    setPointerCapture(id) { captures.set(id, this); captureCalls.push(id) },
+    hasPointerCapture(id) { return captures.get(id) === this },
+    releasePointerCapture(id) {
+      captures.delete(id); releaseCalls.push(id)
+      this.dispatchEvent(new dom.PointerEvent('lostpointercapture', { pointerId: id, bubbles: true }))
+    },
+  })) {
+    const original = Object.getOwnPropertyDescriptor(dom.HTMLElement.prototype, name)
+    Object.defineProperty(dom.HTMLElement.prototype, name, { configurable: true, value })
+    t.after(() => {
+      if (original) Object.defineProperty(dom.HTMLElement.prototype, name, original)
+      else delete dom.HTMLElement.prototype[name]
+    })
+  }
   t.mock.method(dom.HTMLElement.prototype, 'getBoundingClientRect', () => ({ left: 100, top: 100, width: 200, height: 200 }))
   const descriptor = Object.getOwnPropertyDescriptor(dom.HTMLElement.prototype, 'animate')
   Object.defineProperty(dom.HTMLElement.prototype, 'animate', { configurable: true, value: function (keyframes, options) {
@@ -77,8 +93,24 @@ async function pointer(type, options = {}, target = query('hit-area')) {
   await act(async () => target.dispatchEvent(event))
   assert.equal(event.defaultPrevented, false, 'Native scrolling and gestures remain available')
 }
-async function frame() {
-  await act(async () => { const pending = [...frames.values()]; frames.clear(); pending.forEach(fn => fn(16)) })
+async function frame(delta = 16) {
+  await act(async () => { const pending = [...frames.values()]; frames.clear(); clock += delta; pending.forEach(fn => fn(clock)) })
+}
+async function settle() {
+  for (let i = 0; i < 60 && frames.size; i++) await frame()
+  assert.equal(frames.size, 0, 'No perpetual drag or return frame loop')
+}
+function dragOffset() {
+  const transform = query('drag-motion').style.transform
+  if (!transform) return { x: 0, y: 0 }
+  const parts = transform.match(/^translate\(([-+\d.e]+)px, ([-+\d.e]+)px\)$/)
+  assert.ok(parts, 'The drag layer owns translation only')
+  return { x: Number(parts[1]), y: Number(parts[2]) }
+}
+async function startDrag(options = {}) {
+  await pointer('pointerdown', { clientX: 200, clientY: 200, ...options })
+  await pointer('pointermove', { clientX: 300, clientY: 200, ...options })
+  await frame()
 }
 async function tap(options = {}) { await pointer('pointerdown', options); await pointer('pointerup', options, dom) }
 async function click(label) {
@@ -91,7 +123,7 @@ test('interaction is opt-in, decorative, and composed outside every state transf
   await mount()
   assert.equal(query('hit-area'), null)
   await render()
-  assert.ok(query('companion > .orbit-stage-fidget-motion > .orbit-stage-press-motion > .orbit-stage-thinking-motion > .orbit-stage-celebration-motion > .orbit-stage-idle-motion > .orbit-stage-artwork'))
+  assert.ok(query('companion > .orbit-stage-fidget-motion > .orbit-stage-drag-motion > .orbit-stage-press-motion > .orbit-stage-thinking-motion > .orbit-stage-celebration-motion > .orbit-stage-idle-motion > .orbit-stage-artwork'))
   assert.equal(query('hit-area').parentElement, query('companion'))
   assert.equal(query('companion').getAttribute('aria-hidden'), 'true')
   assert.equal(query('hit-area').hasAttribute('tabindex'), false)
@@ -207,7 +239,9 @@ test('touch and pen tap, cancelled gestures and multi-pointer input preserve nat
   assert.equal(animations.length, count)
   await pointer('pointermove', { pointerType: 'touch', clientY: 240 })
   await pointer('pointerup', { pointerType: 'touch', clientY: 240 }, dom)
-  assert.equal(motions('press-motion').at(-1).options.duration, 180, 'Scroll/drag settles without a tap bounce')
+  assert.equal(motions('press-motion').at(-1).options.duration, 180, 'Vertical touch settles without a tap bounce or drag')
+  assert.equal(captureCalls.length, 0)
+  assert.equal(query('drag-motion').style.transform, '')
   await pointer('pointerdown')
   await pointer('pointercancel', {}, dom)
   assert.equal(motions('press-motion').at(-1).keyframes.at(-1).transform, 'scale(1)')
@@ -256,7 +290,7 @@ test('unmount and disabling interaction cancel pending work and remove all input
   assert.ok(animations.every(a => a.cancelled))
   assert.equal(reduced.listeners.size, 0)
   assert.equal(precise.listeners.size, 0)
-  for (const call of add.mock.calls.filter(call => ['pointerup', 'pointercancel', 'blur'].includes(call.arguments[0]))) {
+  for (const call of add.mock.calls.filter(call => ['pointermove', 'pointerup', 'pointercancel', 'blur'].includes(call.arguments[0]))) {
     assert.ok(remove.mock.calls.some(other => other.arguments[0] === call.arguments[0] && other.arguments[1] === call.arguments[1]))
   }
 })
@@ -307,11 +341,16 @@ test('Study quiz still scores once and celebrates through pointer activity, then
   await act(async () => respond())
   await act(async () => t.mock.timers.tick(10000))
   assert.equal(stage().dataset.expression, 'rest')
-  await pointer('pointerenter'); await tap()
+  await pointer('pointerenter'); await startDrag()
+  const dragged = dragOffset()
   await click('Props')
   assert.equal(stage().dataset.expression, 'celebrating')
   assert.equal(scores.length, 1)
   const celebration = motions('celebration-motion').at(-1)
+  assert.deepEqual(dragOffset(), dragged, 'The quiz celebration starts without snapping the current drag offset')
+  assert.equal(captures.size, 0)
+  await settle()
+  assert.equal(query('drag-motion').style.transform, '')
   await tap(); await tap(); await pointer('pointermove'); await frame()
   assert.equal(celebration.cancelled, false)
   assert.equal(scores.length, 1)
@@ -320,12 +359,255 @@ test('Study quiz still scores once and celebrates through pointer activity, then
   assert.equal(stage().dataset.expression, 'rest')
 })
 
+test('sub-threshold movement remains a held press and the unchanged quick-click rebound', async () => {
+  await render()
+  await pointer('pointerdown')
+  const press = motions('press-motion').at(-1)
+  await pointer('pointermove', { clientX: 284, clientY: 183 })
+  await frame(1000)
+  assert.equal(press.cancelled, false, 'A long hold does not become a drag without movement')
+  assert.equal(query('drag-motion').style.transform, '')
+  assert.equal(captureCalls.length, 0)
+  await pointer('pointerup', { clientX: 284, clientY: 183 }, dom)
+  assert.equal(motions('press-motion').at(-1).options.duration, 440)
+  assert.equal(frames.size, 0)
+})
+
+test('intentional drag uses the original down position, resistance, capture and a radial travel limit', async () => {
+  await render()
+  await pointer('pointerdown', { clientX: 200, clientY: 200 })
+  assert.equal(captureCalls.length, 0, 'Simple presses do not explicitly capture')
+  await pointer('pointermove', { clientX: 210, clientY: 200 })
+  assert.deepEqual(captureCalls, [1])
+  await pointer('pointermove', { clientX: 300, clientY: 200 })
+  assert.equal(frames.size, 1, 'Drag movement is coalesced, not rendered through React')
+  await frame()
+  assert.ok(dragOffset().x >= 35 && dragOffset().x <= 50, '100px of pointer movement produces a resisted pull')
+  assert.equal(dragOffset().y, 0)
+  await pointer('pointerleave')
+  await pointer('pointermove', { clientX: 1200, clientY: 1200 }, dom)
+  await frame()
+  const diagonal = dragOffset()
+  assert.ok(Math.hypot(diagonal.x, diagonal.y) <= 60.001, 'Diagonal pull shares a radial limit')
+  assert.ok(Math.hypot(diagonal.x, diagonal.y) >= 50)
+  await pointer('pointermove', { clientX: 220, clientY: 200 }, dom)
+  await frame()
+  assert.ok(dragOffset().x < 10, 'Offsets are based on the original pointer down, not accumulated movement')
+  assert.equal(dragOffset().y, 0)
+  assert.equal(stage().dataset.expression, 'rest')
+  assert.equal(motions('celebration-motion').length, 0)
+})
+
+test('drag release springs past home subtly, settles exactly neutral, and resumes current hover without click rebound', async () => {
+  await render()
+  await pointer('pointerenter')
+  await frame()
+  const follow = query('fidget-motion').style.transform
+  await startDrag()
+  assert.equal(query('fidget-motion').style.transform, follow)
+  const start = dragOffset().x
+  await pointer('pointerup', { clientX: 300, clientY: 200 }, dom)
+  assert.deepEqual(releaseCalls, [1])
+  assert.equal(captures.size, 0)
+  await pointer('pointermove', { clientX: 150, clientY: 200 })
+  const positions = []
+  const began = clock
+  while (frames.size && clock - began < 700) { await frame(); positions.push(dragOffset().x) }
+  assert.ok(clock - began >= 450 && clock - began <= 650)
+  assert.ok(Math.min(...positions) < 0, 'The spring crosses home once visibly')
+  assert.ok(Math.min(...positions) > -start * 0.08, 'The opposite overshoot remains small')
+  assert.equal(query('drag-motion').style.transform, '')
+  assert.equal(frames.size, 0)
+  assert.match(query('fidget-motion').style.transform, /translate\(-/, 'Follow resumes using the pointer position after release')
+  assert.ok(motions('press-motion').every(a => a.options.duration !== 440), 'Drag release does not play the click rebound')
+})
+
+test('catching a return freezes the visible offset and repeated drags never stack or accumulate', async () => {
+  await render()
+  for (let i = 0; i < 5; i++) {
+    await startDrag()
+    await pointer('pointerup', { clientX: 300, clientY: 200 }, dom)
+    await frame(); await frame(80)
+    const caught = dragOffset()
+    assert.ok(caught.x > 0)
+    await pointer('pointerdown', { clientX: 200, clientY: 200 })
+    assert.deepEqual(dragOffset(), caught)
+    await frame(100)
+    assert.deepEqual(dragOffset(), caught, 'The superseded return has no queued writes')
+    await pointer('pointermove', { clientX: 220, clientY: 200 })
+    await frame()
+    assert.ok(Math.abs(dragOffset().x - (caught.x + 9)) < 0.001, 'A new origin starts at the caught position')
+    assert.ok(frames.size <= 1)
+    await pointer('pointerup', { clientX: 220, clientY: 200 }, dom)
+    await settle()
+    assert.equal(query('drag-motion').style.transform, '')
+  }
+  assert.ok(motions('press-motion').every(a => a.options.duration !== 440))
+})
+
+test('catch and release without further movement still returns home rather than leaving a frozen offset', async () => {
+  await render()
+  await startDrag()
+  await pointer('pointerup', {}, dom)
+  await frame(); await frame(64)
+  await pointer('pointerdown')
+  const caught = dragOffset()
+  assert.ok(caught.x > 0)
+  await pointer('pointerup', {}, dom)
+  assert.deepEqual(dragOffset(), caught)
+  await settle()
+  assert.equal(query('drag-motion').style.transform, '')
+})
+
+for (const type of ['pointercancel', 'lostpointercapture']) test(`${type} returns a drag safely and ignores the later pointerup`, async () => {
+  await render()
+  await startDrag()
+  const before = dragOffset()
+  await pointer(type)
+  assert.deepEqual(dragOffset(), before, 'Cancellation begins at the visible position')
+  assert.equal(captures.size, 0)
+  await pointer('pointerup', {}, dom)
+  await settle()
+  assert.equal(query('drag-motion').style.transform, '')
+  assert.ok(motions('press-motion').every(a => a.options.duration !== 440))
+})
+
+test('only the active primary pointer controls a drag, including moves outside the hit region', async () => {
+  await render()
+  await startDrag()
+  const before = dragOffset()
+  for (const type of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'lostpointercapture']) {
+    await pointer(type, { pointerId: 2, clientX: 999, clientY: 999 })
+  }
+  await pointer('pointermove', { isPrimary: false, clientX: 999, clientY: 999 })
+  await frame()
+  assert.deepEqual(dragOffset(), before)
+  assert.equal(captures.get(1), query('hit-area'))
+  await pointer('pointermove', { clientX: 100, clientY: 200 }, dom)
+  await frame()
+  assert.ok(dragOffset().x < 0)
+  await pointer('pointerup', { clientX: 100, clientY: 200 }, dom)
+  await settle()
+  assert.equal(query('drag-motion').style.transform, '')
+})
+
+test('touch starts horizontally to drag, with a smaller travel limit; pen also supports drag', async () => {
+  await render()
+  precise.change(false)
+  for (const pointerType of ['touch', 'pen']) {
+    await startDrag({ pointerType })
+    assert.equal(captures.get(1), query('hit-area'))
+    await pointer('pointermove', { pointerType, clientX: 1000, clientY: 1000 })
+    await frame()
+    const { x, y } = dragOffset()
+    assert.ok(Math.hypot(x, y) >= 35 && Math.hypot(x, y) <= 44.001)
+    await pointer('pointerup', { pointerType, clientX: 1000, clientY: 1000 }, dom)
+    await settle()
+    assert.equal(query('drag-motion').style.transform, '')
+    assert.equal(query('fidget-motion').style.transform, '', 'Touch/coarse input does not invent hover')
+  }
+})
+
+for (const pose of ['thinking', 'celebrating']) test(`${pose} beginning mid-drag settles without snapping or interrupting the state motion`, async () => {
+  await render()
+  await startDrag()
+  const before = dragOffset(), drag = query('drag-motion')
+  const props = pose === 'thinking' ? { thinking: true } : { expression: pose }
+  await render(props)
+  const stateAnimation = motions(`${pose === 'thinking' ? 'thinking' : 'celebration'}-motion`).at(-1)
+  assert.equal(query('drag-motion'), drag)
+  assert.deepEqual(dragOffset(), before)
+  assert.equal(captures.size, 0)
+  await pointer('pointerup', {}, dom)
+  await settle()
+  assert.equal(drag.style.transform, '')
+  assert.equal(stateAnimation.cancelled, false)
+  await startDrag()
+  assert.ok(dragOffset().x > 0 && dragOffset().x < before.x / 2, 'State motion keeps the existing strength reduction')
+  assert.equal(stateAnimation.cancelled, false)
+  const restrained = dragOffset()
+  await render()
+  assert.deepEqual(dragOffset(), restrained, 'Leaving state motion during drag also settles without a strength jump')
+  assert.equal(captures.size, 0)
+  await settle()
+  assert.equal(stage().dataset.expression, 'rest')
+  assert.equal(drag.style.transform, '')
+})
+
+test('shy/rest changes preserve an active drag and its eventual exact home position', async () => {
+  await render({ expression: 'shy' })
+  await startDrag()
+  const before = dragOffset()
+  await render({ expression: 'rest' })
+  assert.deepEqual(dragOffset(), before)
+  assert.equal(captures.get(1), query('hit-area'))
+  assert.match(query('artwork').src, /orbit-hero/)
+  await pointer('pointerup', {}, dom)
+  await settle()
+  assert.equal(query('drag-motion').style.transform, '')
+})
+
+test('reduced motion prevents dragging and clears an active drag or return immediately', async () => {
+  await render()
+  reduced.change(true)
+  await startDrag()
+  assert.equal(query('drag-motion').style.transform, '')
+  assert.equal(captures.size, 0)
+  assert.equal(frames.size, 0)
+  for (const releaseFirst of [false, true]) {
+    reduced.change(false)
+    await startDrag()
+    if (releaseFirst) { await pointer('pointerup', {}, dom); await frame() }
+    reduced.change(true)
+    assert.equal(query('drag-motion').style.transform, '')
+    assert.equal(captures.size, 0)
+    assert.equal(frames.size, 0)
+    await pointer('pointerup', {}, dom)
+    await settle()
+    assert.equal(query('drag-motion').style.transform, '')
+  }
+})
+
+test('disposal while dragging clears capture, pending frames, animations, listeners and transforms', async t => {
+  const add = t.mock.method(dom, 'addEventListener'), remove = t.mock.method(dom, 'removeEventListener')
+  await render()
+  await startDrag()
+  await pointer('pointermove', { clientX: 1000 })
+  const drag = query('drag-motion'), hit = query('hit-area')
+  assert.ok(frames.size)
+  await act(async () => root.unmount()); root = null
+  assert.equal(drag.style.transform, '')
+  assert.equal(frames.size, 0)
+  assert.equal(captures.size, 0)
+  assert.ok(animations.every(a => a.cancelled))
+  assert.equal(reduced.listeners.size, 0)
+  assert.equal(precise.listeners.size, 0)
+  await pointer('pointermove', {}, hit); await pointer('pointerup', {}, dom)
+  assert.equal(frames.size, 0)
+  for (const call of add.mock.calls.filter(call => ['pointermove', 'pointerup', 'pointercancel', 'blur'].includes(call.arguments[0]))) {
+    assert.ok(remove.mock.calls.some(other => other.arguments[0] === call.arguments[0] && other.arguments[1] === call.arguments[1]))
+  }
+})
+
+test('cancellation before a queued drag frame never applies an unseen target', async () => {
+  await render()
+  await startDrag()
+  const before = dragOffset()
+  await pointer('pointermove', { clientX: -1000, clientY: -1000 })
+  await pointer('pointercancel')
+  await frame()
+  assert.deepEqual(dragOffset(), before)
+  await settle()
+  assert.equal(query('drag-motion').style.transform, '')
+})
+
 test('CSS keeps geometry and state/idle ownership separate, with motion gated by preference', async () => {
   const css = await readFile(new URL('../src/components/OrbitStage.css', import.meta.url), 'utf8')
   assert.match(css, /orbit-stage-companion\s*\{[^}]*pointer-events: none/s)
-  assert.match(css, /orbit-stage-hit-area\s*\{[^}]*pointer-events: auto; touch-action: auto/s)
+  assert.match(css, /orbit-stage-hit-area\s*\{[^}]*pointer-events: auto; touch-action: pan-y pinch-zoom/s)
   assert.match(css, /prefers-reduced-motion: no-preference[^]*orbit-stage-fidget-motion \{ transition: transform/)
-  assert.match(css, /prefers-reduced-motion: reduce[^]*transform: none !important/)
+  assert.match(css, /prefers-reduced-motion: reduce[^]*orbit-stage-drag-motion \{ transform: none !important/)
+  assert.match(css, /prefers-reduced-motion: reduce[^]*orbit-stage-hit-area \{ touch-action: auto/)
   assert.match(css, /orbit-stage-idle-motion \{ animation-play-state: paused/)
   assert.doesNotMatch(css, /orbit-stage-artwork \{ animation:|orbit-celebrate/)
 })

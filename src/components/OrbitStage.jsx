@@ -16,6 +16,7 @@ export default function OrbitStage({ variant = 'study', interaction = 'none', th
   const hitArea = useRef(null)
   const follow = useRef(null)
   const press = useRef(null)
+  const drag = useRef(null)
   const fidget = useRef(null)
   const interactive = interaction === 'fidget' || interaction === 'gentle'
   const [request, setRequest] = useState(() => nextThinkingRequest(null, thinking, thinkingContext))
@@ -32,7 +33,7 @@ export default function OrbitStage({ variant = 'study', interaction = 'none', th
   useEffect(() => startCelebrationMotion(celebration.current, celebrating), [celebrating])
   useEffect(() => {
     if (!interactive) return
-    const controller = startFidgetMotion(hitArea.current, follow.current, press.current)
+    const controller = startFidgetMotion(hitArea.current, follow.current, press.current, drag.current)
     fidget.current = controller
     return () => { controller?.dispose(); fidget.current = null }
   }, [interactive])
@@ -47,11 +48,13 @@ export default function OrbitStage({ variant = 'study', interaction = 'none', th
     >
       <div className="orbit-stage-companion" aria-hidden="true">
         <div className="orbit-stage-fidget-motion" ref={follow}>
-          <div className="orbit-stage-press-motion" ref={press}>
-            <div className="orbit-stage-thinking-motion" ref={motion}>
-              <div className="orbit-stage-celebration-motion" ref={celebration}>
-                <div className="orbit-stage-idle-motion">
-                  <img className="orbit-stage-artwork" src={artwork} alt="" width="1600" height="1600" decoding="async" draggable="false" />
+          <div className="orbit-stage-drag-motion" ref={drag}>
+            <div className="orbit-stage-press-motion" ref={press}>
+              <div className="orbit-stage-thinking-motion" ref={motion}>
+                <div className="orbit-stage-celebration-motion" ref={celebration}>
+                  <div className="orbit-stage-idle-motion">
+                    <img className="orbit-stage-artwork" src={artwork} alt="" width="1600" height="1600" decoding="async" draggable="false" />
+                  </div>
                 </div>
               </div>
             </div>
