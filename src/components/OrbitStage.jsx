@@ -1,11 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
-import orbitHero from '../assets/mascot/orbit-hero-asset-transparent.png'
+import orbitIdle from '../assets/mascot/orbit-idle-loop.webm'
 import orbitTeaching from '../assets/mascot/orbit-teaching-tilt-transparent.png'
-import orbitShy from '../assets/mascot/orbit-shy-asset-transparent.png'
-import orbitCelebrating from '../assets/mascot/orbit-celebrating-asset-transparent.png'
+import orbitSleep from '../assets/mascot/orbit-sleep-loop.webm'
+import orbitBreakthrough from '../assets/mascot/orbit-breakthrough-loop.webm'
 import { getThinkingCopy, nextThinkingRequest, startCelebrationMotion, startThinkingMotion } from './orbitThinking'
 import { startFidgetMotion } from './orbitFidget'
 import './OrbitStage.css'
+
+// Edit per-state sources and video speeds here. All supplied loops play at 1x.
+const ORBIT_MEDIA = {
+  rest: { src: orbitIdle, type: 'video', playbackRate: 1 },
+  shy: { src: orbitSleep, type: 'video', playbackRate: 1 },
+  celebrating: { src: orbitBreakthrough, type: 'video', playbackRate: 1 },
+  thinking: { src: orbitTeaching, type: 'image' },
+}
 
 // Visuals and annotations can enter independently without changing the learning controls.
 // The current stage uses existing artwork only; empty slots render no placeholder UI.
@@ -26,7 +34,7 @@ export default function OrbitStage({ variant = 'study', interaction = 'none', th
   if (nextRequest !== request) setRequest(nextRequest)
   const copy = getThinkingCopy(thinkingContext, nextRequest.sequence)
   const pose = thinking ? 'thinking' : ['shy', 'celebrating'].includes(expression) ? expression : 'rest'
-  const artwork = { rest: orbitHero, thinking: orbitTeaching, shy: orbitShy, celebrating: orbitCelebrating }[pose]
+  const artwork = ORBIT_MEDIA[pose]
 
   useEffect(() => startThinkingMotion(motion.current, thinking), [thinking])
   const celebrating = pose === 'celebrating'
@@ -53,7 +61,13 @@ export default function OrbitStage({ variant = 'study', interaction = 'none', th
               <div className="orbit-stage-thinking-motion" ref={motion}>
                 <div className="orbit-stage-celebration-motion" ref={celebration}>
                   <div className="orbit-stage-idle-motion">
-                    <img className="orbit-stage-artwork" src={artwork} alt="" width="1600" height="1600" decoding="async" draggable="false" />
+                    {artwork.type === 'video'
+                      ? <video key={artwork.src} className="orbit-stage-artwork" src={artwork.src} width="1600" height="1600"
+                        autoPlay loop muted playsInline preload="auto" draggable="false" onLoadedMetadata={(event) => {
+                          event.currentTarget.defaultPlaybackRate = artwork.playbackRate
+                          event.currentTarget.playbackRate = artwork.playbackRate
+                        }} />
+                      : <img className="orbit-stage-artwork" src={artwork.src} alt="" width="1600" height="1600" decoding="async" draggable="false" />}
                   </div>
                 </div>
               </div>
