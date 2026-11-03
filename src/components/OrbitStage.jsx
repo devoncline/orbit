@@ -1,18 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import orbitHero from '../assets/mascot/orbit-hero-asset-transparent.png'
 import orbitTeaching from '../assets/mascot/orbit-teaching-tilt-transparent.png'
-import orbitSleep from '../assets/mascot/orbit-sleep-loop.webm'
+import orbitShy from '../assets/mascot/orbit-shy-asset-transparent.png'
 import orbitCelebrating from '../assets/mascot/orbit-celebrating-asset-transparent.png'
 import { getThinkingCopy, nextThinkingRequest, startCelebrationMotion, startThinkingMotion } from './orbitThinking'
 import { startFidgetMotion } from './orbitFidget'
 import './OrbitStage.css'
 
-// Edit per-state sources and video speeds here. The sleep loop plays at 1x.
+// Each expression uses its original static artwork; motion belongs to the wrappers.
 const ORBIT_MEDIA = {
-  rest: { src: orbitHero, type: 'image' },
-  shy: { src: orbitSleep, type: 'video', playbackRate: 1 },
-  celebrating: { src: orbitCelebrating, type: 'image' },
-  thinking: { src: orbitTeaching, type: 'image' },
+  rest: orbitHero,
+  shy: orbitShy,
+  celebrating: orbitCelebrating,
+  thinking: orbitTeaching,
 }
 
 // Visuals and annotations can enter independently without changing the learning controls.
@@ -61,13 +61,7 @@ export default function OrbitStage({ variant = 'study', interaction = 'none', th
               <div className="orbit-stage-thinking-motion" ref={motion}>
                 <div className="orbit-stage-celebration-motion" ref={celebration}>
                   <div className="orbit-stage-idle-motion">
-                    {artwork.type === 'video'
-                      ? <video key={artwork.src} className="orbit-stage-artwork" src={artwork.src} width="1600" height="1600"
-                        autoPlay loop muted playsInline preload="auto" draggable="false" onLoadedMetadata={(event) => {
-                          event.currentTarget.defaultPlaybackRate = artwork.playbackRate
-                          event.currentTarget.playbackRate = artwork.playbackRate
-                        }} />
-                      : <img className="orbit-stage-artwork" src={artwork.src} alt="" width="1600" height="1600" decoding="async" draggable="false" />}
+                    <img className="orbit-stage-artwork" src={artwork} alt="" width="1600" height="1600" decoding="async" draggable="false" />
                   </div>
                 </div>
               </div>
