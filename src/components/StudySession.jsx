@@ -165,7 +165,7 @@ export default function StudySession({
     const inlineCompanion = presentation.splitVisual && !loadingLesson
     const lastPublished = useRef('')
     const lastLearningPublished = useRef('')
-    const companion = <OrbitStage thinking={busy} expression={active && activeInteraction === 'quiz' && celebrating && (answerResult === 'correct' || followUpResult === 'correct') ? 'celebrating' : 'rest'} thinkingContext={studyThinkingContext({ loadingLesson, loadingConversation, loadingActivity, loadingQuestion, loadingEvaluation })} />
+    const companion = <OrbitStage interaction="gentle" thinking={busy} expression={active && activeInteraction === 'quiz' && celebrating && (answerResult === 'correct' || followUpResult === 'correct') ? 'celebrating' : 'rest'} thinkingContext={studyThinkingContext({ loadingLesson, loadingConversation, loadingActivity, loadingQuestion, loadingEvaluation })} />
     const earlierLessons = learningPath.visited.filter(item => !history.some(entry => entry.type === 'lesson' && entry.title === item.concept.slice(0, 80)))
     useEffect(() => { if (review) reviewPanel.current?.focus({ preventScroll: true }) }, [review])
 

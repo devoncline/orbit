@@ -13,7 +13,7 @@ export default function LearnScreen({ courses, threads = [], today, onStart, onS
   return (
     <section className="orbit-page orbit-page-layout learn-page" aria-labelledby="learn-heading">
       <header className="orbit-page-header"><h1 id="learn-heading">What do you want to learn?</h1></header>
-      <OrbitStage variant="page" expression={!topic.trim() ? 'shy' : 'rest'} />
+      <OrbitStage variant="page" interaction="fidget" expression={!topic.trim() ? 'shy' : 'rest'} />
       <div className="orbit-page-content">
         <section className="learn-recommendations" aria-labelledby="learn-recommendations-heading">
           <h2 id="learn-recommendations-heading">Recommended next</h2>

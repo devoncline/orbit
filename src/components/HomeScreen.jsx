@@ -41,7 +41,7 @@ export default function HomeScreen({
             </div>
           )}
         </div>
-        <OrbitStage variant="home" thinking={loadingRecommendation} thinkingContext="recommendation" />
+        <OrbitStage variant="home" interaction="fidget" thinking={loadingRecommendation} thinkingContext="recommendation" />
       </section>
       {!empty && (
         <div className="home-support">

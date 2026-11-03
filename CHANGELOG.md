@@ -4,6 +4,7 @@
 
 ### Improvements
 
+- Orbit now responds to gentle pointer movement, presses and taps on Home, Learn and Study. Quick clicks rebound immediately; held presses release into a short bounce. Thinking and celebrations keep their own motion, while reduced-motion preferences keep the companion still.
 - Topic mastery now uses five space-themed ranks—Launch Pad, In Orbit, Cruising, Deep Space, and Mission Ready—with consistent badges in Your topics, Continue learning, and recommendation cards for previously started topics. Brand-new recommendations keep their topic marker. Learning details shows a breakdown of topic ranks instead of percentages. Saved progress, recommendations, topic search and separate saved sessions remain available; reading alone does not raise a rank.
 - Study now has **Add reference** for temporary homework photos, worksheets, PDFs, and existing course materials. Compact removable references stay with the current lesson across messages, with Understand it, Work through it, Check my work, and Quiz me shortcuts. Uploads do not enter the course curriculum or trigger AI automatically. References and work using them last for this visit and clear on refresh or when continuing to the next lesson; saved course materials remain intact.
 - Fixed mobile swipes freezing or jumping in Recommended next. Horizontal gestures now tolerate small vertical movement and continue through card changes, while vertical page scrolling, infinite looping and reduced motion remain available.
@@ -60,6 +61,14 @@
 - Study answers now update mastery for the question's topic, with course mastery derived from topic scores. Questions without a topic use the current lesson topic or course name.
 
 ### Manual test checklist
+
+Mascot interaction (automated contracts passed; browser/device motion review pending):
+
+1. On Home with normal motion, watch idle drift, hover near both edges, leave, hold/release, quick-click and rapidly repeat clicks. Lean and lift should stay subtle; a quick release should rebound immediately without pausing compressed. Check recommendation loading, navigation controls and returning to rest.
+2. On Learn, hover Orbit while typing and clearing the topic field: shy/rest artwork should switch without resetting the interaction pose. Check recommendation dragging, vertical scrolling, form submission and keyboard focus; Orbit should add no tab stop.
+3. In Study, repeat interactions at rest, during thinking, immediately before a correct quiz answer and during celebration. Thinking and the full celebration should remain dominant, each should settle smoothly back to rest, and clicking must not replay celebration. Repeat in visual explanation layouts, including switching views during a press/bounce.
+4. At 1440, 768, 390 and 320px, check the full mascot, surrounding controls and page overflow. On a physical touch device, quick-tap, hold/release, scroll vertically starting over Orbit, cancel a gesture and try multi-touch. Scrolling should remain native and a drag/scroll should not trigger a tap bounce.
+5. Enable reduced motion before loading, then toggle it during hover, a held press, bounce, thinking and celebration. All new motion should stop, the mascot should stay stable, and the existing accessible thinking status should remain available. Browser access was unavailable and Chrome automation was not approved during implementation, so these are remaining manual checks.
 
 Topic mastery ranks (automated checks passed; browser/device review pending):
 

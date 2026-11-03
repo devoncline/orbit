@@ -39,6 +39,21 @@ export function studyThinkingContext({ loadingLesson, loadingActivity, loadingCo
 // Freeze the current pose on cleanup so even an interrupted sway settles from
 // its actual angle, rather than snapping to a new animation's first frame.
 export function startThinkingMotion(element, thinking) {
+  return startStateMotion(element, thinking, [
+    { transform: 'translateY(-12px) rotate(-12deg) scale(.94)', offset: 0.28, easing: 'ease-in-out' },
+    { transform: 'translateY(-5px) rotate(7deg) scale(.97)', offset: 0.58, easing: 'ease-in-out' },
+    { transform: 'translateY(-2px) rotate(-2deg)', offset: 0.8, easing: 'ease-in-out' },
+  ], { duration: 5200, iterations: Infinity })
+}
+
+export function startCelebrationMotion(element, celebrating) {
+  return startStateMotion(element, celebrating, [
+    { transform: 'translateY(-14px) rotate(-6deg) scale(1.035)', offset: 0.35, easing: 'ease-in-out' },
+    { transform: 'translateY(-4px) rotate(4deg)', offset: 0.68, easing: 'ease-in-out' },
+  ], { duration: 1200, iterations: 1 })
+}
+
+function startStateMotion(element, active, poses, options) {
   if (!element?.animate || typeof window.matchMedia !== 'function') return
   const preference = window.matchMedia('(prefers-reduced-motion: reduce)')
   let animation
@@ -48,18 +63,16 @@ export function startThinkingMotion(element, thinking) {
     animation?.cancel()
     element.style.transform = ''
     if (preference.matches) return
-    if (!thinking && from === 'none') return
+    if (!active && from === 'none') return
 
     const rest = 'translateY(0px) rotate(0deg)'
-    const frames = thinking ? [
+    const frames = active ? [
       { transform: from, offset: 0, easing: 'ease-in-out' },
-      { transform: 'translateY(-12px) rotate(-12deg) scale(.94)', offset: 0.28, easing: 'ease-in-out' },
-      { transform: 'translateY(-5px) rotate(7deg) scale(.97)', offset: 0.58, easing: 'ease-in-out' },
-      { transform: 'translateY(-2px) rotate(-2deg)', offset: 0.8, easing: 'ease-in-out' },
-      { transform: from, offset: 1 },
+      ...poses,
+      { transform: options.iterations === Infinity ? from : rest, offset: 1 },
     ] : [{ transform: from }, { transform: rest }]
-    animation = element.animate(frames, thinking
-      ? { duration: 5200, iterations: Infinity }
+    animation = element.animate(frames, active
+      ? options
       : { duration: 500, easing: 'ease-out' })
     // Cancellation on request changes/unmount is an expected animation outcome.
     animation.finished?.catch(() => {})

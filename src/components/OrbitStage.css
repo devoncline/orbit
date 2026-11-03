@@ -15,6 +15,9 @@
 }
 
 .orbit-stage-thinking-motion { transform-origin: 50% 68%; }
+.orbit-stage-fidget-motion, .orbit-stage-press-motion { transform-origin: 50% 55%; }
+/* The stationary hit area never follows its own transform or covers the stage's controls. */
+.orbit-stage-hit-area { position: absolute; inset: 10%; border-radius: 50%; pointer-events: auto; touch-action: auto; user-select: none; }
 .orbit-stage-artwork { display: block; width: 100%; height: auto; filter: drop-shadow(0 28px 32px rgb(2 5 14 / 32%)); }
 .orbit-thoughts { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .orbit-thought-fragment {
@@ -51,17 +54,17 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .orbit-stage-artwork { animation: orbit-stage-drift 10s ease-in-out infinite; }
+  .orbit-stage-fidget-motion { transition: transform 360ms cubic-bezier(.2, .65, .3, 1); }
+  .orbit-stage-idle-motion { animation: orbit-stage-drift 10s ease-in-out infinite; }
   .orbit-thought-fragment { animation: orbit-thought-drift 7s ease-in-out infinite; }
   .orbit-thought-fragment:nth-child(2) { animation-delay: -3.5s; }
-  .orbit-stage[data-expression='thinking'] .orbit-stage-artwork { animation: none; }
-  .orbit-stage[data-expression='celebrating'] .orbit-stage-artwork { animation: orbit-celebrate 1.2s ease-in-out 1; }
+  /* Preserve the idle phase through state changes instead of restarting at a different pose. */
+  .orbit-stage[data-expression='thinking'] .orbit-stage-idle-motion,
+  .orbit-stage[data-expression='celebrating'] .orbit-stage-idle-motion { animation-play-state: paused; }
 }
 
-@keyframes orbit-celebrate {
-  0%, 100% { transform: translateY(0) rotate(0); }
-  35% { transform: translateY(-14px) rotate(-6deg) scale(1.035); }
-  68% { transform: translateY(-4px) rotate(4deg); }
+@media (prefers-reduced-motion: reduce) {
+  .orbit-stage-fidget-motion, .orbit-stage-press-motion { transform: none !important; }
 }
 
 @media (max-width: 760px) {

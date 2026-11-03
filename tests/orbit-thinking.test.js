@@ -131,7 +131,7 @@ test('decorative motion is opt-in and mobile reduces fragments without growing t
   const css = await readFile(new URL('../src/components/OrbitStage.css', import.meta.url), 'utf8')
   const [staticStyles, motionStyles] = css.split('@media (prefers-reduced-motion: no-preference)')
   assert.doesNotMatch(staticStyles, /animation:/)
-  assert.match(motionStyles, /orbit-stage-artwork \{ animation:/)
+  assert.match(motionStyles, /orbit-stage-idle-motion \{ animation:/)
   assert.match(motionStyles, /orbit-thought-fragment \{ animation:/)
   assert.doesNotMatch(css, /orbit-thought-trail|orbit-thought-travel/)
   assert.match(css, /orbit-thoughts \{ position: absolute; inset: 0; overflow: hidden;/)
