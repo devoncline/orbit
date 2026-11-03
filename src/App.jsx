@@ -278,7 +278,7 @@ export default function App() {
             <h1>{newSpaceIntent === 'class' ? 'Add a class' : newSpaceIntent === 'material' ? 'Start from a PDF' : 'What do you want to learn?'}</h1>
             {newSpaceIntent === 'material' && <p className="orbit-page-intro">Name your space, then add your material.</p>}
           </header>
-          <OrbitStage variant="page" />
+          <OrbitStage variant="page" interaction="fidget" />
           <div className="orbit-page-content">
             <AddCourse key={`${newSpaceIntent}:${suggestedTopic}`} onAddCourse={addCourse} intent={newSpaceIntent} courses={courses} suggestedTopic={suggestedTopic} />
             <p className="orbit-session-note">Your learning is saved in this browser. It won't appear on your other devices.</p>
@@ -294,7 +294,7 @@ export default function App() {
             <h1>Calendar</h1>
             <p className="orbit-page-intro">Dates from your learning materials.</p>
           </header>
-          <OrbitStage variant="page" />
+          <OrbitStage variant="page" interaction="fidget" />
           <div className="orbit-page-content">
             <UpcomingWork courses={courses} onSelectSpace={selectSpace} />
             <div className="orbit-page-actions">
@@ -309,7 +309,7 @@ export default function App() {
             <h1>Library</h1>
             <p className="orbit-page-intro">{courses.length ? 'Open a space to study or add material.' : 'Keep a class, topic, or skill and its materials together.'}</p>
           </header>
-          <OrbitStage variant="page" />
+          <OrbitStage variant="page" interaction="fidget" />
           <div className="orbit-page-content">
           {courses.length ? (
             <ul className="space-links">

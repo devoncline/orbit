@@ -78,7 +78,7 @@ test('all mastery badges use the exported size-specific SVG with accessible or d
 test('thinking retains the existing asset, bounds decorative fragments, and exposes only one loading status', () => {
   const html = renderToStaticMarkup(createElement(OrbitStage, { thinking: true, thinkingContext: 'example' }))
   assert.match(html, /orbit-teaching-tilt-transparent.png/)
-  assert.doesNotMatch(html, /orbit-idle-loop.webm|<video/)
+  assert.doesNotMatch(html, /orbit-hero-asset-transparent.png|<video/)
   assert.match(html, /class="orbit-thoughts" aria-hidden="true"/)
   assert.equal((html.match(/class="orbit-thought-fragment"/g) || []).length, 2)
   assert.match(html, /finding a clearer angle/)
@@ -89,10 +89,10 @@ test('thinking retains the existing asset, bounds decorative fragments, and expo
   assert.doesNotMatch(html, /class="orbit-stage orbit-stage-study" aria-hidden/)
 })
 
-test('resting restores the idle video and clears thinking UI even when context is retained', () => {
+test('resting restores the static smiling artwork and clears thinking UI even when context is retained', () => {
   const html = renderToStaticMarkup(createElement(OrbitStage, { thinking: false, thinkingContext: 'example' }))
-  assert.match(html, /orbit-idle-loop.webm/)
-  for (const attribute of ['autoplay', 'loop', 'muted', 'playsinline']) assert.match(html, new RegExp(`<video[^>]*${attribute}=""`, 'i'))
+  assert.match(html, /orbit-hero-asset-transparent.png/)
+  assert.doesNotMatch(html, /<video/)
   assert.doesNotMatch(html, /orbit-teaching-tilt-transparent.png|orbit-thought-fragment|finding an example/)
   assert.match(html, /role="status" aria-live="polite" aria-atomic="true"><\/span>/)
 })

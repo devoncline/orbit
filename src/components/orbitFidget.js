@@ -1,5 +1,7 @@
 // Decorative input only: no expression, request, or learning state belongs here.
 // Tracking, drag and press/release each own a transform outside the state animations.
+const DRAG_THRESHOLD = 16
+
 export function startFidgetMotion(hitArea, follow, press, drag) {
   const view = hitArea?.ownerDocument.defaultView
   if (!view?.matchMedia || !follow || !press || !drag) return
@@ -13,7 +15,8 @@ export function startFidgetMotion(hitArea, follow, press, drag) {
   let frame = null
   let animation = null
   let dragFrame = null
-  let offset = { x: 0, y: 0 }
+  let dragTime = null
+  let offset = { x: 0, y: 0, rotation: 0 }
   let dragTarget = null
   let returning = null
   let currentPose = 'rest'
@@ -57,12 +60,14 @@ export function startFidgetMotion(hitArea, follow, press, drag) {
 
   function drawDrag(position) {
     offset = position
-    drag.style.transform = position.x || position.y ? `translate(${position.x}px, ${position.y}px)` : ''
+    drag.style.transform = position.x || position.y || position.rotation
+      ? `translate(${position.x}px, ${position.y}px) rotate(${position.rotation}deg)` : ''
   }
 
   function stopDragFrame() {
     if (dragFrame !== null) view.cancelAnimationFrame(dragFrame)
     dragFrame = null
+    dragTime = null
     dragTarget = null
     returning = null
   }
@@ -74,14 +79,27 @@ export function startFidgetMotion(hitArea, follow, press, drag) {
       if (returning) {
         returning.start ??= time
         const t = Math.min(1, (time - returning.start) / returning.duration)
-        // Damped spring: about 6% opposite overshoot, no velocity accumulation.
-        const factor = returning.spring ? Math.exp(-9 * t) * (Math.cos(10 * t) + 0.9 * Math.sin(10 * t)) : (1 - t) ** 3
-        drawDrag(t === 1 ? { x: 0, y: 0 } : { x: returning.x * factor, y: returning.y * factor })
+        // About 21% return overshoot with a smaller second bounce; rotation settles separately.
+        const factor = returning.spring ? Math.exp(-7 * t) * (Math.cos(14 * t) + 0.5 * Math.sin(14 * t)) : (1 - t) ** 3
+        const twist = returning.spring ? Math.exp(-6 * t) * (Math.cos(18 * t) + Math.sin(18 * t) / 3) : factor
+        drawDrag(t === 1 ? { x: 0, y: 0, rotation: 0 }
+          : { x: returning.x * factor, y: returning.y * factor, rotation: returning.rotation * twist })
         if (t === 1) { returning = null; track() }
         else scheduleDrag()
       } else if (dragTarget) {
-        drawDrag(dragTarget)
-        dragTarget = null
+        // Time-based easing absorbs sparse pointer updates without an abrupt stop at the target.
+        const blend = 1 - Math.exp(-Math.min(64, dragTime === null ? 16 : time - dragTime) / 45)
+        dragTime = time
+        const next = {
+          x: offset.x + (dragTarget.x - offset.x) * blend,
+          y: offset.y + (dragTarget.y - offset.y) * blend,
+          rotation: offset.rotation + (dragTarget.rotation - offset.rotation) * blend,
+        }
+        const settled = Math.hypot(next.x - dragTarget.x, next.y - dragTarget.y) < 0.02
+          && Math.abs(next.rotation - dragTarget.rotation) < 0.002
+        drawDrag(settled ? dragTarget : next)
+        if (settled) { dragTarget = null; dragTime = null }
+        else scheduleDrag()
       }
     })
   }
@@ -89,8 +107,8 @@ export function startFidgetMotion(hitArea, follow, press, drag) {
   function returnHome(spring = true) {
     // Only the last rendered offset owns the return, never a stale queued target.
     stopDragFrame()
-    if (!offset.x && !offset.y) { track(); return }
-    returning = { ...offset, start: null, duration: spring ? 560 : 360, spring }
+    if (!offset.x && !offset.y && !offset.rotation) { track(); return }
+    returning = { ...offset, start: null, duration: spring ? 800 : 360, spring }
     scheduleDrag()
   }
 
@@ -125,20 +143,27 @@ export function startFidgetMotion(hitArea, follow, press, drag) {
     rememberPointer(event, Boolean(held))
     if (held) {
       const dx = event.clientX - held.x, dy = event.clientY - held.y
-      if (!held.dragging && Math.hypot(dx, dy) >= 8) {
+      const distance = Math.hypot(dx, dy)
+      if (!held.dragging && distance >= DRAG_THRESHOLD) {
         // Vertical touch starts belong to page scrolling; horizontal starts can drag.
         if (held.type === 'touch' && Math.abs(dy) >= Math.abs(dx)) { cancelHeld(); return }
         held.dragging = true
+        // Remove the intent threshold from travel so entering drag does not jump.
+        held.dragX = held.x + dx * DRAG_THRESHOLD / distance
+        held.dragY = held.y + dy * DRAG_THRESHOLD / distance
         follow.style.transform = view.getComputedStyle(follow).transform
         settlePress()
         // Capture only after intent is clear. Window listeners also cover unsupported capture.
         try { hitArea.setPointerCapture?.(held.id) } catch { /* The pointer may already have been cancelled. */ }
       }
       if (held.dragging) {
-        const x = held.origin.x + dx * 0.45 * strength, y = held.origin.y + dy * 0.45 * strength
-        const distance = Math.hypot(x, y)
-        const scale = distance > held.limit ? held.limit / distance : 1
-        dragTarget = { x: x * scale, y: y * scale }
+        // Each axis gains resistance gradually instead of striking a circular wall.
+        // Inverting the curve preserves the visible position when catching a return.
+        const pull = (delta, origin) => held.limit * Math.tanh(Math.atanh(origin / held.limit) + delta * 0.55 * strength / held.limit)
+        const x = pull(event.clientX - held.dragX, held.origin.x)
+        const y = pull(event.clientY - held.dragY, held.origin.y)
+        const rotation = held.origin.rotation + (x - held.origin.x) * 0.07 + (y - held.origin.y) * 0.025
+        dragTarget = { x, y, rotation: Math.max(-4 * strength, Math.min(4 * strength, rotation)) }
         scheduleDrag()
         return
       }
@@ -150,10 +175,10 @@ export function startFidgetMotion(hitArea, follow, press, drag) {
     if (reduced.matches || held || event.isPrimary === false || event.button !== 0) return
     // Catch an in-flight return at its visible position, then use this press as a new origin.
     stopDragFrame()
-    const carried = Boolean(offset.x || offset.y)
-    const sizeLimit = Math.min(event.pointerType === 'touch' || !precise.matches ? 44 : 60, hitArea.getBoundingClientRect().width * 0.3)
+    const carried = Boolean(offset.x || offset.y || offset.rotation)
+    const sizeLimit = Math.min(event.pointerType === 'touch' || !precise.matches ? 52 : 80, hitArea.getBoundingClientRect().width * 0.4)
     held = { id: event.pointerId, type: event.pointerType, x: event.clientX, y: event.clientY,
-      dragging: false, carried, origin: { ...offset }, limit: Math.max(Math.hypot(offset.x, offset.y), sizeLimit * strength) }
+      dragging: false, carried, origin: { ...offset }, limit: Math.max(1, Math.abs(offset.x) * 1.01, Math.abs(offset.y) * 1.01, sizeLimit * strength) }
     rememberPointer(event)
     play([{ transform: `scale(${1 - 0.035 * strength})`, offset: 1 }], { duration: 90, easing: 'ease-out', fill: 'forwards' })
   }
@@ -162,7 +187,7 @@ export function startFidgetMotion(hitArea, follow, press, drag) {
     if (held?.id !== event.pointerId) return
     rememberPointer(event, true)
     const wasDrag = held.dragging || held.carried
-    const moved = Math.hypot(event.clientX - held.x, event.clientY - held.y) >= 8
+    const moved = Math.hypot(event.clientX - held.x, event.clientY - held.y) >= DRAG_THRESHOLD
     releasePointer()
     if (wasDrag || moved) { settlePress(); returnHome(wasDrag); return }
     play([
@@ -190,7 +215,7 @@ export function startFidgetMotion(hitArea, follow, press, drag) {
     animation = null
     releasePointer()
     stopDragFrame()
-    drawDrag({ x: 0, y: 0 })
+    drawDrag({ x: 0, y: 0, rotation: 0 })
     hovered = false
     point = null
     follow.style.transform = ''

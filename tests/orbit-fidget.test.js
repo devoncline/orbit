@@ -100,12 +100,16 @@ async function settle() {
   for (let i = 0; i < 60 && frames.size; i++) await frame()
   assert.equal(frames.size, 0, 'No perpetual drag or return frame loop')
 }
-function dragOffset() {
+function dragPose() {
   const transform = query('drag-motion').style.transform
-  if (!transform) return { x: 0, y: 0 }
-  const parts = transform.match(/^translate\(([-+\d.e]+)px, ([-+\d.e]+)px\)$/)
-  assert.ok(parts, 'The drag layer owns translation only')
-  return { x: Number(parts[1]), y: Number(parts[2]) }
+  if (!transform) return { x: 0, y: 0, rotation: 0 }
+  const parts = transform.match(/^translate\(([-+\d.e]+)px, ([-+\d.e]+)px\) rotate\(([-+\d.e]+)deg\)$/)
+  assert.ok(parts, 'Drag translation and wobble stay on their own layer')
+  return { x: Number(parts[1]), y: Number(parts[2]), rotation: Number(parts[3]) }
+}
+function dragOffset() {
+  const { x, y } = dragPose()
+  return { x, y }
 }
 async function startDrag(options = {}) {
   await pointer('pointerdown', { clientX: 200, clientY: 200, ...options })
@@ -146,49 +150,58 @@ test('pointer tracking coalesces, stays bounded, leaves smoothly and never chang
   assert.equal(frames.size, 0)
 })
 
-test('rest, shy and celebration share native inline looping video at the configured 1x rate', async () => {
-  for (const [expression, filename] of [['rest', 'idle'], ['shy', 'sleep'], ['celebrating', 'breakthrough']]) {
+test('shy keeps its inline sleep loop at 1x while rest and celebration use the original static artwork', async () => {
+  for (const [expression, filename] of [['rest', 'hero'], ['celebrating', 'celebrating']]) {
     await render({ expression })
-    const video = query('artwork')
-    assert.equal(video.tagName, 'VIDEO')
-    assert.ok(video.src.endsWith(`orbit-${filename}-loop.webm`))
-    assert.equal(video.autoplay, true)
-    assert.equal(video.loop, true)
-    assert.equal(video.muted, true)
-    assert.equal(video.hasAttribute('playsinline'), true)
-    assert.equal(video.controls, false)
-    assert.equal(video.getAttribute('draggable'), 'false')
-    assert.equal(video.hasAttribute('poster'), false)
-    assert.equal(video.hasAttribute('tabindex'), false)
-    assert.equal(video.getAttribute('width'), '1600')
-    assert.equal(video.getAttribute('height'), '1600')
-    video.playbackRate = 0.5
-    video.defaultPlaybackRate = 0.5
-    await act(async () => video.dispatchEvent(new dom.Event('loadedmetadata')))
-    assert.equal(video.playbackRate, 1, 'The per-state configuration is applied when media is ready')
-    assert.equal(video.defaultPlaybackRate, 1)
-    assert.ok(query('hit-area'))
-    assert.equal(container.querySelectorAll('video').length, 1)
+    assert.equal(query('artwork').tagName, 'IMG')
+    assert.ok(query('artwork').src.endsWith(`orbit-${filename}-asset-transparent.png`))
+    assert.equal(container.querySelector('video'), null)
   }
+  await render({ expression: 'shy' })
+  const video = query('artwork')
+  assert.equal(video.tagName, 'VIDEO')
+  assert.ok(video.src.endsWith('orbit-sleep-loop.webm'))
+  assert.equal(video.autoplay, true)
+  assert.equal(video.loop, true)
+  assert.equal(video.muted, true)
+  assert.equal(video.hasAttribute('playsinline'), true)
+  assert.equal(video.controls, false)
+  assert.equal(video.getAttribute('draggable'), 'false')
+  assert.equal(video.hasAttribute('poster'), false)
+  assert.equal(video.hasAttribute('tabindex'), false)
+  assert.equal(video.getAttribute('width'), '1600')
+  assert.equal(video.getAttribute('height'), '1600')
+  video.playbackRate = 0.5
+  video.defaultPlaybackRate = 0.5
+  await act(async () => video.dispatchEvent(new dom.Event('loadedmetadata')))
+  assert.equal(video.playbackRate, 1, 'The per-state configuration is applied when media is ready')
+  assert.equal(video.defaultPlaybackRate, 1)
+  assert.ok(query('hit-area'))
+  assert.equal(container.querySelectorAll('video').length, 1)
 })
 
 test('expression changes replace playback without remounting the motion layers or retaining stale time', async () => {
-  await render()
+  await render({ expression: 'shy' })
   const follow = query('fidget-motion'), press = query('press-motion'), drag = query('drag-motion')
   let previous = query('artwork')
   previous.currentTime = 4
-  for (const expression of ['shy', 'celebrating', 'rest']) {
+  for (const expression of ['rest', 'celebrating', 'shy', 'rest', 'shy']) {
     await render({ expression })
     const current = query('artwork')
-    assert.notEqual(current, previous)
-    assert.equal(container.contains(previous), false)
-    assert.equal(current.currentTime, 0)
-    assert.equal(current.playbackRate, 1)
+    assert.equal(current.tagName, expression === 'shy' ? 'VIDEO' : 'IMG')
+    if (previous.tagName === 'VIDEO' || current.tagName === 'VIDEO') {
+      assert.notEqual(current, previous)
+      assert.equal(container.contains(previous), false)
+    }
+    if (current.tagName === 'VIDEO') {
+      assert.equal(current.currentTime, 0)
+      assert.equal(current.playbackRate, 1)
+      current.currentTime = 3
+    }
     assert.equal(query('fidget-motion'), follow)
     assert.equal(query('press-motion'), press)
     assert.equal(query('drag-motion'), drag)
     previous = current
-    current.currentTime = 3
   }
   await render({ thinking: true, expression: 'celebrating', thinkingContext: 'lesson' })
   assert.equal(query('artwork').tagName, 'IMG')
@@ -196,16 +209,15 @@ test('expression changes replace playback without remounting the motion layers o
   assert.equal(container.querySelector('video'), null)
   assert.match(container.querySelector('[role="status"]').textContent, /preparing a short lesson/)
   await render()
-  assert.equal(query('artwork').tagName, 'VIDEO')
-  assert.ok(query('artwork').src.endsWith('orbit-idle-loop.webm'))
-  assert.equal(query('artwork').currentTime, 0)
+  assert.equal(query('artwork').tagName, 'IMG')
+  assert.ok(query('artwork').src.endsWith('orbit-hero-asset-transparent.png'))
   assert.equal(query('drag-motion'), drag)
 })
 
 test('reduced motion still disables wrapper interaction without adding a video pause policy', async t => {
   const pause = t.mock.method(dom.HTMLMediaElement.prototype, 'pause', () => {})
   reduced.change(true)
-  await render()
+  await render({ expression: 'shy' })
   const video = query('artwork')
   await startDrag(); await tap(); await settle()
   assert.equal(animations.length, 0)
@@ -219,12 +231,12 @@ test('reduced motion still disables wrapper interaction without adding a video p
   assert.equal(pause.mock.callCount(), 0)
 })
 
-test('active source code has no references to the replaced PNG states', async () => {
+test('active source keeps only the sleep video replacement', async () => {
   const sourceRoot = new URL('../src/', import.meta.url)
   const files = (await readdir(sourceRoot, { recursive: true })).filter(file => /\.(jsx?|tsx?)$/.test(file))
   await Promise.all(files.map(async file => {
     const source = await readFile(new URL(file.replaceAll('\\', '/'), sourceRoot), 'utf8')
-    assert.doesNotMatch(source, /orbit-(?:hero|shy|celebrating)-asset-transparent\.png/, file)
+    assert.doesNotMatch(source, /orbit-(?:idle|breakthrough)-loop\.webm|orbit-shy-asset-transparent\.png/, file)
   }))
 })
 
@@ -235,7 +247,7 @@ test('hovered artwork and state changes retain layers, soften tracking, and pres
   const full = follow.style.transform
   await render({ expression: 'rest' })
   assert.equal(follow.style.transform, full)
-  assert.match(query('artwork').src, /orbit-idle-loop\.webm/)
+  assert.match(query('artwork').src, /orbit-hero-asset-transparent\.png/)
   await render({ thinking: true, thinkingContext: 'recommendation' }); await frame()
   assert.equal(query('fidget-motion'), follow)
   assert.equal(query('press-motion'), press)
@@ -244,7 +256,7 @@ test('hovered artwork and state changes retain layers, soften tracking, and pres
   assert.match(container.querySelector('[role="status"]').textContent, /recommendation/)
   assert.equal(motions('thinking-motion').at(-1).options.iterations, Infinity)
   await render({ expression: 'celebrating' }); await frame()
-  assert.match(query('artwork').src, /orbit-breakthrough-loop\.webm/)
+  assert.match(query('artwork').src, /orbit-celebrating-asset-transparent\.png/)
   assert.equal(motions('celebration-motion').at(-1).options.duration, 1200)
   await render(); await frame()
   assert.equal(follow.style.transform, full)
@@ -385,7 +397,7 @@ test('Home enables fidget through recommendation loading; Learn retains input-dr
   assert.equal(stage().dataset.expression, 'thinking')
   await mount(HomeScreen, { courses: [], loadingRecommendation: false })
   assert.equal(stage().dataset.expression, 'rest')
-  assert.ok(query('artwork').src.endsWith('orbit-idle-loop.webm'))
+  assert.ok(query('artwork').src.endsWith('orbit-hero-asset-transparent.png'))
   await mount(LearnScreen, { courses: [] })
   assert.equal(stage().dataset.expression, 'shy')
   assert.ok(query('artwork').src.endsWith('orbit-sleep-loop.webm'))
@@ -397,7 +409,7 @@ test('Home enables fidget through recommendation loading; Learn retains input-dr
     input.dispatchEvent(new dom.Event('input', { bubbles: true }))
   })
   assert.equal(stage().dataset.expression, 'rest')
-  assert.ok(query('artwork').src.endsWith('orbit-idle-loop.webm'))
+  assert.ok(query('artwork').src.endsWith('orbit-hero-asset-transparent.png'))
   assert.equal(query('fidget-motion'), follow)
   assert.equal(follow.style.transform, before)
   await act(async () => {
@@ -431,8 +443,8 @@ test('Study quiz still scores once and celebrates through pointer activity, then
   const dragged = dragOffset()
   await click('Props')
   assert.equal(stage().dataset.expression, 'celebrating')
-  assert.ok(query('artwork').src.endsWith('orbit-breakthrough-loop.webm'))
-  const breakthrough = query('artwork')
+  assert.ok(query('artwork').src.endsWith('orbit-celebrating-asset-transparent.png'))
+  const celebratingArtwork = query('artwork')
   assert.equal(scores.length, 1)
   const celebration = motions('celebration-motion').at(-1)
   assert.deepEqual(dragOffset(), dragged, 'The quiz celebration starts without snapping the current drag offset')
@@ -440,72 +452,118 @@ test('Study quiz still scores once and celebrates through pointer activity, then
   await settle()
   assert.equal(query('drag-motion').style.transform, '')
   await tap(); await tap(); await pointer('pointermove'); await frame()
-  assert.equal(query('artwork'), breakthrough, 'Fidget input must not restart video playback')
+  assert.equal(query('artwork'), celebratingArtwork, 'Fidget input must not replace celebration artwork')
   assert.equal(celebration.cancelled, false)
   assert.equal(scores.length, 1)
   assert.equal(requests.length, 1)
   await act(async () => t.mock.timers.tick(2400))
   assert.equal(stage().dataset.expression, 'rest')
-  assert.ok(query('artwork').src.endsWith('orbit-idle-loop.webm'))
+  assert.ok(query('artwork').src.endsWith('orbit-hero-asset-transparent.png'))
 })
 
 test('sub-threshold movement remains a held press and the unchanged quick-click rebound', async () => {
   await render()
   await pointer('pointerdown')
   const press = motions('press-motion').at(-1)
-  await pointer('pointermove', { clientX: 284, clientY: 183 })
+  await pointer('pointermove', { clientX: 292, clientY: 183 })
   await frame(1000)
   assert.equal(press.cancelled, false, 'A long hold does not become a drag without movement')
   assert.equal(query('drag-motion').style.transform, '')
   assert.equal(captureCalls.length, 0)
-  await pointer('pointerup', { clientX: 284, clientY: 183 }, dom)
+  await pointer('pointerup', { clientX: 292, clientY: 183 }, dom)
   assert.equal(motions('press-motion').at(-1).options.duration, 440)
   assert.equal(frames.size, 0)
 })
 
-test('intentional drag uses the original down position, resistance, capture and a radial travel limit', async () => {
+test('drag requires deliberate movement, begins without a jump and adds resistance without a circular wall', async () => {
   await render()
   await pointer('pointerdown', { clientX: 200, clientY: 200 })
   assert.equal(captureCalls.length, 0, 'Simple presses do not explicitly capture')
   await pointer('pointermove', { clientX: 210, clientY: 200 })
+  assert.equal(captureCalls.length, 0, 'Small pointer slips remain a press')
+  await pointer('pointermove', { clientX: 216, clientY: 200 })
   assert.deepEqual(captureCalls, [1])
+  await frame()
+  assert.equal(query('drag-motion').style.transform, '', 'Crossing the intent threshold does not jump the artwork')
   await pointer('pointermove', { clientX: 300, clientY: 200 })
   assert.equal(frames.size, 1, 'Drag movement is coalesced, not rendered through React')
   await frame()
+  const first = dragOffset().x
+  assert.ok(first > 0 && first < 20, 'The first frame eases toward the pull')
+  await settle()
   assert.ok(dragOffset().x >= 35 && dragOffset().x <= 50, '100px of pointer movement produces a resisted pull')
   assert.equal(dragOffset().y, 0)
+  const distances = [dragOffset().x]
+  for (const clientX of [360, 420, 480]) {
+    await pointer('pointermove', { clientX, clientY: 200 })
+    await settle()
+    distances.push(dragOffset().x)
+  }
+  const gains = distances.slice(1).map((value, index) => value - distances[index])
+  assert.ok(gains.every(gain => gain > 1), 'Travel continues beyond the old hard limit')
+  assert.ok(gains[0] > gains[1] && gains[1] > gains[2], 'Resistance increases gradually')
   await pointer('pointerleave')
   await pointer('pointermove', { clientX: 1200, clientY: 1200 }, dom)
-  await frame()
+  await settle()
   const diagonal = dragOffset()
-  assert.ok(Math.hypot(diagonal.x, diagonal.y) <= 60.001, 'Diagonal pull shares a radial limit')
-  assert.ok(Math.hypot(diagonal.x, diagonal.y) >= 50)
+  assert.ok(diagonal.x <= 80 && diagonal.y <= 80, 'Each axis stays bounded')
+  assert.ok(Math.hypot(diagonal.x, diagonal.y) > 100, 'Diagonal travel is no longer clipped to a circle')
+  assert.ok(Math.abs(dragPose().rotation) <= 4)
   await pointer('pointermove', { clientX: 220, clientY: 200 }, dom)
-  await frame()
+  await settle()
   assert.ok(dragOffset().x < 10, 'Offsets are based on the original pointer down, not accumulated movement')
   assert.equal(dragOffset().y, 0)
   assert.equal(stage().dataset.expression, 'rest')
   assert.equal(motions('celebration-motion').length, 0)
 })
 
-test('drag release springs past home subtly, settles exactly neutral, and resumes current hover without click rebound', async () => {
+test('drag smoothing stays consistent at different frame rates and stops once the pointer target is reached', async () => {
+  const samples = []
+  for (const step of [8, 16, 32]) {
+    await render({ interaction: 'none' })
+    await render()
+    await startDrag()
+    let previous = dragOffset().x
+    for (let elapsed = 0; elapsed < 160; elapsed += step) {
+      await frame(step)
+      const current = dragOffset().x
+      assert.ok(current > previous && current < 50, 'Following stays smooth without overshooting the held target')
+      previous = current
+    }
+    samples.push(dragPose())
+    await settle()
+    assert.equal(captures.get(1), query('hit-area'), 'No animation loop is needed while holding still')
+  }
+  for (const sample of samples.slice(1)) {
+    assert.ok(Math.abs(sample.x - samples[0].x) < 0.001)
+    assert.ok(Math.abs(sample.rotation - samples[0].rotation) < 0.001)
+  }
+})
+
+test('drag release bounces and wobbles, settles exactly neutral, and resumes current hover without click rebound', async () => {
   await render()
   await pointer('pointerenter')
   await frame()
   const follow = query('fidget-motion').style.transform
   await startDrag()
+  await settle()
   assert.equal(query('fidget-motion').style.transform, follow)
-  const start = dragOffset().x
+  const start = dragPose()
   await pointer('pointerup', { clientX: 300, clientY: 200 }, dom)
   assert.deepEqual(releaseCalls, [1])
   assert.equal(captures.size, 0)
   await pointer('pointermove', { clientX: 150, clientY: 200 })
-  const positions = []
+  const positions = [], rotations = []
   const began = clock
-  while (frames.size && clock - began < 700) { await frame(); positions.push(dragOffset().x) }
-  assert.ok(clock - began >= 450 && clock - began <= 650)
-  assert.ok(Math.min(...positions) < 0, 'The spring crosses home once visibly')
-  assert.ok(Math.min(...positions) > -start * 0.08, 'The opposite overshoot remains small')
+  while (frames.size && clock - began < 950) {
+    await frame(); positions.push(dragOffset().x); rotations.push(dragPose().rotation)
+  }
+  assert.ok(clock - began >= 750 && clock - began <= 900)
+  const minimum = Math.min(...positions)
+  assert.ok(minimum < -start.x * 0.18 && minimum > -start.x * 0.24, 'The return has a visible but bounded first bounce')
+  const secondBounce = Math.max(...positions.slice(positions.indexOf(minimum)))
+  assert.ok(secondBounce > start.x * 0.03 && secondBounce < start.x * 0.06, 'A smaller second bounce settles the return')
+  assert.ok(Math.min(...rotations) < -start.rotation * 0.25, 'Rotation wobbles independently through neutral')
   assert.equal(query('drag-motion').style.transform, '')
   assert.equal(frames.size, 0)
   assert.match(query('fidget-motion').style.transform, /translate\(-/, 'Follow resumes using the pointer position after release')
@@ -517,16 +575,16 @@ test('catching a return freezes the visible offset and repeated drags never stac
   for (let i = 0; i < 5; i++) {
     await startDrag()
     await pointer('pointerup', { clientX: 300, clientY: 200 }, dom)
-    await frame(); await frame(80)
-    const caught = dragOffset()
-    assert.ok(caught.x > 0)
+    await frame(); await frame([80, 200, 380][i % 3])
+    const caught = dragPose()
+    assert.notEqual(caught.x, 0)
     await pointer('pointerdown', { clientX: 200, clientY: 200 })
-    assert.deepEqual(dragOffset(), caught)
+    assert.deepEqual(dragPose(), caught)
     await frame(100)
-    assert.deepEqual(dragOffset(), caught, 'The superseded return has no queued writes')
+    assert.deepEqual(dragPose(), caught, 'The superseded return has no queued writes')
     await pointer('pointermove', { clientX: 220, clientY: 200 })
     await frame()
-    assert.ok(Math.abs(dragOffset().x - (caught.x + 9)) < 0.001, 'A new origin starts at the caught position')
+    assert.ok(dragOffset().x > caught.x && dragOffset().x < caught.x + 3, 'A fresh pull eases from the caught position in either direction')
     assert.ok(frames.size <= 1)
     await pointer('pointerup', { clientX: 220, clientY: 200 }, dom)
     await settle()
@@ -565,6 +623,7 @@ for (const type of ['pointercancel', 'lostpointercapture']) test(`${type} return
 test('only the active primary pointer controls a drag, including moves outside the hit region', async () => {
   await render()
   await startDrag()
+  await settle()
   const before = dragOffset()
   for (const type of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'lostpointercapture']) {
     await pointer(type, { pointerId: 2, clientX: 999, clientY: 999 })
@@ -574,23 +633,23 @@ test('only the active primary pointer controls a drag, including moves outside t
   assert.deepEqual(dragOffset(), before)
   assert.equal(captures.get(1), query('hit-area'))
   await pointer('pointermove', { clientX: 100, clientY: 200 }, dom)
-  await frame()
+  await settle()
   assert.ok(dragOffset().x < 0)
   await pointer('pointerup', { clientX: 100, clientY: 200 }, dom)
   await settle()
   assert.equal(query('drag-motion').style.transform, '')
 })
 
-test('touch starts horizontally to drag, with a smaller travel limit; pen also supports drag', async () => {
+test('touch starts horizontally to drag, with a smaller soft travel limit; pen also supports drag', async () => {
   await render()
   precise.change(false)
   for (const pointerType of ['touch', 'pen']) {
     await startDrag({ pointerType })
     assert.equal(captures.get(1), query('hit-area'))
     await pointer('pointermove', { pointerType, clientX: 1000, clientY: 1000 })
-    await frame()
+    await settle()
     const { x, y } = dragOffset()
-    assert.ok(Math.hypot(x, y) >= 35 && Math.hypot(x, y) <= 44.001)
+    assert.ok(x > 45 && y > 45 && x <= 52 && y <= 52)
     await pointer('pointerup', { pointerType, clientX: 1000, clientY: 1000 }, dom)
     await settle()
     assert.equal(query('drag-motion').style.transform, '')
@@ -631,7 +690,7 @@ test('shy/rest changes preserve an active drag and its eventual exact home posit
   await render({ expression: 'rest' })
   assert.deepEqual(dragOffset(), before)
   assert.equal(captures.get(1), query('hit-area'))
-  assert.match(query('artwork').src, /orbit-idle-loop\.webm/)
+  assert.match(query('artwork').src, /orbit-hero-asset-transparent\.png/)
   await pointer('pointerup', {}, dom)
   await settle()
   assert.equal(query('drag-motion').style.transform, '')

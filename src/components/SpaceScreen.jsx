@@ -33,7 +33,7 @@ export default function SpaceScreen({ course, threads = [], onOpenThread, onStar
   return (
     <section className="orbit-page orbit-page-layout space-page">
       <header className="orbit-page-header"><h1>{course.name}</h1>{course.files?.length > 0 && <p className="space-material-context">{course.files.length} {course.files.length === 1 ? 'material' : 'materials'} added to this space</p>}</header>
-      <OrbitStage variant="page" />
+      <OrbitStage variant="page" interaction="fidget" />
       <div className="orbit-page-content">
       {primary ? <>
         <section className="space-recommendation" aria-labelledby={`${id}-recommended`}>

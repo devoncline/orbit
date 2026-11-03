@@ -1,17 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
-import orbitIdle from '../assets/mascot/orbit-idle-loop.webm'
+import orbitHero from '../assets/mascot/orbit-hero-asset-transparent.png'
 import orbitTeaching from '../assets/mascot/orbit-teaching-tilt-transparent.png'
 import orbitSleep from '../assets/mascot/orbit-sleep-loop.webm'
-import orbitBreakthrough from '../assets/mascot/orbit-breakthrough-loop.webm'
+import orbitCelebrating from '../assets/mascot/orbit-celebrating-asset-transparent.png'
 import { getThinkingCopy, nextThinkingRequest, startCelebrationMotion, startThinkingMotion } from './orbitThinking'
 import { startFidgetMotion } from './orbitFidget'
 import './OrbitStage.css'
 
-// Edit per-state sources and video speeds here. All supplied loops play at 1x.
+// Edit per-state sources and video speeds here. The sleep loop plays at 1x.
 const ORBIT_MEDIA = {
-  rest: { src: orbitIdle, type: 'video', playbackRate: 1 },
+  rest: { src: orbitHero, type: 'image' },
   shy: { src: orbitSleep, type: 'video', playbackRate: 1 },
-  celebrating: { src: orbitBreakthrough, type: 'video', playbackRate: 1 },
+  celebrating: { src: orbitCelebrating, type: 'image' },
   thinking: { src: orbitTeaching, type: 'image' },
 }
 
