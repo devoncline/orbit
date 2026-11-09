@@ -7,6 +7,7 @@ import { createServer } from 'vite'
 import { demoRequest, demoResponse } from './fixtures/demoStore.js'
 import { emptyLearnerMemory, loadLearnerMemory, saveLearnerMemory } from '../src/services/learnerMemory.js'
 import { PORTFOLIO_MESSAGE, isPortfolioResponse } from '../src/services/portfolioMode.js'
+import { lessonImageRequest } from '../src/services/lessonImageRequest.js'
 
 const routeNames = ['generate-study-lesson', 'generate-study-question', 'evaluate-study-answer', 'respond-to-study-message',
   'study-activity', 'analyze-course', 'recommend-course', 'generate-lesson-image']
@@ -126,10 +127,24 @@ function assertReply(scope = container) {
   assert.equal(link.href, 'https://youtu.be/-xQGO-GYUVg')
   assert.equal(link.target, '_blank')
   assert.equal(link.rel, 'noopener noreferrer')
-  assert.equal(reply.querySelector('.orbit-response').getAttribute('aria-busy'), 'false')
-  assert.equal(reply.querySelector('.orbit-response-content').getAttribute('aria-live'), 'polite')
+  const response = reply.querySelector('.orbit-response') || reply.closest('.orbit-response')
+  assert.equal(response.getAttribute('aria-busy'), 'false')
+  assert.equal((reply.hasAttribute('aria-live') ? reply : reply.querySelector('.orbit-response-content')).getAttribute('aria-live'), 'polite')
   assert.equal(scope.querySelector('[role="alert"], .study-result-reveal, .study-streaming-response, .orbit-signal'), null)
   assert.equal(scope.querySelector('[aria-busy="true"]'), null)
+  return reply
+}
+function assertLessonReply() {
+  const reply = assertReply(container.querySelector('.study-active-panel'))
+  assert.ok(reply.closest('.study-lesson [data-orbit-result="lesson"]'))
+  assert.ok(reply.querySelector('.study-lesson-composition > .study-lesson-narrative > .study-content'))
+  assert.equal(reply.querySelector('.study-exchange, .study-message-orbit, .study-visual-presentation'), null)
+  assert.equal(container.querySelector('.study-session').dataset.presentationMode, 'focus')
+  assert.ok(container.querySelector('.study-session > .orbit-stage'))
+  assert.ok(container.querySelector('.study-context h1'))
+  assert.equal(container.querySelector('.study-presentation-label').textContent, 'Explore the idea')
+  assert.equal(container.querySelector('.study-continuation, .study-lesson-support'), null)
+  for (const label of ['Start lesson', 'Continue to next lesson', 'I understand', 'That helps']) assert.equal(button(label), undefined)
   return reply
 }
 async function renderStudy(extra = {}) {
@@ -224,11 +239,20 @@ for (const label of ['You lost me', 'Give me an example', 'Let me try it', 'Quiz
     await click(button(label))
     assertReply(container.querySelector('.study-active-panel'))
     assert.deepEqual(loadLearnerMemory(dom.localStorage), before)
-    await click(button(label))
-    assertReply(container.querySelector('.study-active-panel'))
-    assert.deepEqual(loadLearnerMemory(dom.localStorage), before)
+    const lessonAction = ['You lost me', 'Continue to next lesson'].includes(label)
+    if (lessonAction) {
+      assertLessonReply()
+      assert.equal(button(label), undefined, 'The placeholder cannot be simplified or progressed as if it were teaching')
+      assert.equal(container.querySelector('.study-lesson-reference .study-content').textContent, lesson.content)
+      await click(container.querySelector('.study-lesson-reference summary'))
+      assert.equal(container.querySelector('.study-lesson-reference').open, true)
+    } else {
+      await click(button(label))
+      assertReply(container.querySelector('.study-active-panel'))
+      assert.deepEqual(loadLearnerMemory(dom.localStorage), before)
+    }
     for (const destination of ['Home', 'Library', 'Calendar', 'Learn']) await navigate(destination)
-    assert.equal(calls.length, 2)
+    assert.equal(calls.length, lessonAction ? 1 : 2)
     assert.deepEqual(loadLearnerMemory(dom.localStorage), before)
     await click(button('Lesson'))
     assert.match(container.textContent, /State remembers a value/)
@@ -263,7 +287,7 @@ test('new visitors can submit a topic and further prompts without fabricating a 
   await type(container.querySelector('#learn-topic-input'), 'How do black holes work?')
   await act(async () => container.querySelector('.learn-topic-form').dispatchEvent(new dom.Event('submit', { bubbles: true, cancelable: true })))
   await settleLocalRequests()
-  const reply = assertReply()
+  const reply = assertLessonReply()
   assert.match(reply.querySelector('[aria-label="Your message"]').textContent, /How do black holes work/)
   await type(container.querySelector('.study-composer textarea'), 'What about time?')
   await click(button('Send'))
@@ -274,6 +298,108 @@ test('new visitors can submit a topic and further prompts without fabricating a 
   assert.deepEqual(saved.threads[0].resume.conversation, [])
   assert.equal(saved.courses[0].mastery.overall, 0)
   assert.doesNotMatch(JSON.stringify(saved), /Well, this is awkward|What about time|sustainable business model/)
+})
+
+for (const startRequested of [false, true]) test(`${startRequested ? 'an intentional automatic entry' : 'Start lesson'} uses the lesson narrative without accepting placeholder learning`, async t => {
+  const calls = boundary(t)
+  const state = await renderStudy({ initialThread: { startRequested, requestedTopic: 'State' } })
+  if (!startRequested) {
+    assert.equal(calls.length, 0)
+    await click(button('Start lesson'))
+  } else await settleLocalRequests()
+  const reply = assertLessonReply()
+  assert.equal(reply.querySelector('[aria-label="Your message"]').textContent, 'State')
+  assert.equal(container.querySelector('.study-subject').textContent, course.name, 'No fabricated lesson number')
+  assert.equal(container.querySelector('.study-lesson-reference, .study-visual-presentation, .study-quiz'), null)
+  assert.deepEqual(state, { updates: [], mastery: [], positions: [] })
+  assert.deepEqual(calls.map(call => call.url), ['/api/generate-study-lesson'])
+})
+
+for (const entry of ['Home', 'Learn recommendation', 'Space recommendation']) test(`${entry} opens the Portfolio lesson layout and preserves existing course progress`, async t => {
+  const calls = boundary(t)
+  const biology = { name: 'Biology', nextTask: 'Explore Cells', importantTopics: ['Cells'], mastery: { overall: 40, topics: { Osmosis: 40 } } }
+  saveLearnerMemory({ ...emptyLearnerMemory(), courses: [biology] }, dom.localStorage)
+  const before = loadLearnerMemory(dom.localStorage).courses
+  await act(async () => root.render(createElement(StrictMode, null, createElement(App))))
+  if (entry === 'Learn recommendation') {
+    await navigate('Learn')
+    await click(container.querySelector('.learn-recommendation'))
+  } else if (entry === 'Space recommendation') {
+    await click(container.querySelector('.shell-spaces button'))
+    await click(container.querySelector('.space-recommendation .orbit-button-primary'))
+  } else await click(container.querySelector('.home-recommendation .orbit-button-primary'))
+  assertLessonReply()
+  const saved = loadLearnerMemory(dom.localStorage)
+  assert.deepEqual(saved.courses, before)
+  assert.equal(saved.threads.length, 1, 'Only the explicitly opened empty thread is created')
+  assert.equal(saved.threads[0].resume.lesson, null)
+  assert.deepEqual(saved.threads[0].resume.learningAnchors, [])
+  assert.deepEqual(saved.threads[0].resume.learningPath.visited, [])
+  assert.doesNotMatch(JSON.stringify(saved), /Well, this is awkward|sustainable business model/)
+  assert.deepEqual(calls.map(call => call.url), ['/api/generate-study-lesson'])
+})
+
+test('an example recommendation keeps the existing create-space and start-lesson flow before showing the lesson placeholder', async t => {
+  const calls = boundary(t)
+  await act(async () => root.render(createElement(StrictMode, null, createElement(App))))
+  await navigate('Learn')
+  await click(container.querySelector('[data-current] .learn-recommendation'))
+  await click(button('Create space'))
+  const before = loadLearnerMemory(dom.localStorage).courses
+  assert.equal(before[0].name, 'Orbital Motion')
+  assert.equal(calls.length, 0)
+  await type(container.querySelector('.space-topic-entry input'), 'Orbital Motion')
+  await click(button('Start lesson', container.querySelector('.space-topic-entry')))
+  assertLessonReply()
+  const saved = loadLearnerMemory(dom.localStorage)
+  assert.deepEqual(saved.courses, before)
+  assert.equal(saved.threads[0].resume.lesson, null)
+  assert.equal(calls.length, 1)
+})
+
+for (const interaction of ['Talk it through', 'Quiz me']) test(`continuing from ${interaction} routes the placeholder to Lesson without changing learning state`, async t => {
+  const calls = boundary(t, { '/api/generate-study-question': question })
+  const state = await renderStudy()
+  await click(button(interaction))
+  const before = JSON.stringify(state)
+  const priorCalls = calls.length
+  await click(button('Continue to next lesson'))
+  assertLessonReply()
+  assert.equal(container.querySelector('.study-active-panel').dataset.studyInteraction, 'lesson')
+  assert.equal(container.querySelector('.study-lesson-reference .study-content').textContent, lesson.content)
+  assert.equal(JSON.stringify(state), before)
+  assert.equal(calls.length, priorCalls + 1)
+  assert.equal(calls.at(-1).body.action, 'next')
+})
+
+test('continuing an illustrated recovery lesson uses the ordinary text layout without borrowing its visual or changing saved work', async t => {
+  const calls = boundary(t)
+  const illustrated = { ...lesson, visual }
+  const request = lessonImageRequest({ courseName: course.name, lesson: illustrated, visual })
+  const state = await renderStudy({ initialThread: { resume: { lesson: illustrated, recoveringLesson: true,
+    learningPath: { step: 3, understood: true }, images: [{ request, status: 'ready', url: 'https://images.example.test/saved.webp' }] } } })
+  assert.ok(container.querySelector('.study-visual-presentation'))
+  const before = JSON.stringify(state)
+  await click(button('Continue to next lesson'))
+  assertLessonReply()
+  assert.equal(container.querySelector('.study-visual-presentation'), null)
+  assert.match(container.querySelector('.study-subject').textContent, /Lesson 3/)
+  assert.equal(JSON.stringify(state), before)
+  assert.equal(calls.length, 1, 'No image regeneration accompanies a Portfolio lesson')
+})
+
+test('disabled Portfolio Mode still presents and saves genuine lesson content with normal study controls', async t => {
+  process.env.ORBIT_PORTFOLIO_MODE = 'false'
+  const calls = boundary(t, { '/api/generate-study-lesson': lesson })
+  const state = await renderStudy({ initialThread: {} })
+  await click(button('Start lesson'))
+  assert.equal(container.querySelector('.study-lesson-composition > .study-lesson-narrative > .study-content').textContent, lesson.content)
+  assert.equal(container.querySelector('[data-portfolio-reply]'), null)
+  assert.ok(container.querySelector('.study-session > .orbit-stage'))
+  for (const label of ['You lost me', 'I understand', 'Continue to next lesson']) assert.ok(button(label))
+  assert.ok(state.updates.some(([, update]) => update.resume?.lesson?.content === lesson.content))
+  assert.deepEqual(state.mastery, [])
+  assert.equal(calls.length, 1)
 })
 
 test('a blocked evaluation of an existing real quiz does not record an answer, score, recovery or memory', async t => {

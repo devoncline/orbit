@@ -23,7 +23,7 @@ import { createLessonImageCache } from '../services/lessonImages'
 import { lessonImageRequest } from '../services/lessonImageRequest'
 import { aiErrorMessage } from '../services/demoUsage'
 import { isPortfolioResponse } from '../services/portfolioMode'
-import PortfolioReply from './PortfolioReply'
+import PortfolioReply, { PortfolioContent } from './PortfolioReply'
 import { createStudyVisualRequest, studyVisualContext } from '../services/studyVisualRequest'
 import { learningResumeGuidance, normalizeLearningProfile } from '../services/learningProfile'
 import CoursePosition from './CoursePosition'
@@ -164,10 +164,13 @@ export default function StudySession({
         feedback: activityFeedback?.feedback || '',
     } : undefined
     const busy = Boolean(readingReferences || loadingLesson || loadingConversation || loadingActivity || loadingQuestion || loadingEvaluation)
+    const portfolioLesson = activeInteraction === 'lesson' && portfolioReply?.interaction === 'lesson'
     const recommendation = recommendStudyAction({ lesson, activeInteraction, learningPath, example, lessonError, conversation,
         activity, activityError, activityFeedback, activityResponse, answerResult, followUpResult, evaluation, evaluationError, questionError, learningProfile: profile })
-    const presentation = useStudyPresentation({ courseName: course.name, activeInteraction, lesson, conversationVisual, requestedVisual, learningProfile: profile,
-        recoveringLesson, loadingLesson, loadingQuestion, loadingEvaluation, loadingActivity, answerResult, followUpResult,
+    // Use the normal text lesson layout without borrowing a saved lesson's visual
+    // or recovery treatment. The actual lesson and learning path stay untouched.
+    const presentation = useStudyPresentation({ courseName: course.name, activeInteraction, lesson: portfolioLesson ? null : lesson, conversationVisual, requestedVisual, learningProfile: profile,
+        recoveringLesson: !portfolioLesson && recoveringLesson, loadingLesson, loadingQuestion, loadingEvaluation, loadingActivity, answerResult, followUpResult,
         showAdaptedLesson, evaluation, evaluationError, questionError, activityFeedback, activityResponse, activityError, conversation }, lessonImageCache)
     const showRecommendationAction = presentation.primary === 'recommendation'
     const inlineCompanion = presentation.splitVisual && !loadingLesson
@@ -652,7 +655,8 @@ export default function StudySession({
         } catch (error) {
             if (!controller.signal.aborted) {
                 if (isPortfolioResponse(error)) {
-                    setPortfolioReply({ interaction: activeInteraction })
+                    setPortfolioReply({ interaction: 'lesson' })
+                    openInteraction('lesson')
                 } else if (error.code === 'COURSE_POSITION_REQUIRED') {
                     openInteraction('lesson')
                     setProgressionError('Choose what your class is working on above, then continue to the next lesson.')
@@ -792,8 +796,8 @@ export default function StudySession({
                 <button onClick={onNewThread}>Study from class focus</button>
             </div>}
             <OrbitResponse pending={loadingLesson === 'next'} context="next" reveal={resultReveal}>
-            {portfolioReply?.interaction === activeInteraction && !portfolioReply.inline && !portfolioReply.transcript && <PortfolioReply message={portfolioReply.message} />}
-            {!portfolioReply && <p className="study-presentation-label">{presentation.label}</p>}
+            {!portfolioLesson && portfolioReply?.interaction === activeInteraction && !portfolioReply.inline && !portfolioReply.transcript && <PortfolioReply message={portfolioReply.message} />}
+            {(!portfolioReply || portfolioLesson) && <p className="study-presentation-label">{presentation.label}</p>}
             {activeInteraction === 'example' && <div className="study-example">
                 <OrbitResponse pending={loadingLesson === 'example'} context="example" reveal={resultReveal}>
                     {example && <><StudyContent content={example} /><button disabled={busy} onClick={() => changeLesson('example')}>Another example</button></>}
@@ -803,29 +807,30 @@ export default function StudySession({
                 <div className="study-lesson">
                     {['lesson', 'visual'].includes(activeInteraction) && (
                         <OrbitResponse pending={loadingLesson === 'lesson' || loadingLesson === 'simplify'} context={loadingLesson === 'simplify' ? 'simplify' : 'lesson'} reveal={resultReveal}>
-                        <div>
-                            {lesson && <>
+                        <div data-portfolio-reply={portfolioLesson || undefined} aria-live={portfolioLesson ? 'polite' : undefined}>
+                            {portfolioLesson && portfolioReply.message && <div className="study-message study-message-learner" aria-label="Your message"><p>{portfolioReply.message}</p></div>}
+                            {(lesson || portfolioLesson) && <>
                             <div className={`study-lesson-composition${presentation.splitVisual ? ' study-lesson-composition-visual' : ''}`}>
                                 <div className="study-lesson-narrative">
-                                    <StudyContent content={activeInteraction === 'visual' ? requestedVisual?.explanation : lesson.content} />
+                                    {portfolioLesson ? <PortfolioContent /> : <StudyContent content={activeInteraction === 'visual' ? requestedVisual?.explanation : lesson.content} />}
                                     {inlineCompanion && companion}
                                 </div>
-                                {displayedVisual && <div className="study-visual-presentation">
+                                {!portfolioLesson && displayedVisual && <div className="study-visual-presentation">
                                     <LessonVisual visual={displayedVisual} lesson={visualLesson} courseName={course.name} cache={lessonImageCache} />
                                 </div>}
                             </div>
-                            <div className="study-lesson-support">
+                            {!portfolioLesson && <div className="study-lesson-support">
                             {presentation.primary === 'recovery_done' && <button className="study-primary-action" disabled={busy}
                                 onClick={() => { setRecoveringLesson(false); panel.current?.focus({ preventScroll: true }) }}>That helps</button>}
                             <button className="study-secondary-action" disabled={busy} onClick={() => changeLesson('simplify')}>You lost me</button>
-                            </div>
+                            </div>}
                             </>}
                         </div>
                         </OrbitResponse>
                     )}
 
                     {lessonError && <p role="alert">{lessonError}</p>}
-                    {!lesson && !loadingLesson && (
+                    {!lesson && !loadingLesson && !portfolioReply && (
                         <button onClick={retryLesson}>{lessonError ? 'Try again' : 'Start lesson'}</button>
                     )}
 
@@ -1052,7 +1057,7 @@ export default function StudySession({
             )}
             </OrbitResponse>
             </section>
-            {lesson && activeInteraction !== 'lesson' && <details className="study-lesson-reference">
+            {lesson && (activeInteraction !== 'lesson' || portfolioLesson) && <details className="study-lesson-reference">
                 <summary>Lesson context</summary>
                 <StudyContent content={lesson.content} />
             </details>}
@@ -1069,20 +1074,20 @@ export default function StudySession({
                 <button disabled={Boolean(readingReferences || loadingLesson || loadingQuestion || loadingEvaluation)} aria-pressed={activeInteraction === 'quiz'} onClick={() => studyQuestion ? openInteraction('quiz') : loadQuestion(lesson)}>Quiz me</button>
                 </div>
             </details>}
-            {lesson && <nav className="study-continuation" aria-label="Lesson progression" aria-busy={busy}>
-                {!portfolioReply && <div className="study-recommendation">
+            {lesson && !portfolioReply && <nav className="study-continuation" aria-label="Lesson progression" aria-busy={busy}>
+                <div className="study-recommendation">
                     <p><strong>Suggested next</strong><span>{presentation.guidance || recommendation.hint}</span></p>
                     {showRecommendationAction && recommendation.action && <button className="study-primary-action" disabled={busy} onClick={takeRecommendedStep}>
                         {recommendation.action === 'continue'
                             ? loadingLesson === 'next' ? 'Preparing next lesson…' : progressionError ? 'Try next lesson again' : recommendation.label
                             : recommendation.label}
                     </button>}
-                </div>}
+                </div>
                 <div className="study-continue-actions">
-                    {!portfolioReply && activeInteraction === 'lesson' && <button className="study-secondary-action" disabled={busy} aria-pressed={learningPath.understood} onClick={() => setLearningPath((current) => ({ ...current, understood: !current.understood }))}>
+                    {activeInteraction === 'lesson' && <button className="study-secondary-action" disabled={busy} aria-pressed={learningPath.understood} onClick={() => setLearningPath((current) => ({ ...current, understood: !current.understood }))}>
                         {learningPath.understood ? 'Feeling ready' : 'I understand'}
                     </button>}
-                    {(portfolioReply || !showRecommendationAction || recommendation.action !== 'continue') && <button className="study-secondary-action" disabled={busy} onClick={continueLesson}>
+                    {(!showRecommendationAction || recommendation.action !== 'continue') && <button className="study-secondary-action" disabled={busy} onClick={continueLesson}>
                         {loadingLesson === 'next' ? 'Preparing next lesson…' : progressionError ? 'Try next lesson again' : 'Continue to next lesson'}
                     </button>}
                 </div>
