@@ -7,6 +7,47 @@ import { readFileSync } from 'node:fs'
 
 const today = '2026-11-02'
 
+test('Portfolio Mode supplies four ordinary recommendation cards only when the genuine list is empty', () => {
+  const courses = Object.freeze([]), threads = Object.freeze([])
+  assert.deepEqual(learnRecommendations(courses, threads, today), [])
+  assert.deepEqual(learnRecommendations(courses, threads, today, { portfolioMode: false }), [])
+  const examples = learnRecommendations(courses, threads, today, { portfolioMode: true })
+  assert.deepEqual(examples.map(item => item.topic), ['Orbital Motion', 'Music Theory', 'Photosynthesis', 'The Psychology of Habits'])
+  assert.equal(new Set(examples.map(item => item.id)).size, 4)
+  for (const item of examples) {
+    assert.deepEqual(Object.keys(item).sort(), ['courseName', 'id', 'kind', 'reason', 'topic'])
+    assert.equal(item.kind, 'new')
+    assert.equal(item.courseName, null)
+    assert.ok(item.reason)
+  }
+  assert.deepEqual(learnRecommendations(courses, threads, today, { portfolioMode: true }), examples)
+})
+
+test('Portfolio Mode preserves genuine course and related-interest recommendations without padding the list', () => {
+  for (const courses of [
+    [{ name: 'Biology', importantTopics: ['Cells'] }],
+    [{ name: 'Music theory' }],
+  ]) {
+    const before = JSON.stringify(courses)
+    const genuine = learnRecommendations(courses, [], today)
+    assert.equal(genuine.length, 1)
+    assert.deepEqual(learnRecommendations(courses, [], today, { portfolioMode: true }), genuine)
+    assert.equal(JSON.stringify(courses), before)
+  }
+})
+
+test('empty returning visitors get examples without inventing or changing saved learning or duplicating a matching space', () => {
+  const courses = [{ name: 'The psychology of habits', mastery: { overall: 35, topics: { Cues: 35 } } }]
+  const threads = [{ courseName: courses[0].name, topic: 'Cues', resume: { lesson: { topic: 'Cues', content: 'A saved lesson.' } } }]
+  const before = JSON.stringify({ courses, threads })
+  assert.deepEqual(learnRecommendations(courses, threads, today), [])
+  const examples = learnRecommendations(courses, threads, today, { portfolioMode: true })
+  assert.equal(examples.length, 4)
+  assert.equal(examples[3].kind, 'existing')
+  assert.equal(examples[3].courseName, courses[0].name)
+  assert.equal(JSON.stringify({ courses, threads }), before)
+})
+
 test('Learn recommendations exclude current, visited, practiced and excluded topics without changing their source data', () => {
   const course = { name: 'Biology', importantTopics: ['Photosynthesis', 'Energy transfer', 'Cells', 'Osmosis', 'Genetics', 'Ecology'],
     mastery: { overall: 35, topics: { Cells: 35 } }, recentLearning: { topic: 'Osmosis', updatedAt: today },

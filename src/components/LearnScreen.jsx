@@ -8,7 +8,7 @@ import './LearnScreen.css'
 
 export default function LearnScreen({ courses, threads = [], today, onStart, onSelectSpace, onOpenTopic, onNewSpace }) {
   const [topic, setTopic] = useState('')
-  const recommendations = learnRecommendations(courses, threads, today)
+  const recommendations = learnRecommendations(courses, threads, today, { portfolioMode: import.meta.env.ORBIT_PORTFOLIO_MODE === true })
 
   return (
     <section className="orbit-page orbit-page-layout learn-page" aria-labelledby="learn-heading">

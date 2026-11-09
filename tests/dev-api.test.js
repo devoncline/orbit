@@ -7,6 +7,21 @@ import { delimiter, join, resolve } from 'node:path'
 import { execFile, spawnSync } from 'node:child_process'
 import { createServer } from 'node:http'
 import { promisify } from 'node:util'
+import viteConfig from '../vite.config.js'
+
+test('Vite exposes only the resolved Portfolio Mode boolean, defaulting to live without loading local settings', () => {
+  const prior = process.env.ORBIT_PORTFOLIO_MODE
+  try {
+    for (const [setting, expected] of [[undefined, false], ['false', false], ['true', true], [' TRUE ', true], ['typo', false]]) {
+      if (setting === undefined) delete process.env.ORBIT_PORTFOLIO_MODE
+      else process.env.ORBIT_PORTFOLIO_MODE = setting
+      assert.deepEqual(viteConfig().define, { 'import.meta.env.ORBIT_PORTFOLIO_MODE': JSON.stringify(expected) })
+    }
+  } finally {
+    if (prior === undefined) delete process.env.ORBIT_PORTFOLIO_MODE
+    else process.env.ORBIT_PORTFOLIO_MODE = prior
+  }
+})
 
 function stubCLI(t, { local, inherited } = {}) {
   const directory = mkdtempSync(join(tmpdir(), 'orbit-dev-api-'))

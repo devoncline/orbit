@@ -15,6 +15,13 @@ const relatedInterests = [
   { interests: ['Quantum physics'], topic: 'Particle physics' },
 ]
 
+const portfolioTopics = [
+  { topic: 'Orbital Motion', reason: 'Explore how gravity shapes an orbit.' },
+  { topic: 'Music Theory', reason: 'Connect rhythm, melody, and harmony.' },
+  { topic: 'Photosynthesis', reason: 'Follow how plants turn light into energy.' },
+  { topic: 'The Psychology of Habits', reason: 'Explore how habits form and change.' },
+]
+
 function coveredTopics(course, threads) {
   return new Set([
     course.recentLearning?.topic,
@@ -26,7 +33,7 @@ function coveredTopics(course, threads) {
 }
 
 // Read-only Learn projection. It neither generates recommendations nor writes learner memory.
-export function learnRecommendations(courses = [], threads = [], today = localDate()) {
+export function learnRecommendations(courses = [], threads = [], today = localDate(), { portfolioMode = false } = {}) {
   const allCovered = new Set()
   const interests = new Map()
   const positions = []
@@ -79,5 +86,11 @@ export function learnRecommendations(courses = [], threads = [], today = localDa
     result.push({ id: `new:${key(connection.topic)}`, kind: 'new', topic: connection.topic, courseName: null,
       reason: `Related to your interest in ${interests.get(interest)}.` })
   }
-  return result
+  if (result.length || !portfolioMode) return result
+  // Examples belong only to this read-only projection, never to learner memory.
+  return portfolioTopics.map(({ topic, reason }) => {
+    const course = courses.find(course => key(course.name) === key(topic))
+    return { id: course ? JSON.stringify([course.name, key(topic)]) : `new:${key(topic)}`,
+      kind: course ? 'existing' : 'new', topic, courseName: course?.name || null, reason }
+  })
 }

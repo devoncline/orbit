@@ -61,7 +61,14 @@ before(async () => {
     Object.defineProperty(globalThis, key, { configurable: true, writable: true, value })
   }
   createRoot = (await import('react-dom/client')).createRoot
-  server = await createServer({ server: { middlewareMode: true, watch: null, hmr: false }, appType: 'custom' })
+  const startupMode = process.env.ORBIT_PORTFOLIO_MODE
+  try {
+    process.env.ORBIT_PORTFOLIO_MODE = 'true'
+    server = await createServer({ server: { middlewareMode: true, watch: null, hmr: false }, appType: 'custom' })
+  } finally {
+    if (startupMode === undefined) delete process.env.ORBIT_PORTFOLIO_MODE
+    else process.env.ORBIT_PORTFOLIO_MODE = startupMode
+  }
   App = (await server.ssrLoadModule('/src/App.jsx')).default
   StudySession = (await server.ssrLoadModule('/src/components/StudySession.jsx')).default
   client = await server.ssrLoadModule('/src/services/meta.js')
@@ -143,6 +150,50 @@ async function savedApp() {
   await navigate('Learn')
   return loadLearnerMemory(dom.localStorage)
 }
+
+test('first-visit Portfolio recommendations reuse the looping carousel and new-space review without writes or AI requests', async t => {
+  const calls = boundary(t)
+  const topics = ['Orbital Motion', 'Music Theory', 'Photosynthesis', 'The Psychology of Habits']
+  const storage = () => Array.from({ length: dom.localStorage.length }, (_, index) => {
+    const key = dom.localStorage.key(index)
+    return [key, dom.localStorage.getItem(key)]
+  })
+  await act(async () => root.render(createElement(StrictMode, null, createElement(App))))
+  const before = storage()
+  await navigate('Learn')
+  assert.deepEqual([...container.querySelectorAll('.learn-recommendation strong')].map(element => element.textContent), topics)
+  assert.equal(container.querySelector('.learn-empty'), null)
+  assert.equal(container.querySelector('.learn-spaces'), null)
+  assert.equal(container.querySelector('#learn-topic-input').value, '')
+  assert.equal(container.querySelectorAll('.learn-recommendation[tabindex="0"]').length, 1)
+  const key = async value => act(async () => container.querySelector('.orbit-carousel').dispatchEvent(
+    new dom.KeyboardEvent('keydown', { key: value, bubbles: true, cancelable: true })))
+  await key('ArrowLeft')
+  assert.equal(container.querySelector('[data-current] strong').textContent, topics[3])
+  await key('ArrowRight')
+  assert.equal(container.querySelector('[data-current] strong').textContent, topics[0])
+  for (let index = 0; index < topics.length; index++) {
+    if (index) await navigate('Learn')
+    for (let move = 0; move < index; move++) await key('ArrowRight')
+    await click(container.querySelector('[data-current] .learn-recommendation'))
+    const field = container.querySelector('.orbit-form input')
+    assert.equal(field.value, topics[index])
+    assert.equal(field.readOnly, false)
+    assert.ok(button('Create space'))
+    assert.deepEqual(storage(), before, 'Browsing and reviewing a suggestion cannot save examples or create spaces')
+  }
+  assert.equal(calls.length, 0)
+  assert.deepEqual(loadLearnerMemory(dom.localStorage).courses, [])
+  assert.deepEqual(loadLearnerMemory(dom.localStorage).threads, [])
+})
+
+test('Portfolio Learn renders genuine returning-visitor recommendations without example cards or memory changes', async t => {
+  const calls = boundary(t)
+  const before = await savedApp()
+  assert.deepEqual([...container.querySelectorAll('.learn-recommendation strong')].map(element => element.textContent), ['Web accessibility'])
+  assert.deepEqual(loadLearnerMemory(dom.localStorage), before)
+  assert.equal(calls.length, 0)
+})
 
 test('all AI services recognize the portfolio result before parsing teaching or streaming text', async t => {
   const calls = boundary(t)

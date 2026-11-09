@@ -179,7 +179,9 @@ Use `dev:api` for lessons, uploads, conversation, and image generation. If the i
 
 Orbit can remain an interactive portfolio after the hackathon without ongoing AI inference. **Portfolio Mode is disabled by default.** When enabled, AI actions return Orbit's predefined reply and a **Watch the Demo** link to the [original recording](https://youtu.be/-xQGO-GYUVg). Home, spaces, topics, saved local lessons, the mascot, and prompt inputs remain available. Replies appear immediately in the existing assistant layout, without simulated streaming or new mastery, progress, quiz results, extracted file context, or learner memories. Creating a space or attaching a file still saves its ordinary local metadata.
 
-To select it for local development, keep this server-only variable in your uncommitted `.env.local`:
+When genuine recommendations are empty, Learn's existing carousel offers Orbital Motion, Music Theory, Photosynthesis, and The Psychology of Habits. These examples are display-only: browsing them never creates spaces, learning history, or progress. Selecting a new topic opens the existing editable space form; genuine recommendations always take priority.
+
+To select it for local development, keep this setting in your uncommitted `.env.local`:
 
 ```dotenv
 ORBIT_PORTFOLIO_MODE=true
@@ -192,7 +194,7 @@ ORBIT_PORTFOLIO_MODE=true
 
 After startup, run `npm run check:portfolio -- http://localhost:5173`. It checks actual local HTTP responses for every AI route, streaming, retries, and PDF actions. It first sends an invalid lesson request and stops if Portfolio Mode is absent, so checking a stale live server cannot trigger inference. It accepts loopback HTTP origins only. The component regression suite can also run against that server by setting `ORBIT_TEST_LOCAL_URL=http://localhost:5173` for the test process; it uses the same safe probe before sending valid inputs.
 
-The guard covers all eight AI routes: lesson generation (including next, simpler explanations, and examples), quiz generation and answer evaluation, streamed and ordinary conversation, activity generation/evaluation, PDF analysis, recommendations, and image generation/retries. It runs before payload/file processing, rate limiting, and provider calls. Requests receive HTTP 200 JSON with `mode: "portfolio"`, the reply, and the demo URL, plus `X-Orbit-Mode: portfolio` and `Cache-Control: no-store`; even a streaming request gets this immediate JSON response. The shared client intercepts it before teaching or persistence code runs. Request parameters cannot override the server setting.
+The guard covers all eight AI routes: lesson generation (including next, simpler explanations, and examples), quiz generation and answer evaluation, streamed and ordinary conversation, activity generation/evaluation, PDF analysis, recommendations, and image generation/retries. It runs before payload/file processing, rate limiting, and provider calls. Requests receive HTTP 200 JSON with `mode: "portfolio"`, the reply, and the demo URL, plus `X-Orbit-Mode: portfolio` and `Cache-Control: no-store`; even a streaming request gets this immediate JSON response. The shared client intercepts it before teaching or persistence code runs. Request parameters cannot override the server setting. Vite exposes only a boolean from the resolved startup/build environment for Learn's example cards; API enforcement remains server-side. The local launcher supplies that boolean to both runtimes without enabling it in ordinary builds.
 
 When retiring inference across the whole project, also retire older reachable deployments with live AI or revoke their provider credentials: the new guard cannot change old deployment URLs or already-running requests. Local mode selection does not change Vercel environment settings, deployed sites, or the live demo.
 
