@@ -22,6 +22,8 @@ import { acceptPathLesson, learningPathContextKey, generatedLessonVisual, normal
 import { createLessonImageCache } from '../services/lessonImages'
 import { lessonImageRequest } from '../services/lessonImageRequest'
 import { aiErrorMessage } from '../services/demoUsage'
+import { isPortfolioResponse } from '../services/portfolioMode'
+import PortfolioReply from './PortfolioReply'
 import { createStudyVisualRequest, studyVisualContext } from '../services/studyVisualRequest'
 import { learningResumeGuidance, normalizeLearningProfile } from '../services/learningProfile'
 import CoursePosition from './CoursePosition'
@@ -91,6 +93,10 @@ export default function StudySession({
     const studyTools = useRef(null)
     const id = useId()
     const [lesson, setLesson] = useState(resume.lesson)
+    // Portfolio replies are presentation-only and never enter thread resume,
+    // learning anchors, generated teaching, or mastery evidence.
+    const [portfolioReply, setPortfolioReply] = useState(null)
+    const [portfolioTurns, setPortfolioTurns] = useState([])
     const [lessonReferences, setLessonReferences] = useState([])
     const [readingReferences, setReadingReferences] = useState(false)
     const [referenceBaseline, setReferenceBaseline] = useState(null)
@@ -104,7 +110,9 @@ export default function StudySession({
     const latestContextKey = useRef(contextKey)
     const pathView = studyPathView(learningPath, lesson, contextKey)
     const lessonVisual = generatedLessonVisual(lesson?.visual)
-    const [lessonImageCache] = useState(() => createLessonImageCache(resume.images))
+    const [lessonImageCache] = useState(() => createLessonImageCache(resume.images, {
+        onPortfolio: () => setPortfolioReply({ interaction: 'visual', inline: true }),
+    }))
     const savedImages = useSyncExternalStore(lessonImageCache.subscribe, lessonImageCache.getSaved, lessonImageCache.getSaved)
     const [requestedVisual, setRequestedVisual] = useState(resume.requestedVisual)
     const [recentVisualRecovery, setRecentVisualRecovery] = useState(resume.recentVisualRecovery)
@@ -196,7 +204,7 @@ export default function StudySession({
     useEffect(() => {
         // Keep the last ordinary lesson resume while working with temporary pages.
         // Neither uploaded content nor derived reference work becomes learner memory.
-        if (!lesson || referenceBaseline) return
+        if (!lesson || referenceBaseline || busy || portfolioReply || lessonImageCache.isPendingAction()) return
         // Keep the current lesson/Show me/discussion references even when older
         // than the recent-image window. Other entries remain bounded by resume.
         const images = [...savedImages]
@@ -230,7 +238,7 @@ export default function StudySession({
         if (resumeOnly) { onThreadUpdate?.(threadId, { resume: snapshot }); return }
         onThreadUpdate?.(threadId, { ...metadata, resume: snapshot, courseName: initialContext.course.name,
             ...threadContext, updatedAt: new Date().toISOString() })
-    }, [threadId, onThreadUpdate, lesson, activeInteraction, conversation, activity, activityFeedback, questionNumber, answerResult, followUpResult, learningAnchors, learningPath, resume, initialContext, threadContext, savedImages, requestedVisual, recentVisualRecovery, conversationVisual, recoveringLesson, loadingLesson, course.name, lessonImageCache, referenceBaseline])
+    }, [threadId, onThreadUpdate, lesson, activeInteraction, conversation, activity, activityFeedback, questionNumber, answerResult, followUpResult, learningAnchors, learningPath, resume, initialContext, threadContext, savedImages, requestedVisual, recentVisualRecovery, conversationVisual, recoveringLesson, loadingLesson, course.name, lessonImageCache, referenceBaseline, busy, portfolioReply])
 
     useEffect(() => {
         if (active) panel.current?.focus({ preventScroll: false })
@@ -314,6 +322,8 @@ export default function StudySession({
             .then(async (result) => {
                 if (current) await showResult('lesson', result.content)
                 if (current) {
+                    setPortfolioReply(null)
+                    setPortfolioTurns([])
                     initialLessonLoaded.current = true
                     setLesson(result)
                     setLearningPath(acceptPathLesson(result, undefined, undefined, learningPathContextKey(initialContext.course)))
@@ -321,14 +331,16 @@ export default function StudySession({
                 }
             })
             .catch((error) => {
-                if (current) setLessonError(aiErrorMessage(error, 'Orbit could not load your lesson. Please try again.'))
+                if (!current) return
+                if (isPortfolioResponse(error)) setPortfolioReply({ interaction: 'lesson', message: initialThread?.requestedTopic || initialContext.course.name })
+                else setLessonError(aiErrorMessage(error, 'Orbit could not load your lesson. Please try again.'))
             })
             .finally(() => {
                 if (current) setLoadingLesson('')
             })
 
         return () => { current = false }
-    }, [initialContext, lessonAttempt, resume, showResult, profile, lessonImageCache])
+    }, [initialContext, lessonAttempt, resume, showResult, profile, lessonImageCache, initialThread?.requestedTopic])
 
     useEffect(() => {
         return () => {
@@ -363,7 +375,7 @@ export default function StudySession({
     async function sendMessage(event) {
         event.preventDefault()
         const message = learnerMessage.trim()
-        if (!lesson || stage !== 'learn' || !message || loadingLesson || readingReferences ||
+        if ((!lesson && !portfolioReply) || stage !== 'learn' || !message || loadingLesson || readingReferences ||
             loadingQuestion || activityRequest.current || conversationRequest.current) return
 
         const controller = new AbortController()
@@ -386,9 +398,24 @@ export default function StudySession({
         })
         const changeMotion = () => display.setReducedMotion(preference.matches)
         preference.addEventListener('change', changeMotion)
+        const update = lesson ? readPositionStatement(message, lesson.topic) : null
         try {
-            const update = readPositionStatement(message, lesson.topic)
-            if (update) changePosition(update)
+            // A new portfolio visit has no generated lesson. Keep its composer
+            // usable through the existing lesson endpoint without inventing one.
+            if (!lesson) {
+                const result = await generateStudyLesson({ ...course, nextTask: message }, mastery, {
+                    anchors: learningAnchors, path: learningPath, signal: controller.signal, learningProfile: profile,
+                })
+                if (controller.signal.aborted) return
+                setPortfolioReply(null)
+                setPortfolioTurns([])
+                initialLessonLoaded.current = true
+                setLesson(result)
+                setLearningPath(acceptPathLesson(result, undefined, undefined, contextKey))
+                loadLessonVisual(lessonImageCache, course.name, result)
+                setPendingTurn(null)
+                return
+            }
             const requestCourse = update ? { ...course, learnerPosition: applyPositionOverride(course.learnerPosition, update) } : course
             const result = await respondToStudyMessageStream(requestCourse, lesson, {
                 message,
@@ -404,6 +431,10 @@ export default function StudySession({
             })
             await display.finish()
             if (controller.signal.aborted || conversationRequest.current !== controller) return
+
+            setPortfolioReply(null)
+            setPortfolioTurns([])
+            if (update) changePosition(update)
 
             const visual = generatedLessonVisual(result.visual)
             if (visual) {
@@ -425,8 +456,15 @@ export default function StudySession({
             setPendingTurn(null)
         } catch (error) {
             if (!controller.signal.aborted) {
-                setLearnerMessage(message)
-                setConversationError(aiErrorMessage(error, 'Orbit’s reply was interrupted. Your message is still here; try sending it again.'))
+                if (isPortfolioResponse(error)) {
+                    setPortfolioReply(current => !lesson ? current : { interaction: 'conversation', transcript: true })
+                    setPortfolioTurns(current => [...current, message].slice(-MAX_STUDY_EXCHANGES))
+                    setPendingTurn(null)
+                } else {
+                    if (update) changePosition(update)
+                    setLearnerMessage(message)
+                    setConversationError(aiErrorMessage(error, 'Orbit’s reply was interrupted. Your message is still here; try sending it again.'))
+                }
             }
         } finally {
             preference.removeEventListener('change', changeMotion)
@@ -462,6 +500,8 @@ export default function StudySession({
                 action === 'generate' ? `## ${result.title}\n${result.instruction}` : result.feedback, controller.signal)
             if (controller.signal.aborted) return
 
+            setPortfolioReply(null)
+
             if (action === 'generate') {
                 if (activity) rememberInteraction('activity', activity.title, `${activity.instruction}\n\nYour response: ${activityResponse || 'Not submitted'}`, activityFeedback?.feedback || '')
                 setActivity(result)
@@ -479,7 +519,8 @@ export default function StudySession({
             }
         } catch (error) {
             if (!controller.signal.aborted) {
-                setActivityError({
+                if (isPortfolioResponse(error)) setPortfolioReply({ interaction: 'activity', message: action === 'evaluate' ? response : undefined })
+                else setActivityError({
                     action,
                     message: aiErrorMessage(error, action === 'generate'
                         ? 'Orbit could not prepare an activity. Please try again.'
@@ -520,6 +561,8 @@ export default function StudySession({
                 : await generateStudyExample(course, lesson, example, { anchors: learningAnchors, learningProfile: profile, lessonReferences: referenceContext })
             await showResult(action, result.content)
 
+            setPortfolioReply(null)
+
             if (action === 'simplify') {
                 rememberInteraction('lesson', lesson.concept, lesson.content)
                 setLesson(result)
@@ -532,7 +575,11 @@ export default function StudySession({
                 setExample(result.content)
             }
         } catch (error) {
-            setLessonError(aiErrorMessage(error, 'Orbit could not update this lesson. Please try that action again.'))
+            if (isPortfolioResponse(error)) {
+                setPortfolioReply({ interaction: action === 'example' ? 'example' : 'lesson' })
+                if (action === 'simplify') setRecoveringLesson(recoveringLesson)
+            }
+            else setLessonError(aiErrorMessage(error, 'Orbit could not update this lesson. Please try that action again.'))
         } finally {
             setLoadingLesson('')
         }
@@ -558,6 +605,8 @@ export default function StudySession({
                 setProgressionError('Your course context changed while Orbit was preparing the next lesson. Please try again.')
                 return
             }
+            setPortfolioReply(null)
+            setPortfolioTurns([])
             rememberInteraction('lesson', lesson.concept, lesson.content)
             for (const exchange of conversation) rememberInteraction('conversation', exchange.message, exchange.message, exchange.response)
             if (activity) rememberInteraction('activity', activity.title, activity.instruction, activityFeedback?.feedback || activityResponse)
@@ -602,7 +651,9 @@ export default function StudySession({
             openInteraction('lesson')
         } catch (error) {
             if (!controller.signal.aborted) {
-                if (error.code === 'COURSE_POSITION_REQUIRED') {
+                if (isPortfolioResponse(error)) {
+                    setPortfolioReply({ interaction: activeInteraction })
+                } else if (error.code === 'COURSE_POSITION_REQUIRED') {
                     openInteraction('lesson')
                     setProgressionError('Choose what your class is working on above, then continue to the next lesson.')
                 } else {
@@ -634,6 +685,7 @@ export default function StudySession({
         try {
             const question = await generateStudyQuestion(course, mastery, lessonContext, { anchors: learningAnchors, learningProfile: profile, lessonReferences: referenceContext })
             await showResult('quiz', question.question)
+            setPortfolioReply(null)
             setStudyQuestion(question)
             setAnswerResult('')
             setFollowUpResult('')
@@ -643,7 +695,8 @@ export default function StudySession({
             setSelectedAnswer(null)
             setQuestionNumber((number) => number + 1)
         } catch (error) {
-            setQuestionError(aiErrorMessage(error, 'Orbit could not load your question. Please try again.'))
+            if (isPortfolioResponse(error)) setPortfolioReply({ interaction: 'quiz' })
+            else setQuestionError(aiErrorMessage(error, 'Orbit could not load your question. Please try again.'))
         } finally {
             setLoadingQuestion(false)
         }
@@ -671,29 +724,37 @@ export default function StudySession({
 
     async function answerQuestion(answer, retry = false) {
         if (busy || (answerResult && !retry)) return
-        setSelectedAnswer(answer)
-        setAnswerResult(answer.correct ? 'correct' : 'incorrect')
-        setShowAdaptedLesson(!answer.correct)
-        setFollowUpResult('')
-        setFollowUpAnswer(null)
-        setEvaluation(null)
-        setEvaluationError('')
-        rememberVisualRecovery({ activeInteraction: 'quiz', lesson, studyQuestion, selectedAnswer: answer, answerResult: answer.correct ? 'correct' : 'incorrect' })
-        if (!retry) {
-            const topic = studyQuestion.topic || lesson?.topic || course.name
-            updateTopicMastery(topic, { kind: 'quiz', outcome: answer.correct ? 'success' : 'miss',
-                id: masteryEvidenceId(topic, studyQuestion.question) })
+        if (portfolioReply) { setPortfolioReply({ interaction: 'quiz', message: answer.text }); return }
+        const recordAnswer = () => {
+            setSelectedAnswer(answer)
+            setAnswerResult(answer.correct ? 'correct' : 'incorrect')
+            setShowAdaptedLesson(!answer.correct)
+            setFollowUpResult('')
+            setFollowUpAnswer(null)
+            setEvaluation(null)
+            rememberVisualRecovery({ activeInteraction: 'quiz', lesson, studyQuestion, selectedAnswer: answer, answerResult: answer.correct ? 'correct' : 'incorrect' })
+            if (!retry) {
+                const topic = studyQuestion.topic || lesson?.topic || course.name
+                updateTopicMastery(topic, { kind: 'quiz', outcome: answer.correct ? 'success' : 'miss',
+                    id: masteryEvidenceId(topic, studyQuestion.question) })
+            }
         }
-        if (answer.correct) { if (!retry) celebrate(); return }
+        setEvaluationError('')
+        if (answer.correct) { recordAnswer(); if (!retry) celebrate(); return }
         setLoadingEvaluation(true)
         try {
             const result = await evaluateStudyAnswer(course, studyQuestion, answer, mastery, { anchors: learningAnchors, learningProfile: profile, lessonReferences: referenceContext })
             await showResult('evaluation', `${result.feedback}\n\n${result.adaptedExplanation}\n\n${result.followUpQuestion}`)
+            recordAnswer()
             setEvaluation(result)
             rememberVisualRecovery({ activeInteraction: 'quiz', lesson, studyQuestion, selectedAnswer: answer, answerResult: 'incorrect', evaluation: result })
             rememberAnchor(result.anchor)
         } catch (error) {
-            setEvaluationError(aiErrorMessage(error, 'Orbit could not prepare a different explanation. Your answer is saved; try again.'))
+            if (isPortfolioResponse(error)) setPortfolioReply({ interaction: 'quiz', message: answer.text })
+            else {
+                recordAnswer()
+                setEvaluationError(aiErrorMessage(error, 'Orbit could not prepare a different explanation. Your answer is saved; try again.'))
+            }
         } finally {
             setLoadingEvaluation(false)
         }
@@ -731,7 +792,8 @@ export default function StudySession({
                 <button onClick={onNewThread}>Study from class focus</button>
             </div>}
             <OrbitResponse pending={loadingLesson === 'next'} context="next" reveal={resultReveal}>
-            <p className="study-presentation-label">{presentation.label}</p>
+            {portfolioReply?.interaction === activeInteraction && !portfolioReply.inline && !portfolioReply.transcript && <PortfolioReply message={portfolioReply.message} />}
+            {!portfolioReply && <p className="study-presentation-label">{presentation.label}</p>}
             {activeInteraction === 'example' && <div className="study-example">
                 <OrbitResponse pending={loadingLesson === 'example'} context="example" reveal={resultReveal}>
                     {example && <><StudyContent content={example} /><button disabled={busy} onClick={() => changeLesson('example')}>Another example</button></>}
@@ -822,7 +884,7 @@ export default function StudySession({
                         </div>
                     )}
 
-                    {lesson && activeInteraction === 'conversation' && (
+                    {((lesson && activeInteraction === 'conversation') || (!lesson && portfolioReply)) && (
                         <div className={`study-conversation${presentation.splitVisual ? ' study-conversation-visual' : ''}`}>
                             {presentation.compactConversation && conversation.length > 1 && <details className="study-recovery-history">
                                 <summary>Earlier in this discussion</summary>
@@ -832,7 +894,8 @@ export default function StudySession({
                                 </div>)}
                             </details>}
                             <div className="study-transcript" aria-label="Lesson discussion">
-                                {[...conversation, ...(pendingTurn ? [{ ...pendingTurn, pending: true }] : [])].map((exchange, index) => (
+                                {[...conversation, ...portfolioTurns.map(message => ({ message, portfolio: true })), ...(pendingTurn ? [{ ...pendingTurn, pending: true }] : [])].map((exchange, index) => exchange.portfolio
+                                    ? <PortfolioReply key={turnOffset + index} message={exchange.message} /> : (
                                     <article className={`study-exchange${exchange.pending ? ' study-current-turn' : ''}`} key={turnOffset + index} ref={exchange.pending ? currentTurn : undefined}
                                         hidden={presentation.compactConversation && index < conversation.length - 1}>
                                         <div className="study-message study-message-learner" aria-label="Your message"><p>{exchange.message}</p></div>
@@ -884,7 +947,7 @@ export default function StudySession({
                 </div>
             )}
 
-            {stage === 'quiz' && <h2 className="study-question-number">Question {questionNumber || 1}{studyQuestion?.topic && studyQuestion.topic !== lesson?.topic ? ` · ${studyQuestion.topic}` : ''}</h2>}
+            {stage === 'quiz' && (!portfolioReply || studyQuestion) && <h2 className="study-question-number">Question {questionNumber || 1}{studyQuestion?.topic && studyQuestion.topic !== lesson?.topic ? ` · ${studyQuestion.topic}` : ''}</h2>}
 
             {questionError && (
                 <div role="alert">
@@ -945,6 +1008,7 @@ export default function StudySession({
                                     disabled={busy || followUpResult === 'correct'}
                                     onClick={() => {
                                         if (followUpResult === 'correct') return
+                                        if (portfolioReply) { setPortfolioReply({ interaction: 'quiz', message: answer.text }); return }
                                         const topic = studyQuestion.topic || lesson?.topic || course.name
                                         updateTopicMastery(topic, { kind: 'recovery', outcome: answer.correct ? 'success' : 'miss',
                                             id: masteryEvidenceId(topic, studyQuestion.question) })
@@ -1006,19 +1070,19 @@ export default function StudySession({
                 </div>
             </details>}
             {lesson && <nav className="study-continuation" aria-label="Lesson progression" aria-busy={busy}>
-                <div className="study-recommendation">
+                {!portfolioReply && <div className="study-recommendation">
                     <p><strong>Suggested next</strong><span>{presentation.guidance || recommendation.hint}</span></p>
                     {showRecommendationAction && recommendation.action && <button className="study-primary-action" disabled={busy} onClick={takeRecommendedStep}>
                         {recommendation.action === 'continue'
                             ? loadingLesson === 'next' ? 'Preparing next lesson…' : progressionError ? 'Try next lesson again' : recommendation.label
                             : recommendation.label}
                     </button>}
-                </div>
+                </div>}
                 <div className="study-continue-actions">
-                    {activeInteraction === 'lesson' && <button className="study-secondary-action" disabled={busy} aria-pressed={learningPath.understood} onClick={() => setLearningPath((current) => ({ ...current, understood: !current.understood }))}>
+                    {!portfolioReply && activeInteraction === 'lesson' && <button className="study-secondary-action" disabled={busy} aria-pressed={learningPath.understood} onClick={() => setLearningPath((current) => ({ ...current, understood: !current.understood }))}>
                         {learningPath.understood ? 'Feeling ready' : 'I understand'}
                     </button>}
-                    {(!showRecommendationAction || recommendation.action !== 'continue') && <button className="study-secondary-action" disabled={busy} onClick={continueLesson}>
+                    {(portfolioReply || !showRecommendationAction || recommendation.action !== 'continue') && <button className="study-secondary-action" disabled={busy} onClick={continueLesson}>
                         {loadingLesson === 'next' ? 'Preparing next lesson…' : progressionError ? 'Try next lesson again' : 'Continue to next lesson'}
                     </button>}
                 </div>

@@ -164,6 +164,9 @@ Open the URL printed by Vercel. This runs the frontend and the root `/api/*` fun
 | Command | Purpose |
 | --- | --- |
 | `npm run dev:api` | Full local app, including serverless AI routes |
+| `npm run dev:portfolio -- --listen 5173` | Full local app with Portfolio Mode explicitly enabled |
+| `npm run dev:live -- --listen 5173` | Full local app with Portfolio Mode explicitly disabled |
+| `npm run check:portfolio -- http://localhost:5173` | Verify the running local server's eight guarded AI routes |
 | `npm run dev` | Vite frontend only; does not execute `/api/*` |
 | `npm run build` | Production frontend build |
 | `npm run preview` | Preview that frontend build; no serverless API runtime |
@@ -171,6 +174,27 @@ Open the URL printed by Vercel. This runs the frontend and the root `/api/*` fun
 | `npm test` | Automated tests |
 
 Use `dev:api` for lessons, uploads, conversation, and image generation. If the interface opens but AI actions fail under plain Vite, switch to the full runtime and check the server-side key.
+
+## Optional Portfolio Mode
+
+Orbit can remain an interactive portfolio after the hackathon without ongoing AI inference. **Portfolio Mode is disabled by default.** When enabled, AI actions return Orbit's predefined reply and a **Watch the Demo** link to the [original recording](https://youtu.be/-xQGO-GYUVg). Home, spaces, topics, saved local lessons, the mascot, and prompt inputs remain available. Replies appear immediately in the existing assistant layout, without simulated streaming or new mastery, progress, quiz results, extracted file context, or learner memories. Creating a space or attaching a file still saves its ordinary local metadata.
+
+To select it for local development, keep this server-only variable in your uncommitted `.env.local`:
+
+```dotenv
+ORBIT_PORTFOLIO_MODE=true
+```
+
+- **Locally:** stop the full API server with Ctrl+C, run `npm run dev:api -- --listen 5173`, and reload `http://localhost:5173`. The launcher explicitly passes the local portfolio setting to Vercel's API workers. A `[vite] server restarted` message only means the frontend restarted; changing `.env.local` requires restarting the full command. Portfolio Mode does not require a model key or Redis credentials. Plain Vite still does not serve the API routes.
+- **Explicit local switches:** `npm run dev:portfolio -- --listen 5173` enables the mode regardless of the local setting; `npm run dev:live -- --listen 5173` disables it. These commands affect only their child development processes, never builds or deployed settings. Precedence is the explicit command, then `.env.local`, then the inherited environment, then disabled by default. The launcher prints ON/OFF without any credentials and rejects invalid setting values. Keep `.env.local` uncommitted; the scripts themselves are safe to commit.
+- **On Vercel, when ready to retire live AI:** first include this feature's code in the deployment you intend to use. In the project's Environment Variables settings, add `ORBIT_PORTFOLIO_MODE` with value `true` to the intended environment, then create a new deployment from that code and reload the app. [Environment changes apply only to new deployments](https://vercel.com/docs/environment-variables), so changing the setting alone does not retire the current demo.
+- **To disable it persistently:** set the local variable to `false`, restart `dev:api`, and reload. Removing it falls back to the inherited environment or disabled. For Vercel, remove it or set it to `false` and create a new deployment. Normal AI then uses the existing server credentials and demo limiter. Only `true` enables the mode (case and surrounding whitespace are ignored); do not use a `VITE_` prefix.
+
+After startup, run `npm run check:portfolio -- http://localhost:5173`. It checks actual local HTTP responses for every AI route, streaming, retries, and PDF actions. It first sends an invalid lesson request and stops if Portfolio Mode is absent, so checking a stale live server cannot trigger inference. It accepts loopback HTTP origins only. The component regression suite can also run against that server by setting `ORBIT_TEST_LOCAL_URL=http://localhost:5173` for the test process; it uses the same safe probe before sending valid inputs.
+
+The guard covers all eight AI routes: lesson generation (including next, simpler explanations, and examples), quiz generation and answer evaluation, streamed and ordinary conversation, activity generation/evaluation, PDF analysis, recommendations, and image generation/retries. It runs before payload/file processing, rate limiting, and provider calls. Requests receive HTTP 200 JSON with `mode: "portfolio"`, the reply, and the demo URL, plus `X-Orbit-Mode: portfolio` and `Cache-Control: no-store`; even a streaming request gets this immediate JSON response. The shared client intercepts it before teaching or persistence code runs. Request parameters cannot override the server setting.
+
+When retiring inference across the whole project, also retire older reachable deployments with live AI or revoke their provider credentials: the new guard cannot change old deployment URLs or already-running requests. Local mode selection does not change Vercel environment settings, deployed sites, or the live demo.
 
 ## Project Documentation
 

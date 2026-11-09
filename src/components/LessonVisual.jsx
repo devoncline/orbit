@@ -1,3 +1,5 @@
+import PortfolioReply from './PortfolioReply'
+
 import { useId, useState, useSyncExternalStore } from 'react'
 import { lessonImageRequest } from '../services/lessonImageRequest'
 import './LessonVisual.css'
@@ -27,6 +29,7 @@ function GeneratedLessonImage({ requestKey, cache }) {
   const id = useId()
   const image = useSyncExternalStore(cache.subscribe, () => cache.get(requestKey), () => cache.get(requestKey))
   const { visual } = JSON.parse(requestKey)
+  if (image.status === 'portfolio') return <PortfolioReply />
   // Rendering/restoring an instruction never authorizes a paid image request.
   if (image.status === 'idle' || image.status === 'error') return <div className="lesson-image-retry">
     <span>Visual unavailable.</span> <button type="button" onClick={() => cache.load(requestKey, true)}>Retry visual</button>

@@ -1,3 +1,4 @@
+import { respondInPortfolioMode } from './_lib/portfolioMode.js'
 import process from 'node:process'
 import { enforceDemoRateLimit } from './_lib/demoRateLimit.js'
 import { lessonImageRequest, lessonImageUrl } from '../src/services/lessonImageRequest.js'
@@ -5,6 +6,7 @@ import { lessonImageRequest, lessonImageUrl } from '../src/services/lessonImageR
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store')
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+  if (respondInPortfolioMode(res)) return
   // Keep input well below the function limit even before projecting bounded fields.
   if (JSON.stringify(req.body || {}).length > 16000) return res.status(413).json({ error: 'Image request too large' })
   const context = lessonImageRequest(req.body)

@@ -1,6 +1,8 @@
+import { PortfolioResponse } from './portfolioMode.js'
+export { DEMO_VIDEO_URL } from './portfolioMode.js'
+
 export const DEMO_LIMIT_MESSAGE = "You've reached the AI limit for Orbit's public demo. You can still explore the app or watch the full demo."
 export const DEMO_CAPACITY_MESSAGE = "Orbit's public demo has reached its current AI capacity. You can still explore the app or watch the full demo."
-export const DEMO_VIDEO_URL = 'https://youtu.be/-xQGO-GYUVg'
 const UNAVAILABLE_MESSAGE = 'AI is temporarily unavailable. You can still explore Orbit. Please try again shortly.'
 
 // A temporary UI convenience only. Refreshing/clearing this never resets the
@@ -41,6 +43,7 @@ export async function demoAiFetch(url, options, { includedImage = false } = {}) 
   if (limit?.until > Date.now() && !includedImage) throw limitError()
   if (limit && limit.until <= Date.now()) { limit = null; notify(); scheduleExpiry() }
   const response = await fetch(url, options)
+  if (response.headers?.get('X-Orbit-Mode') === 'portfolio') throw new PortfolioResponse()
   if (response.status !== 429 && response.status !== 503) return response
   let data
   try { data = await response.clone().json() } catch { return response }

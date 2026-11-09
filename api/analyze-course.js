@@ -1,3 +1,4 @@
+import { respondInPortfolioMode } from './_lib/portfolioMode.js'
 import process from 'node:process'
 import { Buffer } from 'node:buffer'
 import { enforceDemoRateLimit } from './_lib/demoRateLimit.js'
@@ -10,6 +11,7 @@ export default async function handler(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' })
     }
+    if (respondInPortfolioMode(res)) return
 
     try {
         const { fileName, fileType, fileData, currentDate, materialKind = 'syllabus' } = req.body || {}

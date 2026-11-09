@@ -1,5 +1,6 @@
 import { lessonImageRequest, lessonImageUrl, savedLessonImages } from './lessonImageRequest.js'
 import { demoAiFetch } from './demoUsage.js'
+import { isPortfolioResponse } from './portfolioMode.js'
 
 export async function generateLessonImage(context, { includedImage = false } = {}) {
   const request = lessonImageRequest(context)
@@ -19,17 +20,21 @@ export const EMPTY_IMAGE = Object.freeze({ status: 'idle' })
 // Owned by the mounted StudySession, outside conditional lesson/conversation views.
 // Pending promises AND failures survive tool switches/StrictMode; retry is explicit.
 // Resume stores only bounded metadata. Hydration is read-only, including failures.
-export function createLessonImageCache(saved) {
+export function createLessonImageCache(saved, { onPortfolio } = {}) {
   let snapshot = savedLessonImages(saved)
   const entries = new Map(snapshot.map(({ request, ...image }) => [JSON.stringify(request), { snapshot: image }]))
   const listeners = new Set()
   const notify = () => {
-    snapshot = savedLessonImages([...entries].map(([key, entry]) => ({ request: JSON.parse(key), ...entry.snapshot })))
+    snapshot = savedLessonImages([...entries].filter(([, entry]) => entry.snapshot.status !== 'portfolio')
+      .map(([key, entry]) => ({ request: JSON.parse(key), ...entry.snapshot })))
     listeners.forEach((listener) => listener())
   }
   return {
     get: (key) => entries.get(key)?.snapshot || EMPTY_IMAGE,
     getSaved: () => snapshot,
+    // Included images follow accepted teaching; saving that real lesson must
+    // not wait for its image. Standalone image actions await the server mode.
+    isPendingAction: () => [...entries.values()].some(entry => entry.snapshot.status === 'pending' && !entry.includedImage),
     subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener) },
     retain(saved) {
       const keys = new Set(savedLessonImages(saved).map(image => JSON.stringify(image.request)))
@@ -42,12 +47,15 @@ export function createLessonImageCache(saved) {
     },
     load(key, retry = false, includedImage = false) {
       const previous = entries.get(key)
-      if (previous && (!retry || previous.snapshot.status !== 'error')) return previous.promise
-      const entry = { snapshot: { status: 'pending' } }
+      if (previous && previous.snapshot.status !== 'portfolio' && (!retry || previous.snapshot.status !== 'error')) return previous.promise
+      const entry = { snapshot: { status: 'pending' }, includedImage }
       entries.set(key, entry)
       entry.promise = generateLessonImage(JSON.parse(key), { includedImage }).then((image) => {
         entry.snapshot = image ? { status: 'ready', ...image } : { status: 'error' }
-      }).catch(() => { entry.snapshot = { status: 'error' } }).finally(notify)
+      }).catch(error => {
+        entry.snapshot = { status: isPortfolioResponse(error) ? 'portfolio' : 'error' }
+        if (isPortfolioResponse(error)) onPortfolio?.()
+      }).finally(notify)
       notify()
       return entry.promise
     },

@@ -1,9 +1,12 @@
 import { useId, useRef, useState } from 'react'
 import { aiErrorMessage } from '../services/demoUsage'
+import { isPortfolioResponse } from '../services/portfolioMode'
+import PortfolioReply from './PortfolioReply'
 import { canAnalyzeMaterial, materialType, materialValidationError, MATERIAL_ACCEPT, PHOTO_ACCEPT, MATERIAL_FORMAT_LABEL, MAX_COURSE_MATERIALS, materialMetadata, normalizeCourseMaterials, sameMaterial } from '../services/courseMaterials'
 
 export default function AddCourseFile({ files, onAddFile, onAnalyzeFile, onRemoveFile, hasFile }) {
     const [status, setStatus] = useState('')
+    const [portfolioReply, setPortfolioReply] = useState(false)
     const [loading, setLoading] = useState(false)
     const [errors, setErrors] = useState([])
     const [kind, setKind] = useState('resource')
@@ -53,12 +56,14 @@ export default function AddCourseFile({ files, onAddFile, onAnalyzeFile, onRemov
         setLoading(true)
         setErrors([])
         setStatus('Reading ' + file.name + '…')
+        setPortfolioReply(false)
         try {
             await onAnalyzeFile(file)
             setStatus(file.kind === 'syllabus' ? 'Syllabus topics and dates are ready to review.' : 'Class material is ready to use in your lessons. No calendar dates were added.')
         } catch (error) {
             setStatus('')
-            setErrors([aiErrorMessage(error, file.name + ' could not be read. Your material is still attached; try again.')])
+            if (isPortfolioResponse(error)) setPortfolioReply(true)
+            else setErrors([aiErrorMessage(error, file.name + ' could not be read. Your material is still attached; try again.')])
         } finally {
             setLoading(false)
             busy.current = false
@@ -92,6 +97,7 @@ export default function AddCourseFile({ files, onAddFile, onAnalyzeFile, onRemov
         </div>
         <p className="course-material-formats">A PDF reading action sends that PDF to Orbit’s AI. Only names and extracted context are saved. Photos are not analyzed or saved as image files. Removing a syllabus keeps its imported topics and dates.</p>
         <p className="course-material-status" role="status">{status}</p>
+        {portfolioReply && <PortfolioReply />}
         {errors.length > 0 && <ul className="course-material-errors" role="alert">{errors.map((error, index) => <li key={index}>{error}</li>)}</ul>}
     </section>
 }

@@ -4,6 +4,7 @@
 
 ### Improvements
 
+- Added optional Portfolio Mode for keeping Orbit explorable after the hackathon. AI actions show an Orbit reply with a **Watch the Demo** link while saved learning, navigation, prompts, and the mascot remain available. Placeholder replies do not change learning progress. Local development now consistently applies the chosen mode and offers explicit portfolio/live startup commands. The mode is off by default; the current live demo is unchanged.
 - Orbit uses its original static artwork for every expression, including the sleeping/shy pose. Existing floating, hover, click-and-hold, slingshot drag and quiz celebration motion are preserved, with reduced-motion preferences respected.
 - Orbit now responds to gentle pointer movement, presses, taps and resisted dragging on Home, Learn, Calendar, Library, individual spaces and New space, with quieter motion in Study. Dragging takes a more deliberate pull, follows smoothly and gains resistance gradually instead of hitting a circular limit. Release adds a springy bounce and a small wobble, and another press can catch the return. Hover, quick-click and click-and-hold motion stay the same. On touch screens, start horizontally to drag or vertically to scroll. Thinking and celebrations keep their own motion, while reduced-motion preferences disable interactive movement.
 - Topic mastery now uses five space-themed ranks—Launch Pad, In Orbit, Cruising, Deep Space, and Mission Ready—with consistent badges in Your topics, Continue learning, and recommendation cards for previously started topics. Brand-new recommendations keep their topic marker. Learning details shows a breakdown of topic ranks instead of percentages. Saved progress, recommendations, topic search and separate saved sessions remain available; reading alone does not raise a rank.
@@ -62,6 +63,12 @@
 - Study answers now update mastery for the question's topic, with course mastery derived from topic scores. Questions without a topic use the current lesson topic or course name.
 
 ### Manual test checklist
+
+Portfolio Mode (automated route and component checks; browser/device review pending):
+
+1. Start `npm run dev:portfolio -- --listen 5173`, reload, and run `npm run check:portfolio -- http://localhost:5173` in a second terminal. Submit a new topic and several follow-up prompts. Confirm the complete Orbit reply, visible prompts, unchanged mascot/layout at desktop and phone widths, and **Watch the Demo** opening the original video in a new tab.
+2. With saved learning, try You lost me, examples, next lesson, activities, quizzes, Talk it through, Show me/Retry visual, and reading a resource or syllabus PDF. Confirm the reply, no stuck loading/error UI, and unchanged saved lessons, scores, progress, and file analysis state. Navigate away and back, then refresh.
+3. Disable the local mode, restart and reload. Confirm ordinary AI behavior using your own provider credentials (this spends credits). Check keyboard focus, screen-reader announcements, and reduced-motion presentation. No production switch is part of this review.
 
 Mascot media (automated media/state contracts checked; browser/device review pending):
 

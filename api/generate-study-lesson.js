@@ -1,3 +1,4 @@
+import { respondInPortfolioMode } from './_lib/portfolioMode.js'
 import { lessonReferenceInput } from './_lib/lessonReferenceInput.js'
 import { formatMaterialContext } from '../src/services/courseMaterials.js'
 import process from 'node:process'
@@ -24,6 +25,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
+  if (respondInPortfolioMode(res)) return
 
   const {
     action = 'lesson',

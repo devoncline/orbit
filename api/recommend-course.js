@@ -1,3 +1,4 @@
+import { respondInPortfolioMode } from './_lib/portfolioMode.js'
 import process from 'node:process'
 import { enforceDemoRateLimit } from './_lib/demoRateLimit.js'
 import { MODEL_OUTPUT_TOKENS } from './_lib/modelLimits.js'
@@ -7,6 +8,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
+  if (respondInPortfolioMode(res)) return
 
   try {
     const { courses, currentDate } = req.body || {}

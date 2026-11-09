@@ -6,9 +6,12 @@
   "scripts": {
     "dev": "vite",
     "dev:api": "node scripts/dev-api.js",
+    "dev:portfolio": "node scripts/dev-api.js --portfolio",
+    "dev:live": "node scripts/dev-api.js --live",
     "build": "vite build",
     "lint": "eslint .",
     "test": "node --import ./tests/fixtures/testEnvironment.js --test tests/*.test.js",
+    "check:portfolio": "node scripts/check-portfolio-local.js",
     "preview": "vite preview"
   },
   "dependencies": {
